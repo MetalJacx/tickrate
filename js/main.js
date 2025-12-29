@@ -7,15 +7,24 @@ import { CLASSES, getClassDef } from "./classes/index.js"
 
 let tickTimer = null;
 let saveTimer = null;
+let selectedClassKey = null;
 
 function showStartScreen() {
   document.getElementById("startScreen").style.display = "flex";
   document.getElementById("gameScreen").style.display = "none";
+  document.getElementById("classScreen").style.display = "none";
 }
 
 function showGameScreen() {
   document.getElementById("startScreen").style.display = "none";
   document.getElementById("gameScreen").style.display = "block";
+  document.getElementById("classScreen").style.display = "none";
+}
+
+function showClassScreen() {
+  document.getElementById("startScreen").style.display = "none";
+  document.getElementById("gameScreen").style.display = "none";
+  document.getElementById("classScreen").style.display = "flex";
 }
 
 function setStartError(msg) {
@@ -24,15 +33,10 @@ function setStartError(msg) {
   el.style.display = msg ? "block" : "none";
 }
 
-function populateClassSelect() {
-  const sel = document.getElementById("startingClassSelect");
-  sel.innerHTML = "";
-  for (const cls of CLASSES) {
-    const opt = document.createElement("option");
-    opt.value = cls.key;
-    opt.textContent = `${cls.name} (${cls.role})`;
-    sel.appendChild(opt);
-  }
+function setClassError(msg) {
+  const el = document.getElementById("classError");
+  el.textContent = msg;
+  el.style.display = msg ? "block" : "none";
 }
 
 function simulateOfflineProgress(seconds) {
@@ -72,31 +76,77 @@ function startLoops({ lastSavedAt }) {
   window.addEventListener("beforeunload", saveGame);
 }
 
-function wireStartScreen(onCreated) {
-  populateClassSelect();
+function renderClassCards() {
+  const container = document.getElementById("classCardContainer");
+  container.innerHTML = "";
 
+  for (const cls of CLASSES) {
+    const card = document.createElement("div");
+    card.className = "class-card" + (selectedClassKey === cls.key ? " selected" : "");
+
+    const skillsHtml = cls.skills.map(sk => {
+      const typeLabel = sk.type === "damage" ? "Damage" : "Heal";
+      return `<div class="class-skill">
+        <div><strong>${sk.name}</strong> (Lv ${sk.level})</div>
+        <div>${typeLabel} +${sk.amount}, cooldown ${sk.cooldownSeconds}s</div>
+      </div>`;
+    }).join("");
+
+    card.innerHTML = `
+      <div class="class-header">
+        <div>${cls.name}</div>
+        <div class="class-role">${cls.role}</div>
+      </div>
+      <div class="class-base">HP ${cls.baseHP} | DPS ${cls.baseDPS} | Healing ${cls.baseHealing}</div>
+      <div class="class-cost">Cost: ${cls.cost} gold</div>
+      <div class="class-skills">${skillsHtml}</div>
+    `;
+
+    card.addEventListener("click", () => {
+      selectedClassKey = cls.key;
+      setClassError("");
+      renderClassCards();
+      document.getElementById("classConfirmBtn").disabled = !selectedClassKey;
+    });
+
+    container.appendChild(card);
+  }
+}
+
+function wireStartScreen(onContinue) {
   document.getElementById("createCharacterBtn").addEventListener("click", () => {
     const account = document.getElementById("accountNameInput").value.trim();
     const charName = document.getElementById("characterNameInput").value.trim();
-    const classKey = document.getElementById("startingClassSelect").value;
 
     if (!account) return setStartError("Please enter an account name.");
     if (!charName) return setStartError("Please enter a character name.");
-    if (!classKey) return setStartError("Please choose a class.");
 
     setStartError("");
 
     state.accountName = account;
     state.characterName = charName;
-    state.playerClassKey = classKey;
+    // reset selection and proceed to class choice
+    selectedClassKey = null;
+    onContinue();
+  });
+}
 
-    // Fresh party for a new character
+function wireClassScreen(onConfirmed) {
+  document.getElementById("classBackBtn").addEventListener("click", () => {
+    showStartScreen();
+  });
+
+  document.getElementById("classConfirmBtn").addEventListener("click", () => {
+    if (!selectedClassKey) return setClassError("Please select a class to continue.");
+
+    state.playerClassKey = selectedClassKey;
     state.party = [];
     state.partyHP = 0;
     state.partyMaxHP = 0;
 
+    setClassError("");
     saveGame();
-    onCreated();
+    onConfirmed();
   });
 }
 
@@ -145,11 +195,19 @@ function start() {
     showGameScreen();
     startLoops({ lastSavedAt });
   } else {
-    showStartScreen();
+    // New player flow: start -> class select -> game
     wireStartScreen(() => {
+      showClassScreen();
+      document.getElementById("classConfirmBtn").disabled = true;
+      renderClassCards();
+    });
+
+    wireClassScreen(() => {
       showGameScreen();
       startLoops({ lastSavedAt: null });
     });
+
+    showStartScreen();
   }
 }
 

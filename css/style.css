@@ -149,3 +149,117 @@ select {
   font-size: 11px;
   color: #aaa;
 }
+
+/* Class selection screen */
+.class-shell {
+  width: 100%;
+  max-width: 980px;
+  background: #181818;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 16px;
+  box-sizing: border-box;
+  color: #eee;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+}
+.class-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.class-title {
+  font-size: 22px;
+  font-weight: bold;
+}
+.class-subtitle {
+  font-size: 12px;
+  color: #aaa;
+}
+.class-back {
+  background: #2a2a2a;
+  border: 1px solid #444;
+  color: #ddd;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.class-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+.class-card {
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 10px;
+  background: #202020;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.15s;
+}
+.class-card:hover {
+  border-color: #555;
+  transform: translateY(-2px);
+}
+.class-card.selected {
+  border-color: #4caf50;
+  box-shadow: 0 0 0 1px #4caf50;
+}
+.class-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+.class-role {
+  font-size: 12px;
+  color: #8ab4ff;
+}
+.class-base,
+.class-cost {
+  font-size: 12px;
+  color: #ccc;
+  margin-bottom: 6px;
+}
+.class-skills {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.class-skill {
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 6px;
+  background: #1a1a1a;
+  font-size: 12px;
+}
+.class-skill strong {
+  color: #fff;
+}
+.class-actions {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.class-confirm {
+  background: #4caf50;
+  color: #0c0c0c;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  min-width: 160px;
+}
+.class-confirm:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.class-error {
+  color: #ff6b6b;
+  font-size: 12px;
+}

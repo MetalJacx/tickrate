@@ -25,15 +25,9 @@
         style="width:100%;padding:8px;border-radius:6px;border:1px solid #555;background:#111;color:#eee;">
     </div>
 
-    <div style="margin-bottom:14px;">
-      <label style="display:block;font-size:12px;margin-bottom:4px;">Starting Class</label>
-      <select id="startingClassSelect"
-        style="width:100%;padding:8px;border-radius:6px;border:1px solid #555;background:#111;color:#eee;"></select>
-    </div>
-
     <button id="createCharacterBtn"
       style="width:100%;padding:10px;border-radius:8px;border:1px solid #666;background:#444;color:#eee;cursor:pointer;">
-      Create Character
+      Continue
     </button>
 
     <div id="startError" style="margin-top:10px;color:#ff6b6b;font-size:12px;display:none;"></div>
@@ -105,6 +99,26 @@
       <button id="resetBtn" style="width:100%;margin-top:8px;">Reset Progress</button>
     </section>
   </main>
+</div>
+
+<!-- CLASS SELECTION SCREEN -->
+<div id="classScreen" style="min-height:100vh;display:none;align-items:center;justify-content:center;background:#0d0d0d;padding:20px;">
+  <div class="class-shell">
+    <div class="class-header-row">
+      <div>
+        <div class="class-title">Choose Your Starting Class</div>
+        <div class="class-subtitle">Review stats and skills before you begin.</div>
+      </div>
+      <button id="classBackBtn" class="class-back">Back</button>
+    </div>
+
+    <div id="classCardContainer" class="class-grid"></div>
+
+    <div class="class-actions">
+      <div id="classError" class="class-error" style="display:none;"></div>
+      <button id="classConfirmBtn" class="class-confirm" disabled>Confirm Class</button>
+    </div>
+  </div>
 </div>
 
 <script type="module" src="js/main.js"></script>
