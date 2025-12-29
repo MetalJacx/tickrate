@@ -144,21 +144,31 @@ function onPartyWipe() {
   state.waitingToRespawn = true;
 }
 
+export function killsRequiredForZone(z) {
+  return 10 + z * 2;
+}
+
 export function canTravel() {
-  // Dynamic per-zone kill requirement: base 10 + 2 per zone level
-  const killsRequired = 10 + state.zone * 2; // Z1=12, Z2=14, Z3=16
-  return state.killsThisZone >= killsRequired;
+  // Dynamic per-zone kill requirement
+  return state.killsThisZone >= killsRequiredForZone(state.zone);
+}
+
+export function canTravelForward() {
+  // Allowed if zone already unlocked or kills requirement met
+  return state.zone < state.highestUnlockedZone || canTravel();
 }
 
 export function travelToNextZone() {
-  if (!canTravel()) return;
   if (state.zone >= MAX_ZONE) {
     addLog("You have reached the end of the known world.", "damage_taken");
     return;
   }
+  if (!canTravelForward()) return;
   state.zone += 1;
   state.killsThisZone = 0;
   addLog(`You travel deeper into the wilds to Zone ${state.zone}.`);
+  // Mark zone as unlocked for free travel later
+  state.highestUnlockedZone = Math.max(state.highestUnlockedZone, state.zone);
   spawnEnemy();
   checkSlotUnlocks();
 }

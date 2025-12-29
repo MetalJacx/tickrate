@@ -21,7 +21,8 @@ export const state = {
   currentEnemy: null,
   log: [],
   autoRestartHealthPercent: 100,
-  waitingToRespawn: false
+  waitingToRespawn: false,
+  highestUnlockedZone: 1
 };
 
 export function nextHeroId() {
@@ -50,6 +51,7 @@ export function serializeState() {
     partyMaxHP: state.partyMaxHP,
     party: state.party.map(h => ({ ...h })),
     autoRestartHealthPercent: state.autoRestartHealthPercent,
+    highestUnlockedZone: state.highestUnlockedZone,
     lastSavedAt: Date.now()
   };
 }
@@ -85,6 +87,7 @@ export function loadGame() {
     state.partyMaxHP = data.partyMaxHP ?? 0;
     state.partyHP = data.partyHP ?? 0;
     state.autoRestartHealthPercent = data.autoRestartHealthPercent ?? 100;
+    state.highestUnlockedZone = data.highestUnlockedZone ?? 1;
 
     const maxId = state.party.reduce((m, h) => Math.max(m, h.id || 0), 0);
     bumpHeroIdCounterToAtLeast(maxId + 1);

@@ -1,5 +1,5 @@
 import { state } from "./state.js";
-import { heroLevelUpCost, applyHeroLevelUp, canTravel, travelToNextZone, travelToPreviousZone, recalcPartyTotals } from "./combat.js";
+import { heroLevelUpCost, applyHeroLevelUp, canTravelForward, travelToNextZone, travelToPreviousZone, recalcPartyTotals, killsRequiredForZone } from "./combat.js";
 import { CLASSES, getClassDef } from "./classes/index.js";
 import { getZoneDef } from "./zones/index.js";
 import { addLog } from "./util.js";
@@ -202,8 +202,7 @@ export function renderMeta() {
   }
   
   document.getElementById("killsSpan").textContent = state.killsThisZone;
-  const killsRequired = 10 + state.zone * 2;
-  document.getElementById("killsNeedSpan").textContent = killsRequired;
+  document.getElementById("killsNeedSpan").textContent = killsRequiredForZone(state.zone);
   document.getElementById("nextZoneSpan").textContent = state.zone + 1;
 
   let dps = 0, heal = 0;
@@ -215,8 +214,8 @@ export function renderMeta() {
   document.getElementById("slotsUsedSpan").textContent = state.party.length;
   document.getElementById("slotsMaxSpan").textContent = state.partySlotsUnlocked;
 
-  // Travel button: can only go forward if kills are met
-  document.getElementById("travelBtn").disabled = !canTravel();
+  // Travel button: forward if zone unlocked or kills requirement met
+  document.getElementById("travelBtn").disabled = !canTravelForward();
   
   // Back button: can always go back except at zone 1
   document.getElementById("travelBackBtn").disabled = state.zone <= 1;
