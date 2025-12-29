@@ -1,13 +1,13 @@
 import { state } from "./state.js";
-import { getClassDef, heroLevelUpCost, applyHeroLevelUp, createHero, canTravel, travelToNextZone, recalcPartyTotals } from "./combat.js";
-import { CLASSES } from "./classes/index.js";
+import { heroLevelUpCost, applyHeroLevelUp, canTravel, travelToNextZone, recalcPartyTotals } from "./combat.js";
+import { CLASSES, getClassDef } from "./classes/index.js";
 import { addLog } from "./util.js";
 
 export function initUI({ onRecruit, onReset }) {
   // Populate recruit dropdown
   const select = document.getElementById("recruitSelect");
   select.innerHTML = "";
-  for (const cls of CLASS_DEFS) {
+  for (const cls of CLASSES) {
     const opt = document.createElement("option");
     opt.value = cls.key;
     opt.textContent = `${cls.name} (${cls.role})`;

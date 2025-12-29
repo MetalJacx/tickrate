@@ -27,7 +27,7 @@ function setStartError(msg) {
 function populateClassSelect() {
   const sel = document.getElementById("startingClassSelect");
   sel.innerHTML = "";
-  for (const cls of CLASS_DEFS) {
+  for (const cls of CLASSES) {
     const opt = document.createElement("option");
     opt.value = cls.key;
     opt.textContent = `${cls.name} (${cls.role})`;
@@ -138,45 +138,6 @@ function start() {
   // Load saved data (if any)
   const { loaded, lastSavedAt } = loadGame();
 
-  // Wire start screen
-  function wireStartScreen(onCreated) {
-  const startingClassSelect = document.getElementById("startingClassSelect");
-
-  // Populate class dropdown ONCE
-  startingClassSelect.innerHTML = "";
-  for (const cls of CLASSES) {
-    const opt = document.createElement("option");
-    opt.value = cls.key;
-    opt.textContent = `${cls.name} (${cls.role})`;
-    startingClassSelect.appendChild(opt);
-  }
-
-  document.getElementById("createCharacterBtn").addEventListener("click", () => {
-    const account = document.getElementById("accountNameInput").value.trim();
-    const charName = document.getElementById("characterNameInput").value.trim();
-    const classKey = startingClassSelect.value;
-
-    if (!account || !charName || !classKey) {
-      alert("Please fill out all fields.");
-      return;
-    }
-
-    // Save to state
-    state.accountName = account;
-    state.characterName = charName;
-    state.playerClassKey = classKey;
-
-    // Clear any old party (new character)
-    state.party = [];
-    state.partyHP = 0;
-    state.partyMaxHP = 0;
-
-    saveGame();
-    onCreated();
-  });
-}
-
-
   // If we already have a created character, skip start screen
   const hasCharacter = !!state.accountName && !!state.characterName && !!state.playerClassKey;
 
@@ -185,6 +146,10 @@ function start() {
     startLoops({ lastSavedAt });
   } else {
     showStartScreen();
+    wireStartScreen(() => {
+      showGameScreen();
+      startLoops({ lastSavedAt: null });
+    });
   }
 }
 

@@ -57,10 +57,53 @@
   </header>
 
   <main>
-    <!-- your existing three panels exactly as before -->
-    <!-- Party panel / Battle panel / Control panel -->
-    <!-- (No need for the profileBox anymore since startScreen replaces it) -->
-    ... your existing content ...
+    <section id="partyPanel" class="panel">
+      <h2>Party</h2>
+      <div id="partyHPBar" class="bar-bg">
+        <div id="partyHPFill" class="bar-fill" style="width:0%"></div>
+      </div>
+      <div id="partyHPLabel" class="bar-label">0 / 0</div>
+      <div id="partyContainer"></div>
+    </section>
+
+    <section id="battlePanel" class="panel">
+      <h2>Battle</h2>
+      <div id="enemyBox">
+        <div id="enemyName">No enemy</div>
+        <div class="bar-bg">
+          <div id="enemyHPFill" class="bar-fill" style="width:0%"></div>
+        </div>
+        <div id="enemyHPLabel" class="bar-label">0 / 0</div>
+        <div style="font-size:12px;margin-top:4px;">Enemy DPS: <span id="enemyDpsSpan">0</span></div>
+      </div>
+      <div class="small-note">Combat log</div>
+      <div id="log"></div>
+    </section>
+
+    <section id="controlPanel" class="panel">
+      <h2>Control</h2>
+      <div id="metaBox" style="margin-bottom:8px;">
+        <div>Next Zone: <span id="nextZoneSpan">2</span></div>
+        <div>Kills: <span id="killsSpan">0</span> / <span id="killsNeedSpan">10</span></div>
+        <div>Party DPS: <span id="partyDpsSpan">0.0</span></div>
+        <div>Party Healing: <span id="partyHealSpan">0.0</span></div>
+        <div>Slots: <span id="slotsUsedSpan">0</span> / <span id="slotsMaxSpan">1</span></div>
+      </div>
+
+      <div id="travelBox">
+        <div class="small-note">Travel when enough kills</div>
+        <button id="travelBtn" disabled>Travel to Zone <span id="nextZoneSpan">2</span></button>
+      </div>
+
+      <div id="recruitBox">
+        <div style="margin-bottom:6px;">Recruit</div>
+        <select id="recruitSelect" style="width:100%;margin-bottom:6px;"></select>
+        <div id="recruitCostInfo" class="small-note" style="margin-bottom:6px;"></div>
+        <button id="recruitBtn" disabled>Recruit</button>
+      </div>
+
+      <button id="resetBtn" style="width:100%;margin-top:8px;">Reset Progress</button>
+    </section>
   </main>
 </div>
 
