@@ -1,6 +1,26 @@
 import { serializeState } from "./util.js";
 import { addLog } from "./util.js";
 
+// Simple CRC32 implementation for tamper detection
+function crc32(str) {
+  let crc = 0 ^ (-1);
+  for (let i = 0; i < str.length; i++) {
+    crc = (crc >>> 8) ^ ((crc ^ str.charCodeAt(i)) & 0xFF);
+    for (let k = 0; k < 8; k++) {
+      crc = (crc & 1) ? (0xEDB88320 ^ (crc >>> 1)) : (crc >>> 1);
+    }
+  }
+  return (crc ^ (-1)) >>> 0;
+}
+
+function base64Encode(str) {
+  return btoa(unescape(encodeURIComponent(str)));
+}
+
+function base64Decode(str) {
+  return decodeURIComponent(escape(atob(str)));
+}
+
 export function initSettings({ onShowSettings, onHideSettings }) {
   const settingsBtn = document.getElementById("settingsBtn");
   const settingsModal = document.getElementById("settingsModal");
@@ -43,19 +63,29 @@ export function initSettings({ onShowSettings, onHideSettings }) {
     exportLabel.textContent = "Export Save";
     exportLabel.style.cssText = "font-size: 12px; font-weight: bold; margin-bottom: 6px; color: #aaa;";
     const exportBtn = document.createElement("button");
-    exportBtn.textContent = "Copy to Clipboard";
+    exportBtn.textContent = "Download Save File";
     exportBtn.style.cssText = "width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #555; background: #444; color: #eee; cursor: pointer; font-size: 12px;";
     
     exportBtn.addEventListener("click", () => {
       try {
         const json = JSON.stringify(serializeState(), null, 2);
-        navigator.clipboard.writeText(json).then(() => {
-          showToast("✓ Save exported to clipboard!");
-          addLog("Save exported to clipboard! Paste it somewhere safe.", "gold");
-        }).catch(() => {
-          prompt("Copy this save data:", json);
-          showToast("Save data shown in prompt");
-        });
+        const checksum = crc32(json).toString(16).padStart(8, '0');
+        const encoded = base64Encode(json);
+        const saveData = checksum + "|" + encoded;
+        
+        // Create blob and download
+        const blob = new Blob([saveData], { type: "application/octet-stream" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `tickrate-save-${Date.now()}.save`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        showToast("✓ Save downloaded!");
+        addLog("Save file downloaded. Keep it safe!", "gold");
       } catch (e) {
         showToast("Export failed: " + e.message, true);
         addLog("Export failed: " + e.message, "damage_taken");
@@ -73,23 +103,55 @@ export function initSettings({ onShowSettings, onHideSettings }) {
     importLabel.textContent = "Import Save";
     importLabel.style.cssText = "font-size: 12px; font-weight: bold; margin-bottom: 6px; color: #aaa;";
     const importBtn = document.createElement("button");
-    importBtn.textContent = "Paste from Clipboard";
+    importBtn.textContent = "Upload Save File";
     importBtn.style.cssText = "width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #555; background: #444; color: #eee; cursor: pointer; font-size: 12px;";
     
     importBtn.addEventListener("click", () => {
-      const json = prompt("Paste your save data here:");
-      if (!json) return;
-      try {
-        const data = JSON.parse(json);
-        if (!data.accountName || data.zone === undefined) {
-          throw new Error("Invalid save format");
-        }
-        // Import is handled by main.js via callback or direct state assignment
-        // For now, we'll just show the prompt path
-        showToast("Import feature coming soon", true);
-      } catch (e) {
-        showToast("Import failed: " + e.message, true);
-      }
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = ".save";
+      input.addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const saveData = event.target.result;
+            const [checksum, encoded] = saveData.split("|");
+            
+            if (!checksum || !encoded) {
+              throw new Error("Invalid save file format");
+            }
+            
+            const json = base64Decode(encoded);
+            const data = JSON.parse(json);
+            
+            // Validate checksum
+            const expectedChecksum = crc32(json).toString(16).padStart(8, '0');
+            if (checksum !== expectedChecksum) {
+              throw new Error("Save file has been tampered with!");
+            }
+            
+            // Validate basic structure
+            if (!data.accountName || data.zone === undefined) {
+              throw new Error("Invalid save format");
+            }
+            
+            // Import callback would go here - for now we'll just notify
+            showToast("✓ Save validated! Reload to import.", false);
+            addLog("Save file loaded and verified. Reload the page to import.", "gold");
+            
+            // Store temporarily in sessionStorage for reload
+            sessionStorage.setItem("pendingImport", json);
+          } catch (e) {
+            showToast("Import failed: " + e.message, true);
+            addLog("Import failed: " + e.message, "damage_taken");
+          }
+        };
+        reader.readAsText(file);
+      });
+      input.click();
     });
 
     importDiv.appendChild(importLabel);
