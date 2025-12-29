@@ -202,7 +202,8 @@ export function renderMeta() {
   }
   
   document.getElementById("killsSpan").textContent = state.killsThisZone;
-  document.getElementById("killsNeedSpan").textContent = state.killsForNextZone;
+  const killsRequired = 10 + state.zone * 2;
+  document.getElementById("killsNeedSpan").textContent = killsRequired;
   document.getElementById("nextZoneSpan").textContent = state.zone + 1;
 
   let dps = 0, heal = 0;

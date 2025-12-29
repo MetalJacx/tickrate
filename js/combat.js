@@ -145,7 +145,9 @@ function onPartyWipe() {
 }
 
 export function canTravel() {
-  return state.killsThisZone >= state.killsForNextZone;
+  // Dynamic per-zone kill requirement: base 10 + 2 per zone level
+  const killsRequired = 10 + state.zone * 2; // Z1=12, Z2=14, Z3=16
+  return state.killsThisZone >= killsRequired;
 }
 
 export function travelToNextZone() {
@@ -167,6 +169,7 @@ export function travelToPreviousZone() {
   state.killsThisZone = 0;
   addLog(`You retreat to Zone ${state.zone}.`);
   spawnEnemy();
+  checkSlotUnlocks();
 }
 
 export function gameTick() {
