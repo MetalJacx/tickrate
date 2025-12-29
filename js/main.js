@@ -6,7 +6,7 @@ import { initUI, renderAll } from "./ui.js";
 import { CLASSES, getClassDef } from "./classes/index.js"
 import { initSettings } from "./settings.js";
 
-let tickTimer = null;
+let tickTimer = null; // requestAnimationFrame id
 let saveTimer = null;
 let selectedClassKey = null;
 
@@ -84,10 +84,22 @@ function startLoops({ lastSavedAt }) {
 
   renderAll();
 
-  tickTimer = setInterval(() => {
-    gameTick();
-    renderAll();
-  }, GAME_TICK_MS);
+  // Delta-based fixed-step loop using requestAnimationFrame
+  let lastTime = performance.now();
+  function loop(now) {
+    const deltaMs = now - lastTime;
+    const ticks = Math.floor(deltaMs / GAME_TICK_MS);
+    if (ticks > 0) {
+      // Advance lastTime by the ticks processed to avoid drift
+      lastTime += ticks * GAME_TICK_MS;
+      for (let i = 0; i < ticks; i++) {
+        gameTick();
+      }
+      renderAll();
+    }
+    tickTimer = requestAnimationFrame(loop);
+  }
+  tickTimer = requestAnimationFrame(loop);
 
   saveTimer = setInterval(saveGame, AUTO_SAVE_EVERY_MS);
   window.addEventListener("beforeunload", saveGame);
@@ -345,7 +357,10 @@ function start() {
       state.log = [];
       selectedClassKey = null;
       // Clear timers
-      if (tickTimer) clearInterval(tickTimer);
+      if (tickTimer) {
+        try { cancelAnimationFrame(tickTimer); } catch {}
+        try { clearInterval(tickTimer); } catch {}
+      }
       if (saveTimer) clearInterval(saveTimer);
       tickTimer = null;
       saveTimer = null;
