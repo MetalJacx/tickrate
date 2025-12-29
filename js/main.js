@@ -9,6 +9,21 @@ let tickTimer = null;
 let saveTimer = null;
 let selectedClassKey = null;
 
+function showToast(message, isError = false) {
+  const toast = document.getElementById("toast");
+  toast.textContent = message;
+  toast.className = isError ? "error" : "";
+  toast.style.display = "block";
+  toast.style.animation = "slideIn 0.3s ease-out";
+  
+  setTimeout(() => {
+    toast.style.animation = "slideOut 0.3s ease-out";
+    setTimeout(() => {
+      toast.style.display = "none";
+    }, 300);
+  }, 3000);
+}
+
 function showStartScreen() {
   document.getElementById("startScreen").style.display = "flex";
   document.getElementById("gameScreen").style.display = "none";
@@ -274,13 +289,16 @@ function start() {
     try {
       const json = JSON.stringify(serializeState(), null, 2);
       navigator.clipboard.writeText(json).then(() => {
+        showToast("✓ Save exported to clipboard!");
         addLog("Save exported to clipboard! Paste it somewhere safe.", "gold");
         renderAll();
       }).catch(() => {
         // Fallback: show in a prompt
         prompt("Copy this save data:", json);
+        showToast("Save data shown in prompt");
       });
     } catch (e) {
+      showToast("Export failed: " + e.message, true);
       addLog("Export failed: " + e.message, "damage_taken");
       renderAll();
     }
@@ -303,11 +321,13 @@ function start() {
       // but it will auto-adjust on next hero creation
       
       saveGame(); // persist to localStorage
+      showToast("✓ Save imported! Reloading...");
       addLog("Save imported successfully! Reloading...", "gold");
       renderAll();
       // Refresh to ensure clean state
       setTimeout(() => location.reload(), 1000);
     } catch (e) {
+      showToast("Import failed: " + e.message, true);
       addLog("Import failed: " + e.message, "damage_taken");
       renderAll();
     }
