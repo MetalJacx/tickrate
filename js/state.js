@@ -3,6 +3,9 @@ import { SAVE_KEY } from "./defs.js";
 let heroIdCounter = 1;
 
 export const state = {
+  accountName: "",
+  characterName: "",
+  playerClassKey: "",
   gold: 0,
   totalXP: 0,
   zone: 1,
