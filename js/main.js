@@ -1,8 +1,9 @@
-import { GAME_TICK_MS, AUTO_SAVE_EVERY_MS, MAX_OFFLINE_SECONDS, CLASS_DEFS } from "./defs.js";
+import { GAME_TICK_MS, AUTO_SAVE_EVERY_MS, MAX_OFFLINE_SECONDS} from "./defs.js";
 import { state, loadGame, saveGame, clearSave } from "./state.js";
 import { addLog } from "./util.js";
 import { createHero, spawnEnemy, gameTick } from "./combat.js";
 import { initUI, renderAll } from "./ui.js";
+import { CLASSES, getClassDef } from "./classes/index.js"
 
 let tickTimer = null;
 let saveTimer = null;
@@ -105,7 +106,7 @@ function start() {
     onRecruit: () => {
       const select = document.getElementById("recruitSelect");
       const clsKey = select.value;
-      const cls = CLASS_DEFS.find(c => c.key === clsKey);
+      const cls = getClassDef(clsKey);
       if (!cls) return;
 
       if (state.party.length >= state.partySlotsUnlocked) {
@@ -138,10 +139,43 @@ function start() {
   const { loaded, lastSavedAt } = loadGame();
 
   // Wire start screen
-  wireStartScreen(() => {
-    showGameScreen();
-    startLoops({ lastSavedAt: null });
+  function wireStartScreen(onCreated) {
+  const startingClassSelect = document.getElementById("startingClassSelect");
+
+  // Populate class dropdown ONCE
+  startingClassSelect.innerHTML = "";
+  for (const cls of CLASSES) {
+    const opt = document.createElement("option");
+    opt.value = cls.key;
+    opt.textContent = `${cls.name} (${cls.role})`;
+    startingClassSelect.appendChild(opt);
+  }
+
+  document.getElementById("createCharacterBtn").addEventListener("click", () => {
+    const account = document.getElementById("accountNameInput").value.trim();
+    const charName = document.getElementById("characterNameInput").value.trim();
+    const classKey = startingClassSelect.value;
+
+    if (!account || !charName || !classKey) {
+      alert("Please fill out all fields.");
+      return;
+    }
+
+    // Save to state
+    state.accountName = account;
+    state.characterName = charName;
+    state.playerClassKey = classKey;
+
+    // Clear any old party (new character)
+    state.party = [];
+    state.partyHP = 0;
+    state.partyMaxHP = 0;
+
+    saveGame();
+    onCreated();
   });
+}
+
 
   // If we already have a created character, skip start screen
   const hasCharacter = !!state.accountName && !!state.characterName && !!state.playerClassKey;

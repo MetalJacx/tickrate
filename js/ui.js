@@ -1,6 +1,6 @@
 import { state } from "./state.js";
 import { getClassDef, heroLevelUpCost, applyHeroLevelUp, createHero, canTravel, travelToNextZone, recalcPartyTotals } from "./combat.js";
-import { CLASS_DEFS } from "./defs.js";
+import { CLASSES } from "./classes/index.js";
 import { addLog } from "./util.js";
 
 export function initUI({ onRecruit, onReset }) {

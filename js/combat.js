@@ -1,5 +1,5 @@
 import { state, nextHeroId } from "./state.js";
-import { CLASS_DEFS, SLOT_UNLOCKS } from "./defs.js";
+import { getClassDef } from "./classes/index.js";
 import { addLog, randInt } from "./util.js";
 
 export function getClassDef(key) {
@@ -9,6 +9,7 @@ export function getClassDef(key) {
 export function createHero(classKey) {
   const cls = getClassDef(classKey);
   if (!cls) return null;
+
   return {
     id: nextHeroId(),
     classKey: cls.key,
@@ -17,8 +18,39 @@ export function createHero(classKey) {
     level: 1,
     maxHP: cls.baseHP,
     dps: cls.baseDPS,
-    healing: cls.baseHealing
+    healing: cls.baseHealing,
+
+    // cooldown tracking per hero:
+    skillTimers: {}
   };
+}
+
+function getUnlockedSkills(hero) {
+  const cls = getClassDef(hero.classKey);
+  if (!cls?.skills) return [];
+  return cls.skills.filter(s => hero.level >= s.level);
+}
+
+let skillBonusDamage = 0;
+let skillBonusHeal = 0;
+
+for (const hero of state.party) {
+  const skills = getUnlockedSkills(hero);
+
+  for (const sk of skills) {
+    if (hero.skillTimers[sk.key] == null) hero.skillTimers[sk.key] = 0;
+
+    // tick cooldown down
+    hero.skillTimers[sk.key] = Math.max(0, hero.skillTimers[sk.key] - 1);
+
+    // fire if ready
+    if (hero.skillTimers[sk.key] === 0) {
+      if (sk.type === "damage") skillBonusDamage += sk.amount;
+      if (sk.type === "heal") skillBonusHeal += sk.amount;
+
+      hero.skillTimers[sk.key] = sk.cooldownSeconds;
+    }
+  }
 }
 
 export function heroLevelUpCost(hero) {
@@ -119,23 +151,26 @@ export function travelToNextZone() {
 }
 
 export function gameTick() {
-  if (!state.currentEnemy || state.party.length === 0) {
-    if (!state.currentEnemy) spawnEnemy();
-    return;
-  }
-
   const totals = recalcPartyTotals();
   const enemy = state.currentEnemy;
 
-  enemy.hp = Math.max(0, enemy.hp - totals.totalDPS);
+  // 1) Skills compute bonuses
+  let skillBonusDamage = 0;
+  let skillBonusHeal = 0;
+  // ... loop heroes, tick cooldowns, add to bonuses ...
 
+  // 2) Apply damage to enemy
+  enemy.hp = Math.max(0, enemy.hp - (totals.totalDPS + skillBonusDamage));
+
+  // 3) Apply enemy damage to party, reduced by healing
   const rawDamage = enemy.dps;
-  const mitigated = Math.max(rawDamage - totals.totalHealing, 0);
+  const effectiveHealing = totals.totalHealing + skillBonusHeal;
+  const mitigated = Math.max(rawDamage - effectiveHealing, 0);
 
   if (mitigated > 0) {
     state.partyHP = Math.max(0, state.partyHP - mitigated);
-  } else if (totals.totalHealing > rawDamage) {
-    state.partyHP = Math.min(state.partyMaxHP, state.partyHP + (totals.totalHealing - rawDamage) * 0.3);
+  } else if (effectiveHealing > rawDamage) {
+    state.partyHP = Math.min(state.partyMaxHP, state.partyHP + (effectiveHealing - rawDamage) * 0.3);
   }
 
   if (enemy.hp <= 0) {
