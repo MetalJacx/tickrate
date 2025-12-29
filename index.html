@@ -57,6 +57,37 @@
   <section id="controlPanel" class="panel">
     <h2>Campfire & Controls</h2>
 
+    <div id="profileBox" style="border:1px solid #333;border-radius:4px;padding:6px;margin-bottom:8px;background:#202020;">
+      <div><strong>Character Setup</strong></div>
+
+      <div id="profileSummary" style="display:none; font-size:12px; margin-top:6px;">
+        Account: <span id="accountNameSpan"></span><br>
+        Character: <span id="characterNameSpan"></span><br>
+        Class: <span id="characterClassSpan"></span>
+      </div>
+    
+      <div id="profileForm" style="margin-top:6px;">
+        <div style="margin-bottom:6px;">
+          <label style="display:block;font-size:12px;">Account Name</label>
+          <input id="accountNameInput" type="text" maxlength="24" style="width:100%;padding:4px;border-radius:4px;border:1px solid #555;background:#111;color:#eee;">
+        </div>
+    
+        <div style="margin-bottom:6px;">
+          <label style="display:block;font-size:12px;">Character Name</label>
+          <input id="characterNameInput" type="text" maxlength="24" style="width:100%;padding:4px;border-radius:4px;border:1px solid #555;background:#111;color:#eee;">
+        </div>
+    
+        <div style="margin-bottom:6px;">
+          <label style="display:block;font-size:12px;">Starting Class</label>
+          <select id="startingClassSelect" style="width:100%;padding:4px;"></select>
+        </div>
+    
+        <button id="createCharacterBtn">Create Character</button>
+        <div class="small-note" style="margin-top:6px;">You must create a character before the game starts.</div>
+      </div>
+    </div>
+
+
     <div id="recruitBox">
       <div><strong>Recruit Adventurer</strong> (Slots: <span id="slotsUsedSpan">0</span>/<span id="slotsMaxSpan">1</span>)</div>
       <div style="margin-top:4px;">
