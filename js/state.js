@@ -29,6 +29,9 @@ export function bumpHeroIdCounterToAtLeast(n) {
 
 export function serializeState() {
   return {
+    accountName: state.accountName,
+    characterName: state.characterName,
+    playerClassKey: state.playerClassKey,
     gold: state.gold,
     totalXP: state.totalXP,
     zone: state.zone,
@@ -57,6 +60,9 @@ export function loadGame() {
 
     const data = JSON.parse(raw);
 
+    state.accountName = data.accountName ?? "";
+    state.characterName = data.characterName ?? "";
+    state.playerClassKey = data.playerClassKey ?? "";
     state.gold = data.gold ?? 0;
     state.totalXP = data.totalXP ?? 0;
     state.zone = data.zone ?? 1;
