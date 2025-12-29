@@ -75,7 +75,7 @@ function checkAccountLevelUp() {
     state.accountLevel += 1;
     // Increase next requirement progressively
     state.accountLevelUpCost = Math.floor(state.accountLevelUpCost * 1.5);
-    addLog(`Account reaches level ${state.accountLevel}!`, "xp");
+    addLog(`SYSTEM: Account reaches level ${state.accountLevel}!`, "xp");
   }
 }
 
@@ -103,7 +103,7 @@ function checkSlotUnlocks() {
   for (const rule of SLOT_UNLOCKS) {
     if (state.zone >= rule.zone && state.partySlotsUnlocked < rule.slots) {
       state.partySlotsUnlocked = rule.slots;
-      addLog(`Your reputation grows. You can now have up to ${rule.slots} party members.`);
+      addLog(`SYSTEM: Your reputation grows. You can now have up to ${rule.slots} party members.`);
     }
   }
 }
@@ -160,13 +160,13 @@ export function canTravelForward() {
 
 export function travelToNextZone() {
   if (state.zone >= MAX_ZONE) {
-    addLog("You have reached the end of the known world.", "damage_taken");
+    addLog("SYSTEM: You have reached the end of the known world.", "damage_taken");
     return;
   }
   if (!canTravelForward()) return;
   state.zone += 1;
   state.killsThisZone = 0;
-  addLog(`You travel deeper into the wilds to Zone ${state.zone}.`);
+  addLog(`SYSTEM: You travel deeper into the wilds to Zone ${state.zone}.`);
   // Mark zone as unlocked for free travel later
   state.highestUnlockedZone = Math.max(state.highestUnlockedZone, state.zone);
   spawnEnemy();
@@ -177,7 +177,7 @@ export function travelToPreviousZone() {
   if (state.zone <= 1) return;
   state.zone -= 1;
   state.killsThisZone = 0;
-  addLog(`You retreat to Zone ${state.zone}.`);
+  addLog(`SYSTEM: You retreat to Zone ${state.zone}.`);
   spawnEnemy();
   checkSlotUnlocks();
 }

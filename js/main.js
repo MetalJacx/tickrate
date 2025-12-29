@@ -60,7 +60,7 @@ function simulateOfflineProgress(seconds) {
   if (!seconds || seconds <= 0) return;
   const capped = Math.min(seconds, MAX_OFFLINE_SECONDS);
   for (let i = 0; i < capped; i++) gameTick();
-  addLog(`Offline progress: simulated ${capped} seconds.`);
+  addLog(`SYSTEM: Offline progress: simulated ${capped} seconds.`);
 }
 
 function startLoops({ lastSavedAt }) {
@@ -72,7 +72,7 @@ function startLoops({ lastSavedAt }) {
     state.party = [starter];
     state.partyHP = starter.maxHP;
     state.partyMaxHP = starter.maxHP;
-    addLog(`${state.characterName} the ${starter.name} begins the grind.`);
+    addLog(`SYSTEM: ${state.characterName} the ${starter.name} begins the grind.`);
   }
 
   spawnEnemy();

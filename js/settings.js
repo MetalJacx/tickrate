@@ -85,7 +85,7 @@ export function initSettings({ onShowSettings, onHideSettings }) {
         URL.revokeObjectURL(url);
         
         showToast("✓ Save downloaded!");
-        addLog("Save file downloaded. Keep it safe!", "gold");
+        addLog("SYSTEM: Save file downloaded. Keep it safe!", "gold");
       } catch (e) {
         showToast("Export failed: " + e.message, true);
         addLog("Export failed: " + e.message, "damage_taken");
@@ -147,7 +147,7 @@ export function initSettings({ onShowSettings, onHideSettings }) {
             
             // Import callback would go here - for now we'll just notify
             showToast("✓ Save validated! Reload to import.", false);
-            addLog("Save file loaded and verified. Reload the page to import.", "gold");
+            addLog("SYSTEM: Save file loaded and verified. Reload the page to import.", "gold");
             
             // Store temporarily in sessionStorage for reload
             sessionStorage.setItem("pendingImport", json);
