@@ -1,6 +1,7 @@
 import { state } from "./state.js";
-import { heroLevelUpCost, applyHeroLevelUp, canTravel, travelToNextZone, recalcPartyTotals } from "./combat.js";
+import { heroLevelUpCost, applyHeroLevelUp, canTravel, travelToNextZone, travelToPreviousZone, recalcPartyTotals } from "./combat.js";
 import { CLASSES, getClassDef } from "./classes/index.js";
+import { getZoneDef } from "./zones/index.js";
 import { addLog } from "./util.js";
 
 export function initUI({ onRecruit, onReset }) {
@@ -17,6 +18,10 @@ export function initUI({ onRecruit, onReset }) {
   document.getElementById("recruitBtn").addEventListener("click", onRecruit);
   document.getElementById("travelBtn").addEventListener("click", () => {
     travelToNextZone();
+    renderAll();
+  });
+  document.getElementById("travelBackBtn").addEventListener("click", () => {
+    travelToPreviousZone();
     renderAll();
   });
 
@@ -189,6 +194,13 @@ export function renderMeta() {
   document.getElementById("xpSpan").textContent = state.totalXP;
   document.getElementById("accountLevelSpan").textContent = state.accountLevel;
   document.getElementById("zoneSpan").textContent = state.zone;
+  
+  // Show current zone name
+  const currentZone = getZoneDef(state.zone);
+  if (currentZone) {
+    document.getElementById("currentZoneName").textContent = currentZone.name;
+  }
+  
   document.getElementById("killsSpan").textContent = state.killsThisZone;
   document.getElementById("killsNeedSpan").textContent = state.killsForNextZone;
   document.getElementById("nextZoneSpan").textContent = state.zone + 1;
@@ -202,7 +214,11 @@ export function renderMeta() {
   document.getElementById("slotsUsedSpan").textContent = state.party.length;
   document.getElementById("slotsMaxSpan").textContent = state.partySlotsUnlocked;
 
+  // Travel button: can only go forward if kills are met
   document.getElementById("travelBtn").disabled = !canTravel();
+  
+  // Back button: can always go back except at zone 1
+  document.getElementById("travelBackBtn").disabled = state.zone <= 1;
 }
 
 export function renderRecruitBox() {

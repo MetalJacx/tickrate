@@ -1,7 +1,7 @@
 import { GAME_TICK_MS, AUTO_SAVE_EVERY_MS, MAX_OFFLINE_SECONDS} from "./defs.js";
 import { state, loadGame, saveGame, clearSave, serializeState } from "./state.js";
 import { addLog } from "./util.js";
-import { createHero, spawnEnemy, gameTick } from "./combat.js";
+import { createHero, spawnEnemy, gameTick, travelToNextZone, travelToPreviousZone } from "./combat.js";
 import { initUI, renderAll } from "./ui.js";
 import { CLASSES, getClassDef } from "./classes/index.js"
 import { initSettings } from "./settings.js";

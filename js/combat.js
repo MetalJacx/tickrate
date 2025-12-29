@@ -161,6 +161,14 @@ export function travelToNextZone() {
   checkSlotUnlocks();
 }
 
+export function travelToPreviousZone() {
+  if (state.zone <= 1) return;
+  state.zone -= 1;
+  state.killsThisZone = 0;
+  addLog(`You retreat to Zone ${state.zone}.`);
+  spawnEnemy();
+}
+
 export function gameTick() {
   const totals = recalcPartyTotals();
   

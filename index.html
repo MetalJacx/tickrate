@@ -92,8 +92,11 @@
       </div>
 
       <div id="travelBox">
-        <div class="small-note">Travel when enough kills</div>
-        <button id="travelBtn" disabled>Travel to Zone <span id="nextZoneSpan">2</span></button>
+        <div class="small-note" style="margin-bottom:8px;">Current Zone: <span id="currentZoneName">Graveyard</span></div>
+        <div style="display:flex;gap:6px;">
+          <button id="travelBackBtn" disabled style="flex:1;">← Previous Zone</button>
+          <button id="travelBtn" disabled style="flex:1;">Next Zone →</button>
+        </div>
       </div>
 
       <div id="recruitBox">
@@ -104,23 +107,13 @@
       </div>
 
       <div style="margin-top:8px;padding:8px;background:#111;border-radius:6px;border:1px solid #333;">
-        <div style="font-size:11px;color:#aaa;margin-bottom:6px;">Auto-Restart Health</div>
-        <div style="display:flex;gap:8px;align-items:center;">
+        <div style="font-size:11px;color:#aaa;margin-bottom:6px;font-weight:bold;\">AUTO-RESTART HEALTH</div>
+        <div style="display:flex;gap:8px;align-items:center;\">
           <input id="healthThresholdInput" type="range" min="0" max="100" value="100" 
-            style="flex:1;cursor:pointer;">
-          <span id="healthThresholdLabel" style="font-size:12px;min-width:40px;text-align:right;">100%</span>
+            style="flex:1;cursor:pointer;\">
+          <span id="healthThresholdLabel" style="font-size:12px;min-width:40px;text-align:right;\">100%</span>
         </div>
-        <div style="font-size:10px;color:#777;margin-top:4px;">Next pull when health reaches this %</div>
-      </div>
-
-      <div style="margin-top:8px;padding:8px;background:#111;border-radius:6px;border:1px solid #333;">
-        <div style="font-size:11px;color:#aaa;margin-bottom:6px;font-weight:bold;">AUTO-RESTART HEALTH</div>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <input id="healthThresholdInput" type="range" min="0" max="100" value="100" 
-            style="flex:1;cursor:pointer;">
-          <span id="healthThresholdLabel" style="font-size:12px;min-width:40px;text-align:right;">100%</span>
-        </div>
-        <div style="font-size:10px;color:#777;margin-top:4px;">Next pull when health reaches this %</div>
+        <div style="font-size:10px;color:#777;margin-top:4px;\">Next pull when health reaches this %</div>
       </div>
 
       <button id="resetBtn" style="width:100%;margin-top:8px;">Reset Progress</button>
