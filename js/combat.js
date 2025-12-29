@@ -242,7 +242,8 @@ export function gameTick() {
 
         if (sk.type === "damage") {
           skillBonusDamage += sk.amount;
-          addLog(`${hero.name} uses ${sk.name} for ${sk.amount} damage!`, "damage_dealt");
+          const damageTypeLabel = sk.damageType ? ` (${sk.damageType})` : "";
+          addLog(`${hero.name} uses ${sk.name}${damageTypeLabel} for ${sk.amount} damage!`, "damage_dealt");
         }
         if (sk.type === "heal") {
           skillBonusHeal += sk.amount;
