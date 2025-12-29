@@ -11,7 +11,7 @@ export function randInt(maxExclusive) {
 }
 
 export function serializeState() {
-  return JSON.stringify(state);
+  return state;
 }
 
 export function loadState(json) {
