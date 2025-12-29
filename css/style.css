@@ -1,0 +1,151 @@
+body {
+  font-family: Arial, sans-serif;
+  background: #111;
+  color: #eee;
+  margin: 0;
+  padding: 0;
+}
+header {
+  background: #222;
+  padding: 10px 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #333;
+}
+header h1 {
+  margin: 0;
+  font-size: 20px;
+}
+.stats {
+  font-size: 14px;
+}
+.stats span {
+  margin-right: 15px;
+}
+main {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  box-sizing: border-box;
+  height: calc(100vh - 60px);
+}
+.panel {
+  background: #181818;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 8px;
+  box-sizing: border-box;
+}
+.panel h2 {
+  margin-top: 0;
+  font-size: 16px;
+  border-bottom: 1px solid #333;
+  padding-bottom: 4px;
+  margin-bottom: 6px;
+}
+#partyPanel {
+  flex: 2;
+  overflow-y: auto;
+}
+#battlePanel {
+  flex: 3;
+}
+#controlPanel {
+  flex: 2;
+}
+.hero {
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 6px;
+  margin-bottom: 6px;
+  background: #202020;
+}
+.hero-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+.hero-stats {
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+button {
+  background: #444;
+  color: #eee;
+  border: 1px solid #666;
+  padding: 3px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+button:hover:not(:disabled) {
+  background: #555;
+}
+#enemyBox {
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 8px;
+  background: #202020;
+  margin-bottom: 8px;
+}
+#enemyName {
+  font-weight: bold;
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+.bar-bg {
+  width: 100%;
+  height: 16px;
+  background: #333;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+.bar-fill {
+  height: 100%;
+  background: #4caf50;
+  width: 100%;
+}
+.bar-label {
+  font-size: 11px;
+  text-align: right;
+}
+#partyHPBar .bar-fill {
+  background: #3b82f6;
+}
+#log {
+  background: #101010;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 4px;
+  height: 55%;
+  overflow-y: auto;
+  font-size: 11px;
+}
+#recruitBox,
+#travelBox {
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 6px;
+  margin-bottom: 8px;
+  background: #202020;
+  font-size: 13px;
+}
+select {
+  background: #111;
+  color: #eee;
+  border: 1px solid #555;
+  border-radius: 4px;
+  padding: 3px;
+  font-size: 12px;
+}
+.small-note {
+  font-size: 11px;
+  color: #aaa;
+}
