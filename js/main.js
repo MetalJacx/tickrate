@@ -13,6 +13,7 @@ function showStartScreen() {
   document.getElementById("startScreen").style.display = "flex";
   document.getElementById("gameScreen").style.display = "none";
   document.getElementById("classScreen").style.display = "none";
+  setStartError("");
 }
 
 function showGameScreen() {
@@ -77,72 +78,133 @@ function startLoops({ lastSavedAt }) {
 }
 
 function renderClassCards() {
-  const container = document.getElementById("classCardContainer");
-  container.innerHTML = "";
+  const buttonContainer = document.getElementById("classButtonContainer");
+  buttonContainer.innerHTML = "";
 
   for (const cls of CLASSES) {
-    const card = document.createElement("div");
-    card.className = "class-card" + (selectedClassKey === cls.key ? " selected" : "");
-
-    const skillsHtml = cls.skills.map(sk => {
-      const typeLabel = sk.type === "damage" ? "Damage" : "Heal";
-      return `<div class="class-skill">
-        <div><strong>${sk.name}</strong> (Lv ${sk.level})</div>
-        <div>${typeLabel} +${sk.amount}, cooldown ${sk.cooldownSeconds}s</div>
-      </div>`;
-    }).join("");
-
-    card.innerHTML = `
-      <div class="class-header">
-        <div>${cls.name}</div>
-        <div class="class-role">${cls.role}</div>
-      </div>
-      <div class="class-base">HP ${cls.baseHP} | DPS ${cls.baseDPS} | Healing ${cls.baseHealing}</div>
-      <div class="class-cost">Cost: ${cls.cost} gold</div>
-      <div class="class-skills">${skillsHtml}</div>
+    const btn = document.createElement("button");
+    btn.textContent = cls.name;
+    btn.style.cssText = `
+      padding: 12px;
+      border-radius: 6px;
+      border: 2px solid ${selectedClassKey === cls.key ? "#4a9eff" : "#555"};
+      background: ${selectedClassKey === cls.key ? "#1a1a2e" : "#222"};
+      color: ${selectedClassKey === cls.key ? "#4a9eff" : "#eee"};
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: ${selectedClassKey === cls.key ? "bold" : "normal"};
+      transition: all 0.2s;
     `;
-
-    card.addEventListener("click", () => {
+    btn.addEventListener("mouseover", function () {
+      if (selectedClassKey !== cls.key) {
+        this.style.background = "#333";
+        this.style.borderColor = "#666";
+      }
+    });
+    btn.addEventListener("mouseout", function () {
+      if (selectedClassKey !== cls.key) {
+        this.style.background = "#222";
+        this.style.borderColor = "#555";
+      }
+    });
+    btn.addEventListener("click", () => {
       selectedClassKey = cls.key;
       setClassError("");
       renderClassCards();
+      renderClassDetails();
       document.getElementById("classConfirmBtn").disabled = !selectedClassKey;
     });
 
-    container.appendChild(card);
+    buttonContainer.appendChild(btn);
+  }
+}
+
+function renderClassDetails() {
+  const detailContainer = document.getElementById("classDetailContainer");
+  const promptContainer = document.getElementById("classSelectPrompt");
+
+  if (!selectedClassKey) {
+    detailContainer.style.display = "none";
+    promptContainer.style.display = "flex";
+    return;
+  }
+
+  const cls = getClassDef(selectedClassKey);
+  if (!cls) return;
+
+  detailContainer.style.display = "flex";
+  promptContainer.style.display = "none";
+
+  document.getElementById("selectedClassName").textContent = cls.name;
+
+  const statsHtml = `
+    HP: ${cls.baseHP}<br>
+    Damage: ${cls.baseDPS}<br>
+    Healing: ${cls.baseHealing}<br>
+    Cost: ${cls.cost}g<br>
+    Role: ${cls.role}
+  `;
+  document.getElementById("classStats").innerHTML = statsHtml;
+
+  const skillsContainer = document.getElementById("classSkills");
+  skillsContainer.innerHTML = "";
+  for (const sk of cls.skills) {
+    const skillDiv = document.createElement("div");
+    const typeLabel = sk.type === "damage" ? "DMG" : "HEAL";
+    skillDiv.style.cssText = `
+      background: #111;
+      padding: 8px;
+      border-radius: 4px;
+      border: 1px solid #333;
+      font-size: 11px;
+      line-height: 1.4;
+    `;
+    skillDiv.innerHTML = `
+      <div style="font-weight:bold;margin-bottom:2px;">${sk.name} (Lv${sk.level})</div>
+      <div style="color:#aaa;">${typeLabel} +${sk.amount} | CD ${sk.cooldownSeconds}s</div>
+    `;
+    skillsContainer.appendChild(skillDiv);
   }
 }
 
 function updateStartButtonState() {
   const account = document.getElementById("accountNameInput").value.trim();
-  const charName = document.getElementById("characterNameInput").value.trim();
   const btn = document.getElementById("createCharacterBtn");
-  btn.disabled = !account || !charName;
+  btn.disabled = !account;
 }
 
 function wireStartScreen(onContinue) {
+  // Clear and re-initialize inputs
   const accountInput = document.getElementById("accountNameInput");
-  const charInput = document.getElementById("characterNameInput");
   const btn = document.getElementById("createCharacterBtn");
 
+  // Clear input
+  accountInput.value = "";
+  
+  // Remove old listeners by cloning elements
+  const newAccountInput = accountInput.cloneNode(true);
+  const newBtn = btn.cloneNode(true);
+  
+  accountInput.parentNode.replaceChild(newAccountInput, accountInput);
+  btn.parentNode.replaceChild(newBtn, btn);
+
+  const accountInputFinal = document.getElementById("accountNameInput");
+  const btnFinal = document.getElementById("createCharacterBtn");
+
   // Update button state on input change
-  accountInput.addEventListener("input", updateStartButtonState);
-  charInput.addEventListener("input", updateStartButtonState);
+  accountInputFinal.addEventListener("input", updateStartButtonState);
 
   // Initialize button state
   updateStartButtonState();
 
-  btn.addEventListener("click", () => {
-    const account = accountInput.value.trim();
-    const charName = charInput.value.trim();
+  btnFinal.addEventListener("click", () => {
+    const account = accountInputFinal.value.trim();
 
     if (!account) return setStartError("Please enter an account name.");
-    if (!charName) return setStartError("Please enter a character name.");
 
     setStartError("");
 
     state.accountName = account;
-    state.characterName = charName;
     // reset selection and proceed to class choice
     selectedClassKey = null;
     console.log("Calling onContinue callback");
@@ -151,14 +213,36 @@ function wireStartScreen(onContinue) {
 }
 
 function wireClassScreen(onConfirmed) {
-  document.getElementById("classBackBtn").addEventListener("click", () => {
+  // Clear class selection and character name input
+  selectedClassKey = null;
+  const charNameInput = document.getElementById("classCharacterNameInput");
+  charNameInput.value = "";
+
+  // Remove old listeners by cloning elements
+  const backBtn = document.getElementById("classBackBtn");
+  const confirmBtn = document.getElementById("classConfirmBtn");
+  const newBackBtn = backBtn.cloneNode(true);
+  const newConfirmBtn = confirmBtn.cloneNode(true);
+  
+  backBtn.parentNode.replaceChild(newBackBtn, backBtn);
+  confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+
+  const backBtnFinal = document.getElementById("classBackBtn");
+  const confirmBtnFinal = document.getElementById("classConfirmBtn");
+
+  backBtnFinal.addEventListener("click", () => {
+    selectedClassKey = null;
     showStartScreen();
   });
 
-  document.getElementById("classConfirmBtn").addEventListener("click", () => {
+  confirmBtnFinal.addEventListener("click", () => {
     if (!selectedClassKey) return setClassError("Please select a class to continue.");
+    
+    const charName = document.getElementById("classCharacterNameInput").value.trim();
+    if (!charName) return setClassError("Please enter a character name.");
 
     state.playerClassKey = selectedClassKey;
+    state.characterName = charName;
     state.party = [];
     state.partyHP = 0;
     state.partyMaxHP = 0;
@@ -200,6 +284,30 @@ function start() {
     onReset: () => {
       if (!confirm("Reset all progress?")) return;
       clearSave();
+      // Reset state object
+      state.accountName = "";
+      state.characterName = "";
+      state.playerClassKey = "";
+      state.gold = 0;
+      state.totalXP = 0;
+      state.accountLevel = 1;
+      state.accountLevelXP = 0;
+      state.accountLevelUpCost = 100;
+      state.zone = 1;
+      state.killsThisZone = 0;
+      state.killsForNextZone = 10;
+      state.partySlotsUnlocked = 1;
+      state.party = [];
+      state.partyMaxHP = 0;
+      state.partyHP = 0;
+      state.currentEnemy = null;
+      state.log = [];
+      selectedClassKey = null;
+      // Clear timers
+      if (tickTimer) clearInterval(tickTimer);
+      if (saveTimer) clearInterval(saveTimer);
+      tickTimer = null;
+      saveTimer = null;
       location.reload();
     }
   });
@@ -217,8 +325,10 @@ function start() {
     // New player flow: start -> class select -> game
     wireStartScreen(() => {
       showClassScreen();
+      selectedClassKey = null;
       document.getElementById("classConfirmBtn").disabled = true;
       renderClassCards();
+      renderClassDetails();
     });
 
     wireClassScreen(() => {

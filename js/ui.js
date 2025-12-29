@@ -22,8 +22,27 @@ export function initUI({ onRecruit, onReset }) {
 
   select.addEventListener("change", renderRecruitBox);
 
+  // Health threshold slider
+  const healthSlider = document.getElementById("healthThresholdInput");
+  if (healthSlider) {
+    healthSlider.addEventListener("input", (e) => {
+      state.autoRestartHealthPercent = parseInt(e.target.value);
+      renderHealthThreshold();
+    });
+    renderHealthThreshold();
+  }
+
   if (onReset && document.getElementById("resetBtn")) {
     document.getElementById("resetBtn").addEventListener("click", onReset);
+  }
+}
+
+function renderHealthThreshold() {
+  const slider = document.getElementById("healthThresholdInput");
+  const label = document.getElementById("healthThresholdLabel");
+  if (slider && label) {
+    slider.value = state.autoRestartHealthPercent;
+    label.textContent = state.autoRestartHealthPercent + "%";
   }
 }
 
@@ -38,9 +57,39 @@ export function renderAll() {
 export function renderLog() {
   const logEl = document.getElementById("log");
   logEl.innerHTML = "";
-  for (const line of state.log) {
+  for (const entry of state.log) {
     const div = document.createElement("div");
-    div.textContent = line;
+    let color = "#eee"; // default white
+    
+    if (typeof entry === "string") {
+      // backward compatibility with old string logs
+      div.textContent = entry;
+      div.style.color = color;
+    } else {
+      // new object format with type
+      div.textContent = entry.text;
+      
+      switch (entry.type) {
+        case "damage_dealt":
+          color = "#eee"; // white
+          break;
+        case "damage_taken":
+          color = "#ff6b6b"; // red
+          break;
+        case "gold":
+        case "xp":
+          color = "#ffd700"; // yellow/gold
+          break;
+        case "healing":
+          color = "#51cf66"; // green
+          break;
+        default:
+          color = "#eee"; // white
+      }
+      
+      div.style.color = color;
+    }
+    
     logEl.appendChild(div);
   }
 }
@@ -88,6 +137,10 @@ export function renderParty() {
     stats.className = "hero-stats";
     stats.textContent = `HP: ${hero.maxHP} | DPS: ${hero.dps.toFixed(1)} | Healing: ${hero.healing.toFixed(1)}`;
 
+    const xpDiv = document.createElement("div");
+    xpDiv.style.cssText = "font-size:11px;color:#aaa;margin-top:4px;";
+    xpDiv.textContent = `XP: ${(hero.xp || 0).toFixed(0)}`;
+
     const btnRow = document.createElement("div");
     const btn = document.createElement("button");
     const cost = heroLevelUpCost(hero);
@@ -97,7 +150,7 @@ export function renderParty() {
       if (state.gold >= cost) {
         state.gold -= cost;
         applyHeroLevelUp(hero);
-        addLog(`${hero.name} trains hard and reaches level ${hero.level}.`);
+        addLog(`${hero.name} trains hard and reaches level ${hero.level}.`, "gold");
         renderAll();
       }
     });
@@ -105,6 +158,7 @@ export function renderParty() {
 
     div.appendChild(header);
     div.appendChild(stats);
+    div.appendChild(xpDiv);
     div.appendChild(btnRow);
     container.appendChild(div);
   }
@@ -120,6 +174,7 @@ export function renderParty() {
 export function renderMeta() {
   document.getElementById("goldSpan").textContent = state.gold;
   document.getElementById("xpSpan").textContent = state.totalXP;
+  document.getElementById("accountLevelSpan").textContent = state.accountLevel;
   document.getElementById("zoneSpan").textContent = state.zone;
   document.getElementById("killsSpan").textContent = state.killsThisZone;
   document.getElementById("killsNeedSpan").textContent = state.killsForNextZone;

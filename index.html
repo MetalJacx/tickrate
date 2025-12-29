@@ -19,12 +19,6 @@
         style="width:100%;padding:8px;border-radius:6px;border:1px solid #555;background:#111;color:#eee;">
     </div>
 
-    <div style="margin-bottom:10px;">
-      <label style="display:block;font-size:12px;margin-bottom:4px;">Character Name</label>
-      <input id="characterNameInput" type="text" maxlength="24"
-        style="width:100%;padding:8px;border-radius:6px;border:1px solid #555;background:#111;color:#eee;">
-    </div>
-
     <button id="createCharacterBtn"
       style="width:100%;padding:10px;border-radius:8px;border:1px solid #666;background:#444;color:#eee;cursor:pointer;">
       Continue
@@ -45,6 +39,7 @@
     <h1>Tickrate</h1>
     <div class="stats">
       <span>Zone: <span id="zoneSpan">1</span></span>
+      <span>Account Lv: <span id="accountLevelSpan">1</span></span>
       <span>Gold: <span id="goldSpan">0</span></span>
       <span>Total XP: <span id="xpSpan">0</span></span>
     </div>
@@ -96,27 +91,65 @@
         <button id="recruitBtn" disabled>Recruit</button>
       </div>
 
+      <div style="margin-top:8px;padding:8px;background:#111;border-radius:6px;border:1px solid #333;">
+        <div style="font-size:11px;color:#aaa;margin-bottom:6px;">Auto-Restart Health</div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input id="healthThresholdInput" type="range" min="0" max="100" value="100" 
+            style="flex:1;cursor:pointer;">
+          <span id="healthThresholdLabel" style="font-size:12px;min-width:40px;text-align:right;">100%</span>
+        </div>
+        <div style="font-size:10px;color:#777;margin-top:4px;">Next pull when health reaches this %</div>
+      </div>
+
       <button id="resetBtn" style="width:100%;margin-top:8px;">Reset Progress</button>
     </section>
   </main>
 </div>
 
 <!-- CLASS SELECTION SCREEN -->
-<div id="classScreen" style="min-height:100vh;display:none;align-items:center;justify-content:center;background:#0d0d0d;padding:20px;">
-  <div class="class-shell">
-    <div class="class-header-row">
-      <div>
-        <div class="class-title">Choose Your Starting Class</div>
-        <div class="class-subtitle">Review stats and skills before you begin.</div>
-      </div>
-      <button id="classBackBtn" class="class-back">Back</button>
+<div id="classScreen" style="min-height:100vh;display:none;background:#0d0d0d;padding:20px;">
+  <div style="display:flex;gap:20px;height:calc(100vh - 40px);">
+    <!-- Left Sidebar -->
+    <div style="width:200px;display:flex;flex-direction:column;gap:10px;">
+      <div style="font-size:18px;font-weight:bold;margin-bottom:10px;">Classes</div>
+      <button id="classBackBtn" style="padding:10px;border-radius:6px;border:1px solid #666;background:#444;color:#eee;cursor:pointer;margin-bottom:10px;">Back</button>
+      <div id="classButtonContainer" style="display:flex;flex-direction:column;gap:8px;overflow-y:auto;flex:1;"></div>
     </div>
 
-    <div id="classCardContainer" class="class-grid"></div>
+    <!-- Right Detail View -->
+    <div style="flex:1;background:#181818;border:1px solid #333;border-radius:10px;padding:20px;display:flex;flex-direction:column;">
+      <div id="classDetailContainer" style="display:none;flex:1;display:flex;flex-direction:column;">
+        <div style="font-size:20px;font-weight:bold;margin-bottom:12px;" id="selectedClassName"></div>
+        
+        <div style="display:flex;gap:20px;flex:1;min-height:0;">
+          <!-- Stats Column -->
+          <div style="flex:1;">
+            <div style="font-size:11px;color:#aaa;margin-bottom:6px;font-weight:bold;">STATS</div>
+            <div id="classStats" style="background:#111;padding:10px;border-radius:6px;border:1px solid #333;font-size:12px;line-height:1.6;"></div>
+          </div>
 
-    <div class="class-actions">
-      <div id="classError" class="class-error" style="display:none;"></div>
-      <button id="classConfirmBtn" class="class-confirm" disabled>Confirm Class</button>
+          <!-- Skills Column -->
+          <div style="flex:1;overflow-y:auto;">
+            <div style="font-size:11px;color:#aaa;margin-bottom:6px;font-weight:bold;">SKILLS</div>
+            <div id="classSkills" style="display:flex;flex-direction:column;gap:6px;"></div>
+          </div>
+        </div>
+
+        <!-- Bottom Section -->
+        <div style="margin-top:20px;border-top:1px solid #333;padding-top:15px;">
+          <label style="display:block;font-size:12px;margin-bottom:8px;">Character Name</label>
+          <div style="display:flex;gap:10px;align-items:flex-end;">
+            <input id="classCharacterNameInput" type="text" maxlength="24"
+              style="flex:1;padding:8px;border-radius:6px;border:1px solid #555;background:#111;color:#eee;box-sizing:border-box;">
+            <button id="classConfirmBtn" style="padding:8px 16px;border-radius:6px;border:1px solid #666;background:#444;color:#eee;cursor:pointer;white-space:nowrap;" disabled>Confirm</button>
+          </div>
+          <div id="classError" style="color:#ff6b6b;font-size:11px;margin-top:8px;display:none;"></div>
+        </div>
+      </div>
+
+      <div id="classSelectPrompt" style="display:flex;align-items:center;justify-content:center;height:100%;color:#777;font-size:14px;">
+        Select a class to view details
+      </div>
     </div>
   </div>
 </div>

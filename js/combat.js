@@ -1,6 +1,7 @@
 import { state, nextHeroId } from "./state.js";
 import { getClassDef, CLASS_DEFS } from "./classes/index.js";
 import { addLog, randInt } from "./util.js";
+import { SLOT_UNLOCKS } from "./defs.js";
 
 export function createHero(classKey) {
   const cls = getClassDef(classKey);
@@ -83,6 +84,15 @@ export function recalcPartyTotals() {
   };
 }
 
+function checkAccountLevelUp() {
+  while (state.accountLevelXP >= state.accountLevelUpCost) {
+    state.accountLevelXP -= state.accountLevelUpCost;
+    state.accountLevel += 1;
+    state.accountLevelUpCost = Math.ceil(state.accountLevelUpCost * 1.15); // Costs increase by 15%
+    addLog(`Account leveled up to level ${state.accountLevel}!`, "gold");
+  }
+}
+
 function pickEnemyNameForZone(zone) {
   if (zone <= 2) return ["Decaying Skeleton", "Gnoll Scout", "Young Orc", "Rabid Wolf"][randInt(4)];
   if (zone <= 4) return ["Skeletal Knight", "Orc Centurion", "Dark Wolf", "Bloodsaber Acolyte"][randInt(4)];
@@ -98,6 +108,7 @@ export function spawnEnemy() {
   const name = pickEnemyNameForZone(z);
 
   state.currentEnemy = { name, level, maxHP, hp: maxHP, dps };
+  state.waitingToRespawn = false;
   addLog(`A level ${level} ${name} appears in Zone ${z}.`);
 }
 
@@ -118,19 +129,32 @@ function onEnemyKilled(enemy, totalDPS) {
   state.gold += gold;
   state.killsThisZone += 1;
 
-  addLog(`Your party defeats the ${enemy.name}, dealing ${totalDPS.toFixed(1)} damage. +${xp} XP, +${gold} gold.`);
+  // Award combat XP to all party members
+  const combatXPPerMember = xp;
+  for (const hero of state.party) {
+    if (!hero.xp) hero.xp = 0;
+    hero.xp += combatXPPerMember;
+  }
 
-  spawnEnemy();
+  // Award to account
+  state.accountLevelXP += xp;
+  checkAccountLevelUp();
+
+  addLog(`Your party defeats the ${enemy.name}, dealing ${totalDPS.toFixed(1)} damage. +${xp} XP, +${gold} gold.`, "gold");
+  state.currentEnemy = null;
+  state.waitingToRespawn = true;
 }
 
 function onPartyWipe() {
-  addLog("Your party is overwhelmed and wiped out. You drag your corpses back to the campfire...");
+  addLog("Your party is overwhelmed and wiped out. You drag your corpses back to the campfire...", "damage_taken");
   const lostGold = Math.floor(state.gold * 0.15);
   state.gold = Math.max(0, state.gold - lostGold);
   state.killsThisZone = 0;
   state.partyHP = Math.floor(state.partyMaxHP * 0.5);
-  spawnEnemy();
-  addLog(`You lost ${lostGold} gold and must rebuild your momentum in this zone.`);
+  addLog(`You lost ${lostGold} gold and must rebuild your momentum in this zone.`, "damage_taken");
+  
+  state.currentEnemy = null;
+  state.waitingToRespawn = true;
 }
 
 export function canTravel() {
@@ -148,29 +172,98 @@ export function travelToNextZone() {
 
 export function gameTick() {
   const totals = recalcPartyTotals();
-  const enemy = state.currentEnemy;
+  
+  // 1) Apply passive health regeneration (always, even when no enemy)
+  // Minimum 2 HP per tick + scaling bonus from healing stat
+  const baseRegenPerTick = 2;
+  const scalingRegenPerTick = totals.totalHealing * 0.2; // Additional scaling per healing point
+  const passiveRegenAmount = baseRegenPerTick + scalingRegenPerTick;
+  
+  if (passiveRegenAmount > 0 && state.partyHP < state.partyMaxHP) {
+    const oldHP = state.partyHP;
+    state.partyHP = Math.min(state.partyMaxHP, state.partyHP + passiveRegenAmount);
+    const actualHealed = state.partyHP - oldHP;
+    if (actualHealed > 0.1) { // Only log if meaningful healing
+      addLog(`Party regenerates ${actualHealed.toFixed(1)} HP!`, "healing");
+    }
+  }
+  
+  // Check if we should respawn
+  if (state.waitingToRespawn && !state.currentEnemy) {
+    if (state.partyMaxHP > 0) {
+      const healthPercent = (state.partyHP / state.partyMaxHP) * 100;
+      if (healthPercent >= state.autoRestartHealthPercent) {
+        spawnEnemy();
+      }
+    } else {
+      spawnEnemy();
+    }
+  }
 
-  // 1) Skills compute bonuses
+  const enemy = state.currentEnemy;
+  if (!enemy) return;
+
+  // 2) Process skills and calculate bonuses
   let skillBonusDamage = 0;
   let skillBonusHeal = 0;
-  // ... loop heroes, tick cooldowns, add to bonuses ...
 
-  // 2) Apply damage to enemy
-  enemy.hp = Math.max(0, enemy.hp - (totals.totalDPS + skillBonusDamage));
+  for (const hero of state.party) {
+    const cls = getClassDef(hero.classKey);
+    if (!cls?.skills) continue;
 
-  // 3) Apply enemy damage to party, reduced by healing
+    const skills = cls.skills.filter(s => hero.level >= s.level);
+
+    for (const sk of skills) {
+      if (hero.skillTimers[sk.key] == null) hero.skillTimers[sk.key] = 0;
+
+      // Tick cooldown down
+      hero.skillTimers[sk.key] = Math.max(0, hero.skillTimers[sk.key] - 1);
+
+      // Fire if ready
+      if (hero.skillTimers[sk.key] === 0) {
+        // Award ability XP for using skill
+        const abilityXP = 2;
+        if (!hero.xp) hero.xp = 0;
+        hero.xp += abilityXP;
+        state.accountLevelXP += abilityXP;
+        checkAccountLevelUp();
+
+        if (sk.type === "damage") {
+          skillBonusDamage += sk.amount;
+          addLog(`${hero.name} uses ${sk.name} for ${sk.amount} damage!`, "damage_dealt");
+        }
+        if (sk.type === "heal") {
+          skillBonusHeal += sk.amount;
+          addLog(`${hero.name} casts ${sk.name} for ${sk.amount} healing!`, "healing");
+        }
+        hero.skillTimers[sk.key] = sk.cooldownSeconds;
+      }
+    }
+  }
+
+  // 3) Apply damage to enemy
+  const totalDamage = totals.totalDPS + skillBonusDamage;
+  if (totalDamage > 0) {
+    enemy.hp = Math.max(0, enemy.hp - totalDamage);
+    addLog(`Party attacks for ${totalDamage.toFixed(1)} damage!`, "damage_dealt");
+  }
+
+  // 4) Apply enemy damage to party, reduced by healing
   const rawDamage = enemy.dps;
   const effectiveHealing = totals.totalHealing + skillBonusHeal;
   const mitigated = Math.max(rawDamage - effectiveHealing, 0);
 
   if (mitigated > 0) {
     state.partyHP = Math.max(0, state.partyHP - mitigated);
+    addLog(`${enemy.name} deals ${mitigated.toFixed(1)} damage!`, "damage_taken");
   } else if (effectiveHealing > rawDamage) {
-    state.partyHP = Math.min(state.partyMaxHP, state.partyHP + (effectiveHealing - rawDamage) * 0.3);
+    const healed = (effectiveHealing - rawDamage) * 0.3;
+    state.partyHP = Math.min(state.partyMaxHP, state.partyHP + healed);
+    addLog(`Party heals for ${healed.toFixed(1)} HP!`, "healing");
   }
 
   if (enemy.hp <= 0) {
-    onEnemyKilled(enemy, totals.totalDPS);
+    onEnemyKilled(enemy, totalDamage);
   } else if (state.partyHP <= 0 && state.partyMaxHP > 0) {
     onPartyWipe();
   }

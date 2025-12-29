@@ -8,6 +8,9 @@ export const state = {
   playerClassKey: "",
   gold: 0,
   totalXP: 0,
+  accountLevel: 1,
+  accountLevelXP: 0,
+  accountLevelUpCost: 100,
   zone: 1,
   killsThisZone: 0,
   killsForNextZone: 10,
@@ -16,7 +19,9 @@ export const state = {
   partyMaxHP: 0,
   partyHP: 0,
   currentEnemy: null,
-  log: []
+  log: [],
+  autoRestartHealthPercent: 100,
+  waitingToRespawn: false
 };
 
 export function nextHeroId() {
@@ -34,6 +39,9 @@ export function serializeState() {
     playerClassKey: state.playerClassKey,
     gold: state.gold,
     totalXP: state.totalXP,
+    accountLevel: state.accountLevel,
+    accountLevelXP: state.accountLevelXP,
+    accountLevelUpCost: state.accountLevelUpCost,
     zone: state.zone,
     killsThisZone: state.killsThisZone,
     killsForNextZone: state.killsForNextZone,
@@ -41,6 +49,7 @@ export function serializeState() {
     partyHP: state.partyHP,
     partyMaxHP: state.partyMaxHP,
     party: state.party.map(h => ({ ...h })),
+    autoRestartHealthPercent: state.autoRestartHealthPercent,
     lastSavedAt: Date.now()
   };
 }
@@ -65,6 +74,9 @@ export function loadGame() {
     state.playerClassKey = data.playerClassKey ?? "";
     state.gold = data.gold ?? 0;
     state.totalXP = data.totalXP ?? 0;
+    state.accountLevel = data.accountLevel ?? 1;
+    state.accountLevelXP = data.accountLevelXP ?? 0;
+    state.accountLevelUpCost = data.accountLevelUpCost ?? 100;
     state.zone = data.zone ?? 1;
     state.killsThisZone = data.killsThisZone ?? 0;
     state.killsForNextZone = data.killsForNextZone ?? 10;
@@ -72,6 +84,7 @@ export function loadGame() {
     state.party = Array.isArray(data.party) ? data.party.map(h => ({ ...h })) : [];
     state.partyMaxHP = data.partyMaxHP ?? 0;
     state.partyHP = data.partyHP ?? 0;
+    state.autoRestartHealthPercent = data.autoRestartHealthPercent ?? 100;
 
     const maxId = state.party.reduce((m, h) => Math.max(m, h.id || 0), 0);
     bumpHeroIdCounterToAtLeast(maxId + 1);

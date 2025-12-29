@@ -1,4 +1,4 @@
-export const GAME_TICK_MS = 1000;
+export const GAME_TICK_MS = 3000;
 
 export const SAVE_KEY = "tickrate_save_v1";
 export const AUTO_SAVE_EVERY_MS = 5000;
