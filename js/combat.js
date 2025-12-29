@@ -1,10 +1,6 @@
 import { state, nextHeroId } from "./state.js";
-import { getClassDef } from "./classes/index.js";
+import { getClassDef, CLASS_DEFS } from "./classes/index.js";
 import { addLog, randInt } from "./util.js";
-
-export function getClassDef(key) {
-  return CLASS_DEFS.find(c => c.key === key);
-}
 
 export function createHero(classKey) {
   const cls = getClassDef(classKey);

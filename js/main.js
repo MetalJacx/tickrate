@@ -113,10 +113,28 @@ function renderClassCards() {
   }
 }
 
+function updateStartButtonState() {
+  const account = document.getElementById("accountNameInput").value.trim();
+  const charName = document.getElementById("characterNameInput").value.trim();
+  const btn = document.getElementById("createCharacterBtn");
+  btn.disabled = !account || !charName;
+}
+
 function wireStartScreen(onContinue) {
-  document.getElementById("createCharacterBtn").addEventListener("click", () => {
-    const account = document.getElementById("accountNameInput").value.trim();
-    const charName = document.getElementById("characterNameInput").value.trim();
+  const accountInput = document.getElementById("accountNameInput");
+  const charInput = document.getElementById("characterNameInput");
+  const btn = document.getElementById("createCharacterBtn");
+
+  // Update button state on input change
+  accountInput.addEventListener("input", updateStartButtonState);
+  charInput.addEventListener("input", updateStartButtonState);
+
+  // Initialize button state
+  updateStartButtonState();
+
+  btn.addEventListener("click", () => {
+    const account = accountInput.value.trim();
+    const charName = charInput.value.trim();
 
     if (!account) return setStartError("Please enter an account name.");
     if (!charName) return setStartError("Please enter a character name.");
@@ -127,6 +145,7 @@ function wireStartScreen(onContinue) {
     state.characterName = charName;
     // reset selection and proceed to class choice
     selectedClassKey = null;
+    console.log("Calling onContinue callback");
     onContinue();
   });
 }

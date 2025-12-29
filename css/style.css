@@ -5,6 +5,20 @@ body {
   margin: 0;
   padding: 0;
 }
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+button:not(:disabled):hover {
+  background-color: rgba(100, 200, 100, 0.2) !important;
+}
+
 header {
   background: #222;
   padding: 10px 15px;
