@@ -186,7 +186,10 @@ function renderClassDetails() {
   skillsContainer.innerHTML = "";
   for (const sk of cls.skills) {
     const skillDiv = document.createElement("div");
-    const typeLabel = sk.type === "damage" ? "DMG" : "HEAL";
+    let typeLabel = sk.type === "damage" ? "DMG" : "HEAL";
+    if (sk.damageType) {
+      typeLabel += ` (${sk.damageType})`;
+    }
     skillDiv.style.cssText = `
       background: #111;
       padding: 8px;

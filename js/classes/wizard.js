@@ -9,8 +9,8 @@ export default {
   baseHealing: 1,
 
   skills: [
-    { key: "fireball", name: "Fireball", level: 1, type: "damage", amount: 15, cooldownSeconds: 5 },
-    { key: "meteor", name: "Meteor", level: 4, type: "damage", amount: 35, cooldownSeconds: 12 },
+    { key: "fireball", name: "Fireball", level: 1, type: "damage", damageType: "fire", amount: 15, cooldownSeconds: 5 },
+    { key: "meteor", name: "Meteor", level: 4, type: "damage", damageType: "fire", amount: 35, cooldownSeconds: 12 },
     { key: "arcane_shield", name: "Arcane Shield", level: 6, type: "heal", amount: 12, cooldownSeconds: 8 }
   ]
 };
