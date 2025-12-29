@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Tickrate</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header>
+  <div>
+    <h1>Tickrate</h1>
+    <div class="small-note">A ClassicMMO-inspired idle party game</div>
+  </div>
+  <div class="stats">
+    <span>Zone: <span id="zoneSpan">1</span></span>
+    <span>Gold: <span id="goldSpan">0</span></span>
+    <span>Total XP: <span id="xpSpan">0</span></span>
+  </div>
+</header>
+<main>
+  <section id="partyPanel" class="panel">
+    <h2>Party</h2>
+    <div class="small-note">
+      Start with one adventurer. As you clear tougher zones, more party slots unlock.
+    </div>
+    <div id="partyHPBox" style="margin-top:6px;margin-bottom:6px;">
+      <div>Party HP</div>
+      <div class="bar-bg" id="partyHPBar">
+        <div class="bar-fill" id="partyHPFill"></div>
+      </div>
+      <div class="bar-label" id="partyHPLabel">0 / 0</div>
+    </div>
+    <div id="partyContainer"></div>
+  </section>
+
+  <section id="battlePanel" class="panel">
+    <h2>Battle</h2>
+    <div id="enemyBox">
+      <div id="enemyName">No enemy</div>
+      <div>Enemy HP</div>
+      <div class="bar-bg">
+        <div class="bar-fill" id="enemyHPFill"></div>
+      </div>
+      <div class="bar-label" id="enemyHPLabel">0 / 0</div>
+      <div style="margin-top:4px;font-size:12px;">
+        <span>DPS to Party: <span id="enemyDpsSpan">0</span></span>
+      </div>
+    </div>
+    <div style="font-size:12px;margin-bottom:4px;">
+      <span>Party DPS: <span id="partyDpsSpan">0</span></span> •
+      <span>Party Healing: <span id="partyHealSpan">0</span></span> •
+      <span>Kills this Zone: <span id="killsSpan">0</span>/<span id="killsNeedSpan">10</span></span>
+    </div>
+    <div id="log"></div>
+  </section>
+
+  <section id="controlPanel" class="panel">
+    <h2>Campfire & Controls</h2>
+
+    <div id="recruitBox">
+      <div><strong>Recruit Adventurer</strong> (Slots: <span id="slotsUsedSpan">0</span>/<span id="slotsMaxSpan">1</span>)</div>
+      <div style="margin-top:4px;">
+        <select id="recruitSelect"></select>
+        <button id="recruitBtn">Recruit</button>
+      </div>
+      <div class="small-note" id="recruitCostInfo"></div>
+    </div>
+
+    <div id="travelBox">
+      <div><strong>Travel to Next Zone</strong></div>
+      <div class="small-note">
+        Tougher foes, better XP & gold. Unlocks more party slots at higher zones.
+      </div>
+      <button id="travelBtn" disabled>Travel (Zone <span id="nextZoneSpan">2</span>)</button>
+    </div>
+
+    <div class="small-note">
+      The game advances automatically each second. Leave it running and watch your party grind.
+      Upgrade your heroes to push into higher zones.
+    </div>
+  </section>
+</main>
+
+<script src="js/game.js"></script>
+</body>
+</html>
