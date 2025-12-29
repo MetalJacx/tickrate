@@ -64,6 +64,9 @@ main {
 }
 #battlePanel {
   flex: 3;
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* allow children to overflow-scroll in flex */
 }
 #controlPanel {
   flex: 2;
@@ -138,9 +141,23 @@ button:hover:not(:disabled) {
   border: 1px solid #333;
   border-radius: 4px;
   padding: 4px;
-  height: 55%;
+  /* use flex sizing instead of percentage height to avoid browser differences */
+  flex: 1;
+  min-height: 0; /* critical for scroll inside flex containers */
   overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch; /* iOS momentum scroll */
   font-size: 11px;
+}
+
+/* Hide scrollbars for the combat log but keep it scrollable */
+#log {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge legacy */
+}
+#log::-webkit-scrollbar {
+  width: 0px; /* Chrome/Safari */
+  height: 0px;
 }
 #recruitBox,
 #travelBox {
