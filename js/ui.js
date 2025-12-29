@@ -83,6 +83,9 @@ export function renderLog() {
         case "healing":
           color = "#51cf66"; // green
           break;
+        case "regen":
+          color = "#8ef5a2"; // lighter green for passive regen
+          break;
         default:
           color = "#eee"; // white
       }

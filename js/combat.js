@@ -185,8 +185,8 @@ export function gameTick() {
     const oldHP = state.partyHP;
     state.partyHP = Math.min(state.partyMaxHP, state.partyHP + passiveRegenAmount);
     const actualHealed = state.partyHP - oldHP;
-    if (actualHealed > 0.1) { // Only log if meaningful healing
-      addLog(`Party regenerates ${actualHealed.toFixed(1)} HP!`, "healing");
+    if (actualHealed > 0.1) { // Only log if meaningful regen
+      addLog(`Party regenerates ${actualHealed.toFixed(1)} HP!`, "regen");
     }
   }
   
