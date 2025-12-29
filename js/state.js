@@ -66,7 +66,20 @@ export function saveGame() {
 
 export function loadGame() {
   try {
-    const raw = localStorage.getItem(SAVE_KEY);
+    let raw = localStorage.getItem(SAVE_KEY);
+    
+    // Migration: check old key if new key doesn't exist
+    if (!raw) {
+      const oldKey = "tickrate-save";
+      raw = localStorage.getItem(oldKey);
+      if (raw) {
+        console.log("Migrating from old save key:", oldKey);
+        // Re-save to new key immediately
+        localStorage.setItem(SAVE_KEY, raw);
+        localStorage.removeItem(oldKey);
+      }
+    }
+    
     if (!raw) return { loaded: false, lastSavedAt: null };
 
     const data = JSON.parse(raw);

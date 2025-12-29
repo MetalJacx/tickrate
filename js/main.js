@@ -88,7 +88,15 @@ function startLoops({ lastSavedAt }) {
   let lastTime = performance.now();
   function loop(now) {
     const deltaMs = now - lastTime;
-    const ticks = Math.floor(deltaMs / GAME_TICK_MS);
+    let ticks = Math.floor(deltaMs / GAME_TICK_MS);
+    
+    // Cap catch-up to prevent extreme spikes after long pauses
+    const MAX_CATCH_UP_TICKS = 60;
+    if (ticks > MAX_CATCH_UP_TICKS) {
+      console.warn(`Capping catch-up from ${ticks} to ${MAX_CATCH_UP_TICKS} ticks`);
+      ticks = MAX_CATCH_UP_TICKS;
+    }
+    
     if (ticks > 0) {
       // Advance lastTime by the ticks processed to avoid drift
       lastTime += ticks * GAME_TICK_MS;
