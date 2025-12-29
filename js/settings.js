@@ -1,5 +1,6 @@
 import { serializeState } from "./util.js";
 import { addLog } from "./util.js";
+import { state } from "./state.js";
 
 // Simple CRC32 implementation for tamper detection
 function crc32(str) {
@@ -170,6 +171,64 @@ export function initSettings({ onShowSettings, onHideSettings }) {
     const divider = document.createElement("div");
     divider.style.cssText = "border-top: 1px solid #333; margin: 10px 0;";
     settingsContent.appendChild(divider);
+
+    // Log Filters
+    const filtersDiv = document.createElement("div");
+    filtersDiv.style.cssText = "border: 1px solid #333; border-radius: 6px; padding: 10px; background: #202020;";
+    
+    const filtersLabel = document.createElement("div");
+    filtersLabel.textContent = "Combat Log Filters";
+    filtersLabel.style.cssText = "font-size: 12px; font-weight: bold; margin-bottom: 8px; color: #aaa;";
+    filtersDiv.appendChild(filtersLabel);
+
+    const filterOptions = [
+      { key: "healing", label: "Healing Messages", color: "#4ade80" },
+      { key: "damage_dealt", label: "Damage Dealt", color: "#fb923c" },
+      { key: "damage_taken", label: "Damage Taken", color: "#ef4444" },
+      { key: "normal", label: "General Messages", color: "#ddd" },
+      { key: "gold", label: "Gold & Rewards", color: "#fbbf24" }
+    ];
+
+    filterOptions.forEach(opt => {
+      const checkDiv = document.createElement("div");
+      checkDiv.style.cssText = "display: flex; align-items: center; margin-bottom: 6px;";
+      
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.id = `filter_${opt.key}`;
+      checkbox.checked = state.logFilters?.[opt.key] !== false;
+      checkbox.style.cssText = "margin-right: 8px; cursor: pointer;";
+      
+      checkbox.addEventListener("change", () => {
+        if (!state.logFilters) {
+          state.logFilters = {
+            healing: true,
+            damage_dealt: true,
+            damage_taken: true,
+            normal: true,
+            gold: true
+          };
+        }
+        state.logFilters[opt.key] = checkbox.checked;
+        showToast(`${opt.label} ${checkbox.checked ? "enabled" : "disabled"}`);
+      });
+      
+      const label = document.createElement("label");
+      label.htmlFor = `filter_${opt.key}`;
+      label.textContent = opt.label;
+      label.style.cssText = `color: ${opt.color}; font-size: 12px; cursor: pointer;`;
+      
+      checkDiv.appendChild(checkbox);
+      checkDiv.appendChild(label);
+      filtersDiv.appendChild(checkDiv);
+    });
+
+    settingsContent.appendChild(filtersDiv);
+
+    // Divider
+    const divider2 = document.createElement("div");
+    divider2.style.cssText = "border-top: 1px solid #333; margin: 10px 0;";
+    settingsContent.appendChild(divider2);
 
     // Additional settings can go here
     const placeholderDiv = document.createElement("div");

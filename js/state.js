@@ -22,7 +22,14 @@ export const state = {
   log: [],
   autoRestartHealthPercent: 100,
   waitingToRespawn: false,
-  highestUnlockedZone: 1
+  highestUnlockedZone: 1,
+  logFilters: {
+    healing: true,
+    damage_dealt: true,
+    damage_taken: true,
+    normal: true,
+    gold: true
+  }
 };
 
 export function nextHeroId() {
@@ -52,6 +59,13 @@ export function serializeState() {
     party: state.party.map(h => ({ ...h })),
     autoRestartHealthPercent: state.autoRestartHealthPercent,
     highestUnlockedZone: state.highestUnlockedZone,
+    logFilters: state.logFilters || {
+      healing: true,
+      damage_dealt: true,
+      damage_taken: true,
+      normal: true,
+      gold: true
+    },
     lastSavedAt: Date.now()
   };
 }
