@@ -193,6 +193,21 @@ function wireStartScreen(onContinue) {
 
   // Update button state on input change
   accountInputFinal.addEventListener("input", updateStartButtonState);
+  // Allow pressing Enter to proceed when valid
+  accountInputFinal.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const account = accountInputFinal.value.trim();
+      if (!account) {
+        setStartError("Please enter an account name.");
+        return;
+      }
+      setStartError("");
+      state.accountName = account;
+      selectedClassKey = null;
+      onContinue();
+    }
+  });
 
   // Initialize button state
   updateStartButtonState();

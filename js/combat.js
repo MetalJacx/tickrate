@@ -28,69 +28,54 @@ function getUnlockedSkills(hero) {
   if (!cls?.skills) return [];
   return cls.skills.filter(s => hero.level >= s.level);
 }
+export function recalcPartyTotals() {
+  let totalMaxHP = 0;
+  let totalDPS = 0;
+  let totalHealing = 0;
 
-let skillBonusDamage = 0;
-let skillBonusHeal = 0;
-
-for (const hero of state.party) {
-  const skills = getUnlockedSkills(hero);
-
-  for (const sk of skills) {
-    if (hero.skillTimers[sk.key] == null) hero.skillTimers[sk.key] = 0;
-
-    // tick cooldown down
-    hero.skillTimers[sk.key] = Math.max(0, hero.skillTimers[sk.key] - 1);
-
-    // fire if ready
-    if (hero.skillTimers[sk.key] === 0) {
-      if (sk.type === "damage") skillBonusDamage += sk.amount;
-      if (sk.type === "heal") skillBonusHeal += sk.amount;
-
-      hero.skillTimers[sk.key] = sk.cooldownSeconds;
-    }
+  for (const h of state.party) {
+    totalMaxHP += h?.maxHP ?? 0;
+    totalDPS += h?.dps ?? 0;
+    totalHealing += h?.healing ?? 0;
   }
+
+  state.partyMaxHP = totalMaxHP;
+  if (state.partyHP == null) {
+    state.partyHP = totalMaxHP;
+  } else {
+    state.partyHP = Math.min(state.partyHP, totalMaxHP);
+  }
+
+  return { totalDPS, totalHealing };
 }
 
 export function heroLevelUpCost(hero) {
-  return Math.floor(20 * hero.level * (1 + state.zone * 0.4));
+  const base = 25;
+  const scaling = Math.floor(hero.level * 15);
+  return base + scaling;
 }
 
 export function applyHeroLevelUp(hero) {
-  const oldMax = hero.maxHP;
   hero.level += 1;
-  hero.maxHP = Math.floor(hero.maxHP * 1.25);
-  hero.dps = parseFloat((hero.dps * 1.25).toFixed(1));
-  hero.healing = parseFloat((hero.healing * 1.25).toFixed(1));
-
-  const delta = hero.maxHP - oldMax;
-  state.partyMaxHP += delta;
-  state.partyHP += delta;
-}
-
-export function recalcPartyTotals() {
-  let maxHP = 0, totalDPS = 0, totalHealing = 0;
-  for (const h of state.party) {
-    maxHP += h.maxHP;
-    totalDPS += h.dps;
-    totalHealing += h.healing;
+  // Simple scaling: +12% HP, +10% DPS, +10% Healing per level
+  hero.maxHP = Math.floor(hero.maxHP * 1.12);
+  hero.dps = hero.dps * 1.10;
+  hero.healing = hero.healing * 1.10;
+  // Reset skill cooldowns so new level feels responsive
+  if (hero.skillTimers) {
+    for (const key of Object.keys(hero.skillTimers)) {
+      hero.skillTimers[key] = 0;
+    }
   }
-  state.partyMaxHP = maxHP;
-  if (state.partyHP > maxHP) state.partyHP = maxHP;
-  if (state.partyHP === 0 && maxHP > 0) state.partyHP = maxHP;
-
-  return {
-    maxHP,
-    totalDPS: parseFloat(totalDPS.toFixed(1)),
-    totalHealing: parseFloat(totalHealing.toFixed(1))
-  };
 }
 
 function checkAccountLevelUp() {
   while (state.accountLevelXP >= state.accountLevelUpCost) {
     state.accountLevelXP -= state.accountLevelUpCost;
     state.accountLevel += 1;
-    state.accountLevelUpCost = Math.ceil(state.accountLevelUpCost * 1.15); // Costs increase by 15%
-    addLog(`Account leveled up to level ${state.accountLevel}!`, "gold");
+    // Increase next requirement progressively
+    state.accountLevelUpCost = Math.floor(state.accountLevelUpCost * 1.5);
+    addLog(`Account reaches level ${state.accountLevel}!`, "xp");
   }
 }
 
