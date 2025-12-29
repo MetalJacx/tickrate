@@ -1,4 +1,4 @@
-import { GAME_TICK_MS, AUTO_SAVE_EVERY_MS, MAX_OFFLINE_SECONDS } from "./defs.js";
+import { GAME_TICK_MS, AUTO_SAVE_EVERY_MS, MAX_OFFLINE_SECONDS, CLASS_DEFS } from "./defs.js";
 import { state, loadGame, saveGame, clearSave } from "./state.js";
 import { addLog } from "./util.js";
 import { createHero, spawnEnemy, gameTick } from "./combat.js";
@@ -42,7 +42,6 @@ async function start() {
       const clsKey = select.value;
 
       // Lazy import to avoid circular imports
-      const { CLASS_DEFS } = await import("./defs.js");
       const cls = CLASS_DEFS.find(c => c.key === clsKey);
       if (!cls) return;
 
