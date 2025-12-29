@@ -117,11 +117,18 @@ export function initSettings({ onShowSettings, onHideSettings }) {
         const reader = new FileReader();
         reader.onload = (event) => {
           try {
-            const saveData = event.target.result;
-            const [checksum, encoded] = saveData.split("|");
+            const saveData = event.target.result.trim();
+            const pipeIndex = saveData.indexOf("|");
+            
+            if (pipeIndex === -1) {
+              throw new Error("Invalid save file format (missing separator)");
+            }
+            
+            const checksum = saveData.substring(0, pipeIndex).trim();
+            const encoded = saveData.substring(pipeIndex + 1).trim();
             
             if (!checksum || !encoded) {
-              throw new Error("Invalid save file format");
+              throw new Error("Invalid save file format (empty parts)");
             }
             
             const json = base64Decode(encoded);
@@ -145,6 +152,7 @@ export function initSettings({ onShowSettings, onHideSettings }) {
             // Store temporarily in sessionStorage for reload
             sessionStorage.setItem("pendingImport", json);
           } catch (e) {
+            console.error("Import error:", e);
             showToast("Import failed: " + e.message, true);
             addLog("Import failed: " + e.message, "damage_taken");
           }
