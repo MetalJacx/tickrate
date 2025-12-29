@@ -144,20 +144,31 @@ button:hover:not(:disabled) {
   /* use flex sizing instead of percentage height to avoid browser differences */
   flex: 1;
   min-height: 0; /* critical for scroll inside flex containers */
-  overflow-y: auto;
+  overflow-y: scroll; /* changed from auto to scroll to ensure consistent behavior */
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch; /* iOS momentum scroll */
   font-size: 11px;
 }
 
-/* Hide scrollbars for the combat log but keep it scrollable */
-#log {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE/Edge legacy */
-}
+/* Style scrollbar to be minimal but visible for compatibility */
 #log::-webkit-scrollbar {
-  width: 0px; /* Chrome/Safari */
-  height: 0px;
+  width: 8px; /* thin scrollbar for Chrome/Safari */
+}
+#log::-webkit-scrollbar-track {
+  background: #181818;
+  border-radius: 4px;
+}
+#log::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 4px;
+}
+#log::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+/* Firefox - thin auto scrollbar */
+#log {
+  scrollbar-width: thin;
+  scrollbar-color: #444 #181818;
 }
 #recruitBox,
 #travelBox {
