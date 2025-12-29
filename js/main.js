@@ -1,5 +1,5 @@
 import { GAME_TICK_MS, AUTO_SAVE_EVERY_MS, MAX_OFFLINE_SECONDS} from "./defs.js";
-import { state, loadGame, saveGame, clearSave } from "./state.js";
+import { state, loadGame, saveGame, clearSave, serializeState } from "./state.js";
 import { addLog } from "./util.js";
 import { createHero, spawnEnemy, gameTick } from "./combat.js";
 import { initUI, renderAll } from "./ui.js";
@@ -269,6 +269,50 @@ function wireClassScreen(onConfirmed) {
 }
 
 function start() {
+  // Wire Export/Import buttons
+  document.getElementById("exportBtn").addEventListener("click", () => {
+    try {
+      const json = JSON.stringify(serializeState(), null, 2);
+      navigator.clipboard.writeText(json).then(() => {
+        addLog("Save exported to clipboard! Paste it somewhere safe.", "gold");
+        renderAll();
+      }).catch(() => {
+        // Fallback: show in a prompt
+        prompt("Copy this save data:", json);
+      });
+    } catch (e) {
+      addLog("Export failed: " + e.message, "damage_taken");
+      renderAll();
+    }
+  });
+
+  document.getElementById("importBtn").addEventListener("click", () => {
+    const json = prompt("Paste your save data here:");
+    if (!json) return;
+    try {
+      const data = JSON.parse(json);
+      // Validate basic structure
+      if (!data.accountName || !data.zone) {
+        throw new Error("Invalid save format");
+      }
+      // Load the data into state
+      Object.assign(state, data);
+      // Recalculate hero counter
+      const maxId = state.party.reduce((m, h) => Math.max(m, h.id || 0), 0);
+      // Note: heroIdCounter is not exported, so we can't update it here cleanly
+      // but it will auto-adjust on next hero creation
+      
+      saveGame(); // persist to localStorage
+      addLog("Save imported successfully! Reloading...", "gold");
+      renderAll();
+      // Refresh to ensure clean state
+      setTimeout(() => location.reload(), 1000);
+    } catch (e) {
+      addLog("Import failed: " + e.message, "damage_taken");
+      renderAll();
+    }
+  });
+
   // Init UI handlers for the game screen buttons (recruit/travel etc.)
   initUI({
     onRecruit: () => {
