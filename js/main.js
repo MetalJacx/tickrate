@@ -4,6 +4,7 @@ import { addLog } from "./util.js";
 import { createHero, spawnEnemy, gameTick } from "./combat.js";
 import { initUI, renderAll } from "./ui.js";
 import { CLASSES, getClassDef } from "./classes/index.js"
+import { initSettings } from "./settings.js";
 
 let tickTimer = null;
 let saveTimer = null;
@@ -284,52 +285,13 @@ function wireClassScreen(onConfirmed) {
 }
 
 function start() {
-  // Wire Export/Import buttons
-  document.getElementById("exportBtn").addEventListener("click", () => {
-    try {
-      const json = JSON.stringify(serializeState(), null, 2);
-      navigator.clipboard.writeText(json).then(() => {
-        showToast("✓ Save exported to clipboard!");
-        addLog("Save exported to clipboard! Paste it somewhere safe.", "gold");
-        renderAll();
-      }).catch(() => {
-        // Fallback: show in a prompt
-        prompt("Copy this save data:", json);
-        showToast("Save data shown in prompt");
-      });
-    } catch (e) {
-      showToast("Export failed: " + e.message, true);
-      addLog("Export failed: " + e.message, "damage_taken");
-      renderAll();
-    }
-  });
-
-  document.getElementById("importBtn").addEventListener("click", () => {
-    const json = prompt("Paste your save data here:");
-    if (!json) return;
-    try {
-      const data = JSON.parse(json);
-      // Validate basic structure
-      if (!data.accountName || !data.zone) {
-        throw new Error("Invalid save format");
-      }
-      // Load the data into state
-      Object.assign(state, data);
-      // Recalculate hero counter
-      const maxId = state.party.reduce((m, h) => Math.max(m, h.id || 0), 0);
-      // Note: heroIdCounter is not exported, so we can't update it here cleanly
-      // but it will auto-adjust on next hero creation
-      
-      saveGame(); // persist to localStorage
-      showToast("✓ Save imported! Reloading...");
-      addLog("Save imported successfully! Reloading...", "gold");
-      renderAll();
-      // Refresh to ensure clean state
-      setTimeout(() => location.reload(), 1000);
-    } catch (e) {
-      showToast("Import failed: " + e.message, true);
-      addLog("Import failed: " + e.message, "damage_taken");
-      renderAll();
+  // Wire Export/Import buttons via Settings module
+  initSettings({
+    onShowSettings: () => {
+      // Pause game loop when settings open (optional)
+    },
+    onHideSettings: () => {
+      // Resume game loop when settings close (optional)
     }
   });
 

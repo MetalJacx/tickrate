@@ -3,6 +3,7 @@ import Zone2 from "./zone2.js";
 import Zone3 from "./zone3.js";
 
 export const ZONES = [Zone1, Zone2, Zone3];
+export const MAX_ZONE = ZONES.length;
 
 export function getZoneDef(zoneNumber) {
   return ZONES.find(z => z.zoneNumber === zoneNumber);

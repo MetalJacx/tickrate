@@ -43,7 +43,19 @@
       <span>Gold: <span id="goldSpan">0</span></span>
       <span>Total XP: <span id="xpSpan">0</span></span>
     </div>
+    <button id="settingsBtn" style="background:none;border:none;color:#eee;cursor:pointer;font-size:20px;padding:4px;" title="Settings">⚙️</button>
   </header>
+
+  <!-- Settings Modal -->
+  <div id="settingsModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9998;">
+    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:90%;max-width:400px;background:#181818;border:1px solid #333;border-radius:10px;padding:20px;box-sizing:border-box;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div style="font-size:18px;font-weight:bold;">Settings</div>
+        <button id="settingsCloseBtn" style="background:none;border:none;color:#eee;cursor:pointer;font-size:20px;padding:0;width:24px;height:24px;">✕</button>
+      </div>
+      <div id="settingsContent" style="display:flex;flex-direction:column;gap:10px;"></div>
+    </div>
+  </div>
 
   <main>
     <section id="partyPanel" class="panel">
@@ -102,11 +114,13 @@
       </div>
 
       <div style="margin-top:8px;padding:8px;background:#111;border-radius:6px;border:1px solid #333;">
-        <div style="font-size:11px;color:#aaa;margin-bottom:6px;font-weight:bold;">SAVE MANAGEMENT</div>
-        <div style="display:flex;gap:6px;">
-          <button id="exportBtn" style="flex:1;font-size:11px;padding:6px;">Export Save</button>
-          <button id="importBtn" style="flex:1;font-size:11px;padding:6px;">Import Save</button>
+        <div style="font-size:11px;color:#aaa;margin-bottom:6px;font-weight:bold;">AUTO-RESTART HEALTH</div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input id="healthThresholdInput" type="range" min="0" max="100" value="100" 
+            style="flex:1;cursor:pointer;">
+          <span id="healthThresholdLabel" style="font-size:12px;min-width:40px;text-align:right;">100%</span>
         </div>
+        <div style="font-size:10px;color:#777;margin-top:4px;">Next pull when health reaches this %</div>
       </div>
 
       <button id="resetBtn" style="width:100%;margin-top:8px;">Reset Progress</button>

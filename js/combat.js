@@ -1,6 +1,6 @@
 import { state, nextHeroId } from "./state.js";
 import { getClassDef, CLASS_DEFS } from "./classes/index.js";
-import { getZoneDef, getEnemyForZone } from "./zones/index.js";
+import { getZoneDef, getEnemyForZone, MAX_ZONE } from "./zones/index.js";
 import { addLog, randInt } from "./util.js";
 import { SLOT_UNLOCKS } from "./defs.js";
 
@@ -150,6 +150,10 @@ export function canTravel() {
 
 export function travelToNextZone() {
   if (!canTravel()) return;
+  if (state.zone >= MAX_ZONE) {
+    addLog("You have reached the end of the known world.", "damage_taken");
+    return;
+  }
   state.zone += 1;
   state.killsThisZone = 0;
   addLog(`You travel deeper into the wilds to Zone ${state.zone}.`);
