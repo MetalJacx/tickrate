@@ -1,5 +1,6 @@
 import { state, nextHeroId } from "./state.js";
 import { getClassDef, CLASS_DEFS } from "./classes/index.js";
+import { getZoneDef, getEnemyForZone } from "./zones/index.js";
 import { addLog, randInt } from "./util.js";
 import { SLOT_UNLOCKS } from "./defs.js";
 
@@ -93,23 +94,24 @@ function checkAccountLevelUp() {
   }
 }
 
-function pickEnemyNameForZone(zone) {
-  if (zone <= 2) return ["Decaying Skeleton", "Gnoll Scout", "Young Orc", "Rabid Wolf"][randInt(4)];
-  if (zone <= 4) return ["Skeletal Knight", "Orc Centurion", "Dark Wolf", "Bloodsaber Acolyte"][randInt(4)];
-  if (zone <= 6) return ["Plague Knight", "Shadow Assassin", "Ghoul", "Corrupted Treant"][randInt(4)];
-  return ["Ancient Lich", "Avatar of Rot", "Eternal Horror", "Doomcaller"][randInt(4)];
-}
-
 export function spawnEnemy() {
   const z = state.zone;
   const level = z + randInt(3);
-  const maxHP = 60 + z * 15 + level * 10;
-  const dps = 4 + z * 2 + level;
-  const name = pickEnemyNameForZone(z);
+  
+  // Get enemy definition from zone
+  const enemyDef = getEnemyForZone(z);
+  if (!enemyDef) {
+    addLog("No enemies in this zone!");
+    return;
+  }
+  
+  // Scale enemy stats based on level
+  const maxHP = enemyDef.baseHP + level * 10;
+  const dps = enemyDef.baseDPS + level;
 
-  state.currentEnemy = { name, level, maxHP, hp: maxHP, dps };
+  state.currentEnemy = { name: enemyDef.name, level, maxHP, hp: maxHP, dps };
   state.waitingToRespawn = false;
-  addLog(`A level ${level} ${name} appears in Zone ${z}.`);
+  addLog(`A level ${level} ${enemyDef.name} appears in Zone ${z}.`);
 }
 
 function checkSlotUnlocks() {
@@ -241,15 +243,19 @@ export function gameTick() {
     }
   }
 
-  // 3) Apply damage to enemy
-  const totalDamage = totals.totalDPS + skillBonusDamage;
+  // 3) Apply damage to enemy (with variance)
+  const baseTotalDamage = totals.totalDPS + skillBonusDamage;
+  const variance = baseTotalDamage * 0.2; // ±20% variance
+  const totalDamage = Math.max(1, baseTotalDamage - variance + Math.random() * (variance * 2));
   if (totalDamage > 0) {
     enemy.hp = Math.max(0, enemy.hp - totalDamage);
     addLog(`Party attacks for ${totalDamage.toFixed(1)} damage!`, "damage_dealt");
   }
 
-  // 4) Apply enemy damage to party, reduced by healing
-  const rawDamage = enemy.dps;
+  // 4) Apply enemy damage to party, reduced by healing (with variance)
+  const baseRawDamage = enemy.dps;
+  const enemyVariance = baseRawDamage * 0.2; // ±20% variance
+  const rawDamage = Math.max(1, baseRawDamage - enemyVariance + Math.random() * (enemyVariance * 2));
   const effectiveHealing = totals.totalHealing + skillBonusHeal;
   const mitigated = Math.max(rawDamage - effectiveHealing, 0);
 
