@@ -62,7 +62,8 @@ export function renderLog() {
     let color = "#eee"; // default white
     
     if (typeof entry === "string") {
-      // backward compatibility with old string logs
+      // backward compatibility with old string logs: infer color by keywords
+      color = inferLogColor(entry);
       div.textContent = entry;
       div.style.color = color;
     } else {
@@ -95,6 +96,15 @@ export function renderLog() {
     
     logEl.appendChild(div);
   }
+}
+
+function inferLogColor(text) {
+  const t = text.toLowerCase();
+  if (t.includes("regenerates")) return "#8ef5a2"; // passive regen
+  if (t.includes("heals") || t.includes("healing")) return "#51cf66"; // active healing
+  if (t.includes("+xp") || t.includes("+ gold") || t.includes("+gold")) return "#ffd700"; // rewards
+  if (t.includes("deals") && t.includes("damage") && !t.includes("attacks")) return "#ff6b6b"; // enemy damage
+  return "#eee"; // default
 }
 
 export function renderEnemy() {
