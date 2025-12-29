@@ -9,3 +9,11 @@ export function addLog(msg, type = "normal") {
 export function randInt(maxExclusive) {
   return Math.floor(Math.random() * maxExclusive);
 }
+
+export function serializeState() {
+  return JSON.stringify(state);
+}
+
+export function loadState(json) {
+  Object.assign(state, JSON.parse(json));
+}
