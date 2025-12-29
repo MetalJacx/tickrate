@@ -6,111 +6,63 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<header>
-  <div>
+
+<!-- START SCREEN -->
+<div id="startScreen" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#111;">
+  <div style="width:420px;max-width:95vw;background:#181818;border:1px solid #333;border-radius:10px;padding:16px;">
+    <div style="font-size:28px;font-weight:bold;margin-bottom:4px;">Tickrate</div>
+    <div style="color:#aaa;font-size:12px;margin-bottom:14px;">A classic MMO-inspired idle party game</div>
+
+    <div style="margin-bottom:10px;">
+      <label style="display:block;font-size:12px;margin-bottom:4px;">Account Name</label>
+      <input id="accountNameInput" type="text" maxlength="24"
+        style="width:100%;padding:8px;border-radius:6px;border:1px solid #555;background:#111;color:#eee;">
+    </div>
+
+    <div style="margin-bottom:10px;">
+      <label style="display:block;font-size:12px;margin-bottom:4px;">Character Name</label>
+      <input id="characterNameInput" type="text" maxlength="24"
+        style="width:100%;padding:8px;border-radius:6px;border:1px solid #555;background:#111;color:#eee;">
+    </div>
+
+    <div style="margin-bottom:14px;">
+      <label style="display:block;font-size:12px;margin-bottom:4px;">Starting Class</label>
+      <select id="startingClassSelect"
+        style="width:100%;padding:8px;border-radius:6px;border:1px solid #555;background:#111;color:#eee;"></select>
+    </div>
+
+    <button id="createCharacterBtn"
+      style="width:100%;padding:10px;border-radius:8px;border:1px solid #666;background:#444;color:#eee;cursor:pointer;">
+      Create Character
+    </button>
+
+    <div id="startError" style="margin-top:10px;color:#ff6b6b;font-size:12px;display:none;"></div>
+
+    <div style="margin-top:12px;color:#777;font-size:11px;">
+      Tip: progress is saved in your browser automatically.
+    </div>
+  </div>
+</div>
+
+<!-- GAME SCREEN -->
+<div id="gameScreen" style="display:none;">
+  <!-- Paste your existing header + main UI here -->
+  <header>
     <h1>Tickrate</h1>
-    <div class="small-note">A ClassicMMO-inspired idle party game</div>
-  </div>
-  <div class="stats">
-    <span>Zone: <span id="zoneSpan">1</span></span>
-    <span>Gold: <span id="goldSpan">0</span></span>
-    <span>Total XP: <span id="xpSpan">0</span></span>
-  </div>
-</header>
-<main>
-  <section id="partyPanel" class="panel">
-    <h2>Party</h2>
-    <div class="small-note">
-      Start with one adventurer. As you clear tougher zones, more party slots unlock.
+    <div class="stats">
+      <span>Zone: <span id="zoneSpan">1</span></span>
+      <span>Gold: <span id="goldSpan">0</span></span>
+      <span>Total XP: <span id="xpSpan">0</span></span>
     </div>
-    <div id="partyHPBox" style="margin-top:6px;margin-bottom:6px;">
-      <div>Party HP</div>
-      <div class="bar-bg" id="partyHPBar">
-        <div class="bar-fill" id="partyHPFill"></div>
-      </div>
-      <div class="bar-label" id="partyHPLabel">0 / 0</div>
-    </div>
-    <div id="partyContainer"></div>
-  </section>
+  </header>
 
-  <section id="battlePanel" class="panel">
-    <h2>Battle</h2>
-    <div id="enemyBox">
-      <div id="enemyName">No enemy</div>
-      <div>Enemy HP</div>
-      <div class="bar-bg">
-        <div class="bar-fill" id="enemyHPFill"></div>
-      </div>
-      <div class="bar-label" id="enemyHPLabel">0 / 0</div>
-      <div style="margin-top:4px;font-size:12px;">
-        <span>DPS to Party: <span id="enemyDpsSpan">0</span></span>
-      </div>
-    </div>
-    <div style="font-size:12px;margin-bottom:4px;">
-      <span>Party DPS: <span id="partyDpsSpan">0</span></span> •
-      <span>Party Healing: <span id="partyHealSpan">0</span></span> •
-      <span>Kills this Zone: <span id="killsSpan">0</span>/<span id="killsNeedSpan">10</span></span>
-    </div>
-    <div id="log"></div>
-  </section>
-
-  <section id="controlPanel" class="panel">
-    <h2>Campfire & Controls</h2>
-
-    <div id="profileBox" style="border:1px solid #333;border-radius:4px;padding:6px;margin-bottom:8px;background:#202020;">
-      <div><strong>Character Setup</strong></div>
-
-      <div id="profileSummary" style="display:none; font-size:12px; margin-top:6px;">
-        Account: <span id="accountNameSpan"></span><br>
-        Character: <span id="characterNameSpan"></span><br>
-        Class: <span id="characterClassSpan"></span>
-      </div>
-    
-      <div id="profileForm" style="margin-top:6px;">
-        <div style="margin-bottom:6px;">
-          <label style="display:block;font-size:12px;">Account Name</label>
-          <input id="accountNameInput" type="text" maxlength="24" style="width:100%;padding:4px;border-radius:4px;border:1px solid #555;background:#111;color:#eee;">
-        </div>
-    
-        <div style="margin-bottom:6px;">
-          <label style="display:block;font-size:12px;">Character Name</label>
-          <input id="characterNameInput" type="text" maxlength="24" style="width:100%;padding:4px;border-radius:4px;border:1px solid #555;background:#111;color:#eee;">
-        </div>
-    
-        <div style="margin-bottom:6px;">
-          <label style="display:block;font-size:12px;">Starting Class</label>
-          <select id="startingClassSelect" style="width:100%;padding:4px;"></select>
-        </div>
-    
-        <button id="createCharacterBtn">Create Character</button>
-        <div class="small-note" style="margin-top:6px;">You must create a character before the game starts.</div>
-      </div>
-    </div>
-
-
-    <div id="recruitBox">
-      <div><strong>Recruit Adventurer</strong> (Slots: <span id="slotsUsedSpan">0</span>/<span id="slotsMaxSpan">1</span>)</div>
-      <div style="margin-top:4px;">
-        <select id="recruitSelect"></select>
-        <button id="recruitBtn">Recruit</button>
-      </div>
-      <div class="small-note" id="recruitCostInfo"></div>
-    </div>
-
-    <div id="travelBox">
-      <div><strong>Travel to Next Zone</strong></div>
-      <div class="small-note">
-        Tougher foes, better XP & gold. Unlocks more party slots at higher zones.
-      </div>
-      <button id="travelBtn" disabled>Travel (Zone <span id="nextZoneSpan">2</span>)</button>
-    </div>
-
-    <div class="small-note">
-      The game advances automatically each second. Leave it running and watch your party grind.
-      Upgrade your heroes to push into higher zones.
-    </div>
-  </section>
-</main>
+  <main>
+    <!-- your existing three panels exactly as before -->
+    <!-- Party panel / Battle panel / Control panel -->
+    <!-- (No need for the profileBox anymore since startScreen replaces it) -->
+    ... your existing content ...
+  </main>
+</div>
 
 <script type="module" src="js/main.js"></script>
 </body>
