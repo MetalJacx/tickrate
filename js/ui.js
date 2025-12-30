@@ -341,7 +341,8 @@ export function renderParty() {
       const cost = heroLevelUpCost(hero);
       btn.textContent = `Level Up (${cost} gold)`;
       btn.disabled = state.gold < cost || hero.isDead;
-      btn.addEventListener("click", function () {
+      btn.addEventListener("click", function (e) {
+        e.stopPropagation();
         if (state.gold >= cost && !hero.isDead) {
           state.gold -= cost;
           applyHeroLevelUp(hero);
