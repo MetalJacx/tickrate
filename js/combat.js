@@ -222,7 +222,7 @@ function onPartyWipe() {
   state.partyHP = Math.floor(state.partyMaxHP * 0.5);
   addLog(`You lost ${lostGold} gold and must rebuild your momentum in this zone.`, "damage_taken");
   
-  state.currentEnemy = null;
+  state.currentEnemies = [];
   state.waitingToRespawn = true;
 }
 
@@ -486,7 +486,7 @@ export function gameTick() {
   }
 
   // 4) All living enemies attack party
-  const livingMembers = state.party.filter(h => !h.isDead);
+  let livingMembers = state.party.filter(h => !h.isDead);
   if (livingMembers.length > 0) {
     for (const enemy of state.currentEnemies) {
       const baseRawDamage = enemy.dps;
@@ -521,8 +521,15 @@ export function gameTick() {
         addLog(`${target.name} has been defeated!`, "damage_taken");
       }
     }
+    // Re-evaluate living members after attacks; if none left, wipe ends combat
+    livingMembers = state.party.filter(h => !h.isDead);
+    if (livingMembers.length === 0) {
+      onPartyWipe();
+      return;
+    }
   } else if (state.currentEnemies.length > 0) {
     onPartyWipe();
+    return;
   }
 
   checkSlotUnlocks();
