@@ -114,7 +114,7 @@ export function spawnEnemy() {
   const maxHP = enemyDef.baseHP + level * 10;
   const dps = enemyDef.baseDPS + level;
 
-  state.currentEnemy = {
+  const enemy = {
     name: enemyDef.name,
     level,
     maxHP,
@@ -122,8 +122,48 @@ export function spawnEnemy() {
     dps,
     debuffs: enemyDef.debuffs || []
   };
+  
+  state.currentEnemies = [enemy];
   state.waitingToRespawn = false;
   addLog(`A level ${level} ${enemyDef.name} appears in Zone ${z}.`);
+  
+  // Check for immediate reinforcement chance
+  checkForReinforcement();
+}
+
+function spawnEnemyToList() {
+  const z = state.zone;
+  const level = z + randInt(3);
+  
+  // Get enemy definition from zone
+  const enemyDef = getEnemyForZone(z);
+  if (!enemyDef) return;
+  
+  // Scale enemy stats based on level
+  const maxHP = enemyDef.baseHP + level * 10;
+  const dps = enemyDef.baseDPS + level;
+
+  const enemy = {
+    name: enemyDef.name,
+    level,
+    maxHP,
+    hp: maxHP,
+    dps,
+    debuffs: enemyDef.debuffs || []
+  };
+  
+  state.currentEnemies.push(enemy);
+  addLog(`Oh no! Your luck is not on your side—another ${enemyDef.name} takes notice of your presence!`, "damage_taken");
+}
+
+function checkForReinforcement() {
+  // Each enemy has 5% chance per tick to call reinforcements (when in combat)
+  if (state.currentEnemies.length > 0) {
+    const reinforcementChance = 0.05;
+    if (Math.random() < reinforcementChance) {
+      spawnEnemyToList();
+    }
+  }
 }
 
 function checkSlotUnlocks() {
@@ -245,6 +285,11 @@ export function gameTick() {
     }
   }
 
+  // Check for reinforcements if in combat
+  if (state.currentEnemies.length > 0) {
+    checkForReinforcement();
+  }
+
   const totals = recalcPartyTotals();
   
   // 1) Regenerate resources for all living members
@@ -276,7 +321,7 @@ export function gameTick() {
   }
   
   // Check if we should respawn
-  if (state.waitingToRespawn && !state.currentEnemy) {
+  if (state.waitingToRespawn && state.currentEnemies.length === 0) {
     if (state.partyMaxHP > 0) {
       const healthPercent = (state.partyHP / state.partyMaxHP) * 100;
       if (healthPercent >= state.autoRestartHealthPercent) {
@@ -291,6 +336,12 @@ export function gameTick() {
 
   // Check if any party member is damaged (for heal checks)
   const anyDamaged = state.party.some(h => !h.isDead && h.health < h.maxHP);
+  
+  // If no enemies (out of combat), return early
+  if (state.currentEnemies.length === 0) {
+    checkSlotUnlocks();
+    return;
+  }
 
   // 3) Process skills and calculate bonuses
   let skillBonusDamage = 0;
@@ -311,8 +362,8 @@ export function gameTick() {
 
       // Fire if ready
       if (hero.skillTimers[sk.key] === 0) {
-        // If this is a damage skill but no enemy is present, hold fire until combat starts
-        if (sk.type === "damage" && !enemy) {
+        // If this is a damage skill but no enemies are present, hold fire until combat starts
+        if (sk.type === "damage" && state.currentEnemies.length === 0) {
           continue;
         }
         // Check resource availability
@@ -400,63 +451,75 @@ export function gameTick() {
     }
   }
 
-  // If no enemy (out of combat), stop after processing utility/heal skills
-  if (!enemy) {
+  // If no enemies (out of combat), stop after processing utility/heal skills
+  if (state.currentEnemies.length === 0) {
     checkSlotUnlocks();
     return;
   }
 
-  // 3) Apply damage to enemy (with variance)
+  // 3) Apply damage to main enemy (first in list)
+  const mainEnemy = state.currentEnemies[0];
+  if (!mainEnemy) {
+    checkSlotUnlocks();
+    return;
+  }
   const baseTotalDamage = totals.totalDPS + skillBonusDamage;
   const variance = baseTotalDamage * 0.2; // ±20% variance
   const totalDamage = Math.max(1, baseTotalDamage - variance + Math.random() * (variance * 2));
   if (totalDamage > 0) {
-    enemy.hp = Math.max(0, enemy.hp - totalDamage);
-    addLog(`Party attacks for ${totalDamage.toFixed(1)} damage!`, "damage_dealt");
+    mainEnemy.hp = Math.max(0, mainEnemy.hp - totalDamage);
+    addLog(`Party attacks ${mainEnemy.name} for ${totalDamage.toFixed(1)} damage!`, "damage_dealt");
   }
 
-  // 4) Apply enemy damage to living party members
-  const baseRawDamage = enemy.dps;
-  const enemyVariance = baseRawDamage * 0.2; // ±20% variance
-  const rawDamage = Math.max(1, baseRawDamage - enemyVariance + Math.random() * (enemyVariance * 2));
-  
-  // Get living members
+  // Check if main enemy is killed
+  if (mainEnemy.hp <= 0) {
+    onEnemyKilled(mainEnemy, totalDamage);
+    state.currentEnemies.shift(); // Remove main enemy from list
+    
+    // If no more enemies, trigger respawn
+    if (state.currentEnemies.length === 0) {
+      state.waitingToRespawn = true;
+      return;
+    }
+  }
+
+  // 4) All living enemies attack party
   const livingMembers = state.party.filter(h => !h.isDead);
   if (livingMembers.length > 0) {
-    // Single-target damage: pick one living member to take the full hit
-    const target = livingMembers[randInt(livingMembers.length)];
-    target.health = Math.max(0, target.health - rawDamage);
-    addLog(`${enemy.name} deals ${rawDamage.toFixed(1)} damage to ${target.name}!`, "damage_taken");
+    for (const enemy of state.currentEnemies) {
+      const baseRawDamage = enemy.dps;
+      const enemyVariance = baseRawDamage * 0.2; // ±20% variance
+      const rawDamage = Math.max(1, baseRawDamage - enemyVariance + Math.random() * (enemyVariance * 2));
+      
+      // Single-target damage: pick one living member to take the hit
+      const target = livingMembers[randInt(livingMembers.length)];
+      target.health = Math.max(0, target.health - rawDamage);
+      addLog(`${enemy.name} deals ${rawDamage.toFixed(1)} damage to ${target.name}!`, "damage_taken");
 
-    // Apply any enemy-sourced debuffs defined on the enemy
-    if (enemy.debuffs && enemy.debuffs.length) {
-      for (const debuff of enemy.debuffs) {
-        if (debuff.type === "weaken_damage") {
-          const chance = debuff.chance ?? 1;
-          if (Math.random() < chance) {
-            const duration = debuff.durationTicks ?? 5;
-            const amount = debuff.amount ?? 1;
-            target.tempDamageDebuffTicks = duration;
-            target.tempDamageDebuffAmount = amount;
-            addLog(`${target.name} is weakened! -${amount} damage for ${duration} ticks.`, "damage_taken");
+      // Apply any enemy-sourced debuffs defined on the enemy
+      if (enemy.debuffs && enemy.debuffs.length) {
+        for (const debuff of enemy.debuffs) {
+          if (debuff.type === "weaken_damage") {
+            const chance = debuff.chance ?? 1;
+            if (Math.random() < chance) {
+              const duration = debuff.durationTicks ?? 5;
+              const amount = debuff.amount ?? 1;
+              target.tempDamageDebuffTicks = duration;
+              target.tempDamageDebuffAmount = amount;
+              addLog(`${target.name} is weakened! -${amount} damage for ${duration} ticks.`, "damage_taken");
+            }
           }
         }
       }
+
+      // Check for death on the target
+      if (target.health <= 0 && !target.isDead) {
+        target.isDead = true;
+        target.deathTime = Date.now();
+        addLog(`${target.name} has been defeated!`, "damage_taken");
+      }
     }
-
-    // Check for death on the target
-    if (target.health <= 0 && !target.isDead) {
-      target.isDead = true;
-      target.deathTime = Date.now();
-      addLog(`${target.name} has been defeated!`, "damage_taken");
-    }
-
-    // No pooled healing here; direct heals are applied when cast
-  }
-
-  if (enemy.hp <= 0) {
-    onEnemyKilled(enemy, totalDamage);
-  } else if (livingMembers.length === 0) {
+  } else if (state.currentEnemies.length > 0) {
     onPartyWipe();
   }
 

@@ -19,7 +19,7 @@ export const state = {
   party: [],
   partyMaxHP: 0,
   partyHP: 0,
-  currentEnemy: null,
+  currentEnemies: [],
   log: [],
   autoRestartHealthPercent: 100,
   waitingToRespawn: false,
@@ -57,6 +57,7 @@ export function serializeState() {
     partySlotsUnlocked: state.partySlotsUnlocked,
     partyHP: state.partyHP,
     partyMaxHP: state.partyMaxHP,
+    currentEnemies: state.currentEnemies.map(e => ({ ...e })),
     party: state.party.map(h => ({ ...h })),
     autoRestartHealthPercent: state.autoRestartHealthPercent,
     highestUnlockedZone: state.highestUnlockedZone,
@@ -151,8 +152,8 @@ export function loadGame() {
     const maxId = state.party.reduce((m, h) => Math.max(m, h.id || 0), 0);
     bumpHeroIdCounterToAtLeast(maxId + 1);
 
-    // enemy will be respawned after load
-    state.currentEnemy = null;
+    // enemies will be respawned after load
+    state.currentEnemies = [];
 
     return { loaded: true, lastSavedAt: data.lastSavedAt ?? null };
   } catch (e) {

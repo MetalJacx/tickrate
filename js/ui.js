@@ -105,25 +105,78 @@ function inferLogColor(text) {
 }
 
 export function renderEnemy() {
-  const e = state.currentEnemy;
+  const enemies = state.currentEnemies || [];
+  const container = document.getElementById("battleContainer");
+  
+  if (!container) return;
+  
+  // Clear battle info (keep structure, update content)
   const nameEl = document.getElementById("enemyName");
-  const hpFill = document.getElementById("enemyHPFill");
-  const hpLabel = document.getElementById("enemyHPLabel");
   const dpsSpan = document.getElementById("enemyDpsSpan");
-
-  if (!e) {
+  
+  if (enemies.length === 0) {
     nameEl.textContent = "No enemy";
-    hpFill.style.width = "0%";
-    hpLabel.textContent = "0 / 0";
     dpsSpan.textContent = "0";
+    
+    // Clear all enemy HP bars
+    const hpBars = container.querySelectorAll(".enemy-hp-bar");
+    hpBars.forEach(bar => bar.remove());
     return;
   }
 
-  nameEl.textContent = `${e.name} (Lv ${e.level})`;
-  const pct = e.hp <= 0 ? 0 : Math.max(0, Math.min(100, (e.hp / e.maxHP) * 100));
-  hpFill.style.width = pct + "%";
-  hpLabel.textContent = `${Math.max(0, e.hp.toFixed(1))} / ${e.maxHP.toFixed(1)}`;
-  dpsSpan.textContent = e.dps.toFixed(1);
+  // Show main enemy name and total DPS
+  const mainEnemy = enemies[0];
+  nameEl.textContent = `${mainEnemy.name} (Lv ${mainEnemy.level})`;
+  
+  // Calculate total enemy DPS
+  const totalDPS = enemies.reduce((sum, e) => sum + e.dps, 0);
+  dpsSpan.textContent = totalDPS.toFixed(1);
+
+  // Render health bars for all enemies
+  let hpBarContainer = document.getElementById("enemyHPBarsContainer");
+  if (!hpBarContainer) {
+    hpBarContainer = document.createElement("div");
+    hpBarContainer.id = "enemyHPBarsContainer";
+    hpBarContainer.style.cssText = "margin-top: 8px;";
+    const dpsLabel = document.getElementById("enemyDpsSpan").parentElement;
+    dpsLabel.parentElement.insertBefore(hpBarContainer, dpsLabel.nextSibling);
+  }
+  hpBarContainer.innerHTML = "";
+
+  for (let i = 0; i < enemies.length; i++) {
+    const e = enemies[i];
+    
+    const wrapper = document.createElement("div");
+    wrapper.className = "enemy-hp-bar";
+    wrapper.style.cssText = "margin-top: 6px;";
+    
+    const label = document.createElement("div");
+    label.style.cssText = "font-size:10px;color:#aaa;margin-bottom:2px;";
+    label.textContent = `${e.name}: ${Math.max(0, e.hp.toFixed(1))} / ${e.maxHP.toFixed(1)}`;
+    
+    const bar = document.createElement("div");
+    bar.style.cssText = `
+      background: #222;
+      border-radius: 4px;
+      height: 10px;
+      overflow: hidden;
+      border: 1px solid #444;
+    `;
+    
+    const pct = e.hp <= 0 ? 0 : Math.max(0, Math.min(100, (e.hp / e.maxHP) * 100));
+    const fill = document.createElement("div");
+    fill.style.cssText = `
+      width: ${pct}%;
+      height: 100%;
+      background: #ef4444;
+      transition: width 0.1s;
+    `;
+    bar.appendChild(fill);
+    
+    wrapper.appendChild(label);
+    wrapper.appendChild(bar);
+    hpBarContainer.appendChild(wrapper);
+  }
 }
 
 export function renderParty() {
