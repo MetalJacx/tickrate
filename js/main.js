@@ -78,7 +78,14 @@ function startLoops({ lastSavedAt }) {
     addLog(`SYSTEM: ${state.characterName} ${symbol} ${cls?.name} begins the grind.`);
   }
 
-  spawnEnemy();
+  // Only spawn enemy if no party members are dead
+  const anyDead = state.party.some(h => h.isDead);
+  if (!anyDead) {
+    spawnEnemy();
+  } else {
+    state.waitingToRespawn = true;
+    addLog("Party members are recovering. Combat will resume after revival.", "normal");
+  }
 
   if (lastSavedAt) {
     const secondsOffline = Math.floor((Date.now() - lastSavedAt) / 1000);
