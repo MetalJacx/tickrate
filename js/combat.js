@@ -326,6 +326,9 @@ export function gameTick() {
     const mitigatedTotal = Math.max(0, rawDamage - effectiveHealing);
     const damagePerMember = mitigatedTotal / livingMembers.length;
     
+    // Always show what the enemy is attempting
+    addLog(`${enemy.name} attacks for ${rawDamage.toFixed(1)} damage!`, "damage_taken");
+    
     if (mitigatedTotal > 0) {
       // Distribute damage across living members
       for (const hero of livingMembers) {
@@ -338,7 +341,7 @@ export function gameTick() {
           addLog(`${hero.name} has been defeated!`, "damage_taken");
         }
       }
-      addLog(`${enemy.name} deals ${damagePerMember.toFixed(1)} damage to each member!`, "damage_taken");
+      addLog(`Party takes ${damagePerMember.toFixed(1)} damage per member!`, "damage_taken");
     } else if (effectiveHealing > rawDamage) {
       const healed = (effectiveHealing - rawDamage) * 0.3;
       for (const hero of livingMembers) {
