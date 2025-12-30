@@ -340,27 +340,35 @@ export function gameTick() {
 
   const totals = recalcPartyTotals();
   
+  // Determine if in combat (affects regen rates)
+  const inCombat = state.currentEnemies.length > 0;
+  
   // 1) Regenerate resources for all living members
   for (const hero of state.party) {
     if (hero.isDead) continue;
     
-    if (hero.manaRegenPerTick && hero.mana < hero.maxMana) {
-      hero.mana = Math.min(hero.maxMana, hero.mana + hero.manaRegenPerTick);
+    // Apply regen rates: full out of combat, 1/3 in combat
+    const manaRegenRate = inCombat ? hero.manaRegenPerTick / 3 : hero.manaRegenPerTick;
+    const enduranceRegenRate = inCombat ? hero.enduranceRegenPerTick / 3 : hero.enduranceRegenPerTick;
+    
+    if (manaRegenRate && hero.mana < hero.maxMana) {
+      hero.mana = Math.min(hero.maxMana, hero.mana + manaRegenRate);
     }
-    if (hero.enduranceRegenPerTick && hero.endurance < hero.maxEndurance) {
-      hero.endurance = Math.min(hero.maxEndurance, hero.endurance + hero.enduranceRegenPerTick);
+    if (enduranceRegenRate && hero.endurance < hero.maxEndurance) {
+      hero.endurance = Math.min(hero.maxEndurance, hero.endurance + enduranceRegenRate);
     }
   }
   
   // 2) Apply passive health regeneration to living members only
-  // Passive regen: flat amount only (no scaling with healing stats)
+  // Passive regen: full out of combat, 1/3 in combat
   const passiveRegenAmount = 2;
+  const healthRegenRate = inCombat ? passiveRegenAmount / 3 : passiveRegenAmount;
   
   for (const hero of state.party) {
     if (hero.isDead) continue; // Skip dead members
-    if (passiveRegenAmount > 0 && hero.health < hero.maxHP) {
+    if (healthRegenRate > 0 && hero.health < hero.maxHP) {
       const oldHP = hero.health;
-      hero.health = Math.min(hero.maxHP, hero.health + passiveRegenAmount);
+      hero.health = Math.min(hero.maxHP, hero.health + healthRegenRate);
       const actualHealed = hero.health - oldHP;
       if (actualHealed > 0.1) {
         addLog(`${hero.name} regenerates ${actualHealed.toFixed(1)} HP!`, "regen");
