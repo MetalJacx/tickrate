@@ -1,6 +1,7 @@
 export default {
   key: "cleric",
   name: "Cleric",
+  symbol: "✨",
   role: "Healer",
   cost: 55,
 

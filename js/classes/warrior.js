@@ -1,6 +1,7 @@
 export default {
   key: "warrior",
   name: "Warrior",
+  symbol: "🛡️",
   role: "Tank",
   cost: 50,
 

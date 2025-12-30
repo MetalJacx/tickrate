@@ -69,11 +69,13 @@ function startLoops({ lastSavedAt }) {
 
   // Ensure player has at least their main character hero
   if (state.party.length === 0) {
-    const starter = createHero(state.playerClassKey);
+    const starter = createHero(state.playerClassKey, state.characterName);
     state.party = [starter];
     state.partyHP = starter.maxHP;
     state.partyMaxHP = starter.maxHP;
-    addLog(`SYSTEM: ${state.characterName} the ${starter.name} begins the grind.`);
+    const cls = getClassDef(state.playerClassKey);
+    const symbol = cls?.symbol || "";
+    addLog(`SYSTEM: ${state.characterName} ${symbol} ${cls?.name} begins the grind.`);
   }
 
   spawnEnemy();

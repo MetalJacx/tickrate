@@ -1,6 +1,7 @@
 export default {
   key: "wizard",
   name: "Wizard",
+  symbol: "🔥",
   role: "DPS",
   cost: 60,
 

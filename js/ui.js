@@ -142,7 +142,9 @@ export function renderParty() {
       const header = document.createElement("div");
       header.className = "hero-header";
       const left = document.createElement("div");
-      left.textContent = `${hero.name} (Lv ${hero.level})`;
+      const cls = getClassDef(hero.classKey);
+      const symbol = cls?.symbol || "";
+      left.textContent = `${symbol} ${hero.name} (Lv ${hero.level})`;
       const right = document.createElement("div");
       right.textContent = hero.role;
       header.appendChild(left);

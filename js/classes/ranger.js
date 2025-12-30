@@ -1,7 +1,6 @@
 export default {
   key: "ranger",
-  name: "Ranger",
-  role: "DPS",
+  name: "Ranger",  symbol: "🏹",  role: "DPS",
   cost: 35,
 
   baseHP: 85,

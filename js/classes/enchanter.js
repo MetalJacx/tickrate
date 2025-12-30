@@ -1,6 +1,7 @@
 export default {
   key: "enchanter",
   name: "Enchanter",
+  symbol: "🌀",
   role: "Support",
   cost: 65,
 
