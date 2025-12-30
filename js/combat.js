@@ -191,28 +191,34 @@ function onEnemyKilled(enemy, totalDPS) {
   const baseXP = 5 + state.zone * 3 + enemy.level * 2;
   const gold = 5 + state.zone * 4 + enemy.level;
 
-  // Apply group bonus based on party size
-  const partySize = state.party.length;
-  const groupBonus = 1.0 + (partySize - 1) * 0.1; // 1.0x, 1.1x, 1.2x, 1.3x, 1.4x, 1.5x
+  // Apply group bonus based on LIVING party size only
+  const livingPartySize = state.party.filter(h => !h.isDead).length;
+  const groupBonus = 1.0 + (livingPartySize - 1) * 0.1; // 1.0x, 1.1x, 1.2x, 1.3x, 1.4x, 1.5x
   const totalXP = baseXP * groupBonus;
 
   state.totalXP += Math.floor(totalXP);
   state.gold += gold;
   state.killsThisZone += 1;
 
-  // Calculate level-weighted XP distribution
+  // Calculate level-weighted XP distribution (only for living heroes)
   // weight = level^2
   let totalWeight = 0;
   for (const hero of state.party) {
-    totalWeight += hero.level * hero.level;
+    if (!hero.isDead) {
+      totalWeight += hero.level * hero.level;
+    }
   }
 
-  // Distribute XP proportionally by level weight
-  for (const hero of state.party) {
-    if (!hero.xp) hero.xp = 0;
-    const heroWeight = hero.level * hero.level;
-    const heroShare = totalXP * (heroWeight / totalWeight);
-    hero.xp += heroShare;
+  // Distribute XP proportionally by level weight (only to living heroes)
+  if (totalWeight > 0) {
+    for (const hero of state.party) {
+      if (!hero.isDead) {
+        if (!hero.xp) hero.xp = 0;
+        const heroWeight = hero.level * hero.level;
+        const heroShare = totalXP * (heroWeight / totalWeight);
+        hero.xp += heroShare;
+      }
+    }
   }
 
   // Award to account (use base XP to avoid double-counting bonus)
