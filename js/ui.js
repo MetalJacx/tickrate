@@ -120,75 +120,59 @@ export function renderEnemy() {
 
   if (!enemyBox) return;
 
-  // Find or create enemy lineup container
-  let lineupContainer = document.getElementById("enemyLineup");
-  if (!lineupContainer) {
-    lineupContainer = document.createElement("div");
-    lineupContainer.id = "enemyLineup";
-    lineupContainer.style.cssText = `
-      background: #1a1a1a;
-      border: 1px solid #444;
-      border-radius: 8px;
-      padding: 8px;
-      margin-bottom: 8px;
-      display: flex;
-      gap: 8px;
-      align-items: flex-start;
-      overflow-x: auto;
-    `;
-    enemyBox.parentElement.insertBefore(lineupContainer, enemyBox);
-  }
-  lineupContainer.innerHTML = "";
+  // Clear and populate enemy box directly
+  enemyBox.innerHTML = "";
 
   if (!enemies || enemies.length === 0) {
     const noEnemyDiv = document.createElement("div");
     noEnemyDiv.style.cssText = "color:#777;font-size:12px;padding:8px;";
     noEnemyDiv.textContent = "No enemies";
-    lineupContainer.appendChild(noEnemyDiv);
-    
-    // Hide old enemy info
-    document.getElementById("enemyName").textContent = "No enemy";
-    document.getElementById("enemyHPFill").style.width = "0%";
-    document.getElementById("enemyHPLabel").textContent = "0 / 0";
-    document.getElementById("enemyDpsSpan").textContent = "0";
+    enemyBox.appendChild(noEnemyDiv);
     return;
   }
 
-  // Create enemy cards
+  // Create flex container for dynamic width cards
+  const lineupContainer = document.createElement("div");
+  lineupContainer.style.cssText = `
+    display: flex;
+    gap: 8px;
+    width: 100%;
+  `;
+
+  // Create enemy cards with dynamic width
   for (let i = 0; i < enemies.length; i++) {
     const e = enemies[i];
     const isMainTarget = i === 0;
     
     const card = document.createElement("div");
     card.style.cssText = `
-      flex: 0 0 auto;
-      min-width: 120px;
-      padding: 6px;
+      flex: 1;
+      padding: 8px;
       background: ${isMainTarget ? "#2a2a2a" : "#1f1f1f"};
       border: ${isMainTarget ? "2px solid #4ade80" : "1px solid #444"};
       border-radius: 6px;
-      font-size: 11px;
+      font-size: 12px;
     `;
     
     // Label (MT or XT#)
     const label = document.createElement("div");
-    label.style.cssText = "font-weight:bold;color:#aaa;margin-bottom:3px;";
+    label.style.cssText = "font-weight:bold;color:#aaa;margin-bottom:4px;";
     label.textContent = isMainTarget ? `MT: ${e.name}` : `XT${i}: ${e.name}`;
     
     // Level
     const levelDiv = document.createElement("div");
-    levelDiv.style.cssText = "font-size:9px;color:#777;margin-bottom:3px;";
+    levelDiv.style.cssText = "font-size:10px;color:#777;margin-bottom:4px;";
     levelDiv.textContent = `Lv ${e.level}`;
     
     // Health bar
     const barBg = document.createElement("div");
     barBg.style.cssText = `
       background: #0a0a0a;
-      border-radius: 3px;
-      height: 6px;
+      border-radius: 4px;
+      height: 8px;
       overflow: hidden;
       border: 1px solid #333;
-      margin-bottom: 2px;
+      margin-bottom: 3px;
     `;
     
     const ePct = e.hp <= 0 ? 0 : Math.max(0, Math.min(100, (e.hp / e.maxHP) * 100));
@@ -203,7 +187,7 @@ export function renderEnemy() {
     
     // HP label
     const hpLabel = document.createElement("div");
-    hpLabel.style.cssText = "font-size:8px;color:#aaa;text-align:center;";
+    hpLabel.style.cssText = "font-size:9px;color:#aaa;text-align:center;";
     hpLabel.textContent = `${Math.max(0, e.hp.toFixed(0))}/${e.maxHP}`;
     
     card.appendChild(label);
@@ -213,16 +197,7 @@ export function renderEnemy() {
     lineupContainer.appendChild(card);
   }
 
-  // Update the old enemy info section for context
-  const mainEnemy = enemies[0];
-  document.getElementById("enemyName").textContent = `${mainEnemy.name} (Lv ${mainEnemy.level})`;
-  const pct = mainEnemy.hp <= 0 ? 0 : Math.max(0, Math.min(100, (mainEnemy.hp / mainEnemy.maxHP) * 100));
-  document.getElementById("enemyHPFill").style.width = pct + "%";
-  document.getElementById("enemyHPLabel").textContent = `${Math.max(0, mainEnemy.hp.toFixed(1))} / ${mainEnemy.maxHP.toFixed(1)}`;
-  
-  // Total enemy DPS
-  const totalDPS = enemies.reduce((sum, e) => sum + e.dps, 0);
-  document.getElementById("enemyDpsSpan").textContent = totalDPS.toFixed(1);
+  enemyBox.appendChild(lineupContainer);
 }
 
 export function renderParty() {
