@@ -376,35 +376,37 @@ export function gameTick() {
   // Get living members
   const livingMembers = state.party.filter(h => !h.isDead);
   if (livingMembers.length > 0) {
-    // Apply healing reduction to total damage FIRST, then split among members
-    const effectiveHealing = totals.totalHealing + skillBonusHeal;
-    const mitigatedTotal = Math.max(0, rawDamage - effectiveHealing);
-    const damagePerMember = mitigatedTotal / livingMembers.length;
-    
     // Always show what the enemy is attempting
     addLog(`${enemy.name} attacks for ${rawDamage.toFixed(1)} damage!`, "damage_taken");
-    
-    if (mitigatedTotal > 0) {
-      // Distribute damage across living members
+
+    // Single-target damage: pick one living member to take the full hit
+    const target = livingMembers[randInt(livingMembers.length)];
+    target.health = Math.max(0, target.health - rawDamage);
+    addLog(`${target.name} takes ${rawDamage.toFixed(1)} damage!`, "damage_taken");
+
+    // Check for death on the target
+    if (target.health <= 0 && !target.isDead) {
+      target.isDead = true;
+      target.deathTime = Date.now();
+      addLog(`${target.name} has been defeated!`, "damage_taken");
+    }
+
+    // Apply any healing generated this tick after damage
+    const totalHealThisTick = totals.totalHealing + skillBonusHeal;
+    if (totalHealThisTick > 0) {
+      const healPerMember = totalHealThisTick / livingMembers.length;
+      let healedSomeone = false;
       for (const hero of livingMembers) {
-        hero.health = Math.max(0, hero.health - damagePerMember);
-        
-        // Log damage for this specific hero
-        addLog(`${hero.name} takes ${damagePerMember.toFixed(1)} damage!`, "damage_taken");
-        
-        // Check for death
-        if (hero.health <= 0 && !hero.isDead) {
-          hero.isDead = true;
-          hero.deathTime = Date.now();
-          addLog(`${hero.name} has been defeated!`, "damage_taken");
+        if (hero.isDead) continue;
+        const before = hero.health;
+        hero.health = Math.min(hero.maxHP, hero.health + healPerMember);
+        if (hero.health > before + 0.05) {
+          healedSomeone = true;
         }
       }
-    } else if (effectiveHealing > rawDamage) {
-      const healed = (effectiveHealing - rawDamage) * 0.3;
-      for (const hero of livingMembers) {
-        hero.health = Math.min(hero.maxHP, hero.health + healed);
+      if (healedSomeone) {
+        addLog(`Party heals for ${healPerMember.toFixed(1)} HP per member!`, "healing");
       }
-      addLog(`Party heals for ${healed.toFixed(1)} HP!`, "healing");
     }
   }
 
