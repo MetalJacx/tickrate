@@ -106,76 +106,81 @@ function inferLogColor(text) {
 
 export function renderEnemy() {
   const enemies = state.currentEnemies || [];
-  const container = document.getElementById("battleContainer");
-  
-  if (!container) return;
-  
-  // Clear battle info (keep structure, update content)
   const nameEl = document.getElementById("enemyName");
+  const hpFill = document.getElementById("enemyHPFill");
+  const hpLabel = document.getElementById("enemyHPLabel");
   const dpsSpan = document.getElementById("enemyDpsSpan");
-  
-  if (enemies.length === 0) {
+  const enemyBox = document.getElementById("enemyBox");
+
+  if (!enemies || enemies.length === 0) {
     nameEl.textContent = "No enemy";
+    hpFill.style.width = "0%";
+    hpLabel.textContent = "0 / 0";
     dpsSpan.textContent = "0";
     
-    // Clear all enemy HP bars
-    const hpBars = container.querySelectorAll(".enemy-hp-bar");
-    hpBars.forEach(bar => bar.remove());
+    // Remove extra enemy bars if they exist
+    const extraBars = enemyBox.querySelectorAll(".extra-enemy-bar");
+    extraBars.forEach(bar => bar.remove());
     return;
   }
 
-  // Show main enemy name and total DPS
+  // Main enemy (first in list)
   const mainEnemy = enemies[0];
   nameEl.textContent = `${mainEnemy.name} (Lv ${mainEnemy.level})`;
-  
-  // Calculate total enemy DPS
+  const pct = mainEnemy.hp <= 0 ? 0 : Math.max(0, Math.min(100, (mainEnemy.hp / mainEnemy.maxHP) * 100));
+  hpFill.style.width = pct + "%";
+  hpLabel.textContent = `${Math.max(0, mainEnemy.hp.toFixed(1))} / ${mainEnemy.maxHP.toFixed(1)}`;
+
+  // Total DPS of all enemies
   const totalDPS = enemies.reduce((sum, e) => sum + e.dps, 0);
   dpsSpan.textContent = totalDPS.toFixed(1);
 
-  // Render health bars for all enemies
-  let hpBarContainer = document.getElementById("enemyHPBarsContainer");
-  if (!hpBarContainer) {
-    hpBarContainer = document.createElement("div");
-    hpBarContainer.id = "enemyHPBarsContainer";
-    hpBarContainer.style.cssText = "margin-top: 8px;";
-    const dpsLabel = document.getElementById("enemyDpsSpan").parentElement;
-    dpsLabel.parentElement.insertBefore(hpBarContainer, dpsLabel.nextSibling);
-  }
-  hpBarContainer.innerHTML = "";
+  // Render additional enemy bars (if more than 1 enemy)
+  if (enemies.length > 1) {
+    // Remove old extra bars
+    const oldBars = enemyBox.querySelectorAll(".extra-enemy-bar");
+    oldBars.forEach(bar => bar.remove());
 
-  for (let i = 0; i < enemies.length; i++) {
-    const e = enemies[i];
-    
-    const wrapper = document.createElement("div");
-    wrapper.className = "enemy-hp-bar";
-    wrapper.style.cssText = "margin-top: 6px;";
-    
-    const label = document.createElement("div");
-    label.style.cssText = "font-size:10px;color:#aaa;margin-bottom:2px;";
-    label.textContent = `${e.name}: ${Math.max(0, e.hp.toFixed(1))} / ${e.maxHP.toFixed(1)}`;
-    
-    const bar = document.createElement("div");
-    bar.style.cssText = `
-      background: #222;
-      border-radius: 4px;
-      height: 10px;
-      overflow: hidden;
-      border: 1px solid #444;
-    `;
-    
-    const pct = e.hp <= 0 ? 0 : Math.max(0, Math.min(100, (e.hp / e.maxHP) * 100));
-    const fill = document.createElement("div");
-    fill.style.cssText = `
-      width: ${pct}%;
-      height: 100%;
-      background: #ef4444;
-      transition: width 0.1s;
-    `;
-    bar.appendChild(fill);
-    
-    wrapper.appendChild(label);
-    wrapper.appendChild(bar);
-    hpBarContainer.appendChild(wrapper);
+    // Add bars for enemies 2+
+    for (let i = 1; i < enemies.length; i++) {
+      const e = enemies[i];
+      
+      const barWrapper = document.createElement("div");
+      barWrapper.className = "extra-enemy-bar";
+      barWrapper.style.cssText = "margin-top:8px;";
+      
+      const barLabel = document.createElement("div");
+      barLabel.style.cssText = "font-size:9px;color:#aaa;margin-bottom:2px;";
+      barLabel.textContent = `${e.name} (Lv ${e.level})`;
+      
+      const barBg = document.createElement("div");
+      barBg.style.cssText = `
+        background: #222;
+        border-radius: 4px;
+        height: 8px;
+        overflow: hidden;
+        border: 1px solid #444;
+      `;
+      
+      const ePct = e.hp <= 0 ? 0 : Math.max(0, Math.min(100, (e.hp / e.maxHP) * 100));
+      const barFill = document.createElement("div");
+      barFill.style.cssText = `
+        width: ${ePct}%;
+        height: 100%;
+        background: #ef4444;
+        transition: width 0.1s;
+      `;
+      barBg.appendChild(barFill);
+      
+      const barHPLabel = document.createElement("div");
+      barHPLabel.style.cssText = "font-size:8px;color:#aaa;";
+      barHPLabel.textContent = `${Math.max(0, e.hp.toFixed(1))} / ${e.maxHP.toFixed(1)}`;
+      
+      barWrapper.appendChild(barLabel);
+      barWrapper.appendChild(barBg);
+      barWrapper.appendChild(barHPLabel);
+      enemyBox.appendChild(barWrapper);
+    }
   }
 }
 
