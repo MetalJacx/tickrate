@@ -322,8 +322,10 @@ export function gameTick() {
     }
   }
   
-  // Check if we should respawn
-  if (state.waitingToRespawn && state.currentEnemies.length === 0) {
+  const livingAlive = state.party.some(h => !h.isDead);
+
+  // Check if we should respawn (only if someone is alive and we're out of combat)
+  if (state.waitingToRespawn && state.currentEnemies.length === 0 && livingAlive) {
     if (state.partyMaxHP > 0) {
       const healthPercent = (state.partyHP / state.partyMaxHP) * 100;
       if (healthPercent >= state.autoRestartHealthPercent) {
@@ -333,8 +335,6 @@ export function gameTick() {
       spawnEnemy();
     }
   }
-
-  const enemy = state.currentEnemy;
 
   // Check if any party member is damaged (for heal checks)
   const anyDamaged = state.party.some(h => !h.isDead && h.health < h.maxHP);
