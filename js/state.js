@@ -142,6 +142,10 @@ export function loadGame() {
       if (h.tempDamageDebuffAmount === undefined) {
         h.tempDamageDebuffAmount = 0;
       }
+      // Initialize ability bar
+      if (h.abilityBar === undefined) {
+        h.abilityBar = {};
+      }
       return h;
     }) : [];
     state.partyMaxHP = data.partyMaxHP ?? 0;

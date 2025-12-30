@@ -43,6 +43,12 @@ export function initUI({ onRecruit, onReset, onOpenRecruitModal }) {
       renderAll();
     });
   }
+
+  // Character modal close button
+  const characterModalCloseBtn = document.getElementById("characterModalCloseBtn");
+  if (characterModalCloseBtn) {
+    characterModalCloseBtn.addEventListener("click", closeCharacterModal);
+  }
 }
 
 function renderHealthThreshold() {
@@ -384,6 +390,12 @@ export function renderParty() {
         div.appendChild(debuff);
       }
 
+      // Add click handler to open character detail modal
+      div.style.cursor = "pointer";
+      div.addEventListener("click", () => {
+        openCharacterModal(hero);
+      });
+
       container.appendChild(div);
     } else {
       // Render empty or locked slot
@@ -489,4 +501,240 @@ export function renderMeta() {
   
   // Back button: can always go back except at zone 1
   document.getElementById("travelBackBtn").disabled = state.zone <= 1;
+}
+// Character Modal Functions
+function openCharacterModal(hero) {
+  const modal = document.getElementById("characterModal");
+  const title = document.getElementById("characterModalTitle");
+  const cls = getClassDef(hero.classKey);
+  
+  title.textContent = `${hero.name} (${cls?.name || 'Unknown'}) - Lv ${hero.level}`;
+  
+  // Populate equipment section
+  populateEquipmentSection(hero);
+  
+  // Populate skills section
+  populateSkillsSection(hero);
+  
+  // Populate ability bar
+  populateAbilityBar(hero);
+  
+  modal.style.display = "flex";
+}
+
+function closeCharacterModal() {
+  const modal = document.getElementById("characterModal");
+  modal.style.display = "none";
+}
+
+function populateEquipmentSection(hero) {
+  const equipmentGrid = document.getElementById("characterEquipmentGrid");
+  equipmentGrid.innerHTML = "";
+  
+  const slots = ["Head", "Chest", "Legs", "Feet", "Main", "Off"];
+  
+  for (const slot of slots) {
+    const slotDiv = document.createElement("div");
+    slotDiv.style.cssText = `
+      padding: 8px;
+      background: #1a1a1a;
+      border: 1px solid #444;
+      border-radius: 4px;
+      font-size: 11px;
+      color: #aaa;
+      text-align: center;
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    `;
+    slotDiv.textContent = `${slot}\n(Empty)`;
+    equipmentGrid.appendChild(slotDiv);
+  }
+}
+
+function populateSkillsSection(hero) {
+  const skillsContainer = document.getElementById("characterSkillsContainer");
+  skillsContainer.innerHTML = "";
+  
+  const cls = getClassDef(hero.classKey);
+  if (!cls?.skills || cls.skills.length === 0) {
+    const noSkills = document.createElement("div");
+    noSkills.style.cssText = "color:#777;font-size:12px;";
+    noSkills.textContent = "No skills available";
+    skillsContainer.appendChild(noSkills);
+    return;
+  }
+  
+  // Filter skills available at this level
+  const availableSkills = cls.skills.filter(s => hero.level >= s.level);
+  
+  for (const skill of availableSkills) {
+    const skillDiv = document.createElement("div");
+    skillDiv.draggable = true;
+    skillDiv.dataset.skillKey = skill.key;
+    skillDiv.dataset.skillName = skill.name;
+    skillDiv.style.cssText = `
+      padding: 8px;
+      background: #1a1a1a;
+      border: 1px solid #555;
+      border-radius: 4px;
+      cursor: move;
+      user-select: none;
+      transition: background 0.1s;
+    `;
+    
+    const skillTitle = document.createElement("div");
+    skillTitle.style.cssText = "font-weight:bold;font-size:11px;color:#fff;";
+    skillTitle.textContent = skill.name;
+    
+    const skillInfo = document.createElement("div");
+    skillInfo.style.cssText = "font-size:9px;color:#aaa;margin-top:2px;";
+    const costStr = skill.cost ? `Cost: ${skill.cost}` : "No cost";
+    const cooldown = skill.cooldownSeconds ? ` | CD: ${skill.cooldownSeconds}s` : "";
+    skillInfo.textContent = costStr + cooldown;
+    
+    skillDiv.appendChild(skillTitle);
+    skillDiv.appendChild(skillInfo);
+    
+    // Drag events
+    skillDiv.addEventListener("dragstart", (e) => {
+      e.dataTransfer.effectAllowed = "copy";
+      e.dataTransfer.setData("skillKey", skill.key);
+      e.dataTransfer.setData("skillName", skill.name);
+      skillDiv.style.opacity = "0.5";
+    });
+    
+    skillDiv.addEventListener("dragend", (e) => {
+      skillDiv.style.opacity = "1";
+    });
+    
+    skillDiv.addEventListener("mouseenter", () => {
+      skillDiv.style.background = "#222";
+    });
+    
+    skillDiv.addEventListener("mouseleave", () => {
+      skillDiv.style.background = "#1a1a1a";
+    });
+    
+    skillsContainer.appendChild(skillDiv);
+  }
+}
+
+function getAbilitySlotUnlockLevel(slotIndex) {
+  // Slot 0 unlocked at level 1
+  // Slots 1-11 unlock every 5 levels (level 5, 10, 15, ..., 60)
+  if (slotIndex === 0) return 1;
+  return slotIndex * 5;
+}
+
+function populateAbilityBar(hero) {
+  const abilityBar = document.getElementById("characterAbilityBar");
+  abilityBar.innerHTML = "";
+  
+  for (let i = 0; i < 12; i++) {
+    const slotDiv = document.createElement("div");
+    const unlockLevel = getAbilitySlotUnlockLevel(i);
+    const isUnlocked = hero.level >= unlockLevel;
+    
+    slotDiv.style.cssText = `
+      flex: 1;
+      min-width: 50px;
+      min-height: 50px;
+      background: ${isUnlocked ? "#1a1a1a" : "#111"};
+      border: ${isUnlocked ? "1px solid #555" : "1px solid #333"};
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: ${isUnlocked ? "pointer" : "not-allowed"};
+      transition: background 0.1s;
+      position: relative;
+    `;
+    
+    if (!isUnlocked) {
+      slotDiv.style.opacity = "0.5";
+      const lockLabel = document.createElement("div");
+      lockLabel.style.cssText = "font-size:8px;color:#666;text-align:center;";
+      lockLabel.textContent = `Lv ${unlockLevel}`;
+      slotDiv.appendChild(lockLabel);
+    } else {
+      // Get current skill in this slot
+      if (!hero.abilityBar) hero.abilityBar = {};
+      const skillKey = hero.abilityBar[i];
+      
+      if (skillKey) {
+        const cls = getClassDef(hero.classKey);
+        const skill = cls?.skills?.find(s => s.key === skillKey);
+        if (skill) {
+          const skillLabel = document.createElement("div");
+          skillLabel.style.cssText = "font-size:10px;color:#fff;font-weight:bold;text-align:center;line-height:1.2;word-break:break-word;";
+          skillLabel.textContent = skill.name;
+          slotDiv.appendChild(skillLabel);
+          
+          const clearBtn = document.createElement("button");
+          clearBtn.textContent = "✕";
+          clearBtn.style.cssText = `
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            width: 16px;
+            height: 16px;
+            padding: 0;
+            border: none;
+            background: #b91c1c;
+            color: #fff;
+            border-radius: 50%;
+            font-size: 10px;
+            cursor: pointer;
+            display: none;
+          `;
+          clearBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            hero.abilityBar[i] = null;
+            populateAbilityBar(hero);
+          });
+          slotDiv.appendChild(clearBtn);
+          
+          slotDiv.addEventListener("mouseenter", () => {
+            clearBtn.style.display = "block";
+          });
+          
+          slotDiv.addEventListener("mouseleave", () => {
+            clearBtn.style.display = "none";
+          });
+        }
+      } else {
+        const emptyLabel = document.createElement("div");
+        emptyLabel.style.cssText = "font-size:9px;color:#777;";
+        emptyLabel.textContent = `Slot ${i + 1}`;
+        slotDiv.appendChild(emptyLabel);
+      }
+      
+      // Drag and drop
+      slotDiv.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "copy";
+        slotDiv.style.background = "#2a2a2a";
+      });
+      
+      slotDiv.addEventListener("dragleave", () => {
+        slotDiv.style.background = "#1a1a1a";
+      });
+      
+      slotDiv.addEventListener("drop", (e) => {
+        e.preventDefault();
+        slotDiv.style.background = "#1a1a1a";
+        
+        const skillKey = e.dataTransfer.getData("skillKey");
+        if (skillKey) {
+          if (!hero.abilityBar) hero.abilityBar = {};
+          hero.abilityBar[i] = skillKey;
+          populateAbilityBar(hero);
+        }
+      });
+    }
+    
+    abilityBar.appendChild(slotDiv);
+  }
 }

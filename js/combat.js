@@ -37,6 +37,9 @@ export function createHero(classKey, customName = null) {
     // Revival countdown tracking
     revivalNotifications: {},
 
+    // Ability bar (12 slots, skill keys mapped by slot index)
+    abilityBar: {},
+
     // cooldown tracking per hero:
     skillTimers: {}
   };
