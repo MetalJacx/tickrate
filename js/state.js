@@ -134,6 +134,13 @@ export function loadGame() {
         h.endurance = cls?.maxEndurance || 0;
         h.enduranceRegenPerTick = cls?.enduranceRegenPerTick || 0;
       }
+      // Initialize temporary debuff fields
+      if (h.tempDamageDebuffTicks === undefined) {
+        h.tempDamageDebuffTicks = 0;
+      }
+      if (h.tempDamageDebuffAmount === undefined) {
+        h.tempDamageDebuffAmount = 0;
+      }
       return h;
     }) : [];
     state.partyMaxHP = data.partyMaxHP ?? 0;

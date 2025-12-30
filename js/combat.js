@@ -30,6 +30,10 @@ export function createHero(classKey, customName = null) {
     endurance: cls.maxEndurance || 0,
     enduranceRegenPerTick: cls.enduranceRegenPerTick || 0,
 
+    // Temporary debuffs
+    tempDamageDebuffTicks: 0,
+    tempDamageDebuffAmount: 0,
+
     // cooldown tracking per hero:
     skillTimers: {}
   };
@@ -50,7 +54,12 @@ export function recalcPartyTotals() {
     if (h?.isDead) continue; // Skip dead members
     totalMaxHP += h?.maxHP ?? 0;
     totalCurrentHP += h?.health ?? 0;
-    totalDPS += h?.dps ?? 0;
+    let heroDPS = h?.dps ?? 0;
+    if (h?.tempDamageDebuffTicks > 0) {
+      const debuff = h.tempDamageDebuffAmount || 0;
+      heroDPS = Math.max(0, heroDPS - debuff);
+    }
+    totalDPS += heroDPS;
     totalHealing += h?.healing ?? 0;
   }
 
@@ -105,7 +114,14 @@ export function spawnEnemy() {
   const maxHP = enemyDef.baseHP + level * 10;
   const dps = enemyDef.baseDPS + level;
 
-  state.currentEnemy = { name: enemyDef.name, level, maxHP, hp: maxHP, dps };
+  state.currentEnemy = {
+    name: enemyDef.name,
+    level,
+    maxHP,
+    hp: maxHP,
+    dps,
+    debuffs: enemyDef.debuffs || []
+  };
   state.waitingToRespawn = false;
   addLog(`A level ${level} ${enemyDef.name} appears in Zone ${z}.`);
 }
@@ -217,6 +233,14 @@ export function gameTick() {
         hero.deathTime = null;
         hero.health = Math.max(1, hero.maxHP * 0.1); // Revive at 10% HP
         addLog(`${hero.name} has been automatically revived with 10% health!`);
+      }
+    }
+    // Tick down temporary damage debuff
+    if (hero.tempDamageDebuffTicks && hero.tempDamageDebuffTicks > 0) {
+      hero.tempDamageDebuffTicks -= 1;
+      if (hero.tempDamageDebuffTicks === 0) {
+        hero.tempDamageDebuffAmount = 0;
+        addLog(`${hero.name} shrugs off the weakening hex.`, "normal");
       }
     }
   }
@@ -403,6 +427,22 @@ export function gameTick() {
     const target = livingMembers[randInt(livingMembers.length)];
     target.health = Math.max(0, target.health - rawDamage);
     addLog(`${enemy.name} deals ${rawDamage.toFixed(1)} damage to ${target.name}!`, "damage_taken");
+
+    // Apply any enemy-sourced debuffs defined on the enemy
+    if (enemy.debuffs && enemy.debuffs.length) {
+      for (const debuff of enemy.debuffs) {
+        if (debuff.type === "weaken_damage") {
+          const chance = debuff.chance ?? 1;
+          if (Math.random() < chance) {
+            const duration = debuff.durationTicks ?? 5;
+            const amount = debuff.amount ?? 1;
+            target.tempDamageDebuffTicks = duration;
+            target.tempDamageDebuffAmount = amount;
+            addLog(`${target.name} is weakened! -${amount} damage for ${duration} ticks.`, "damage_taken");
+          }
+        }
+      }
+    }
 
     // Check for death on the target
     if (target.health <= 0 && !target.isDead) {

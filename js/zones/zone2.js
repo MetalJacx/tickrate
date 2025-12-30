@@ -4,8 +4,22 @@ export default {
   description: "An eerie woodland",
   enemies: [
     { name: "Forest Ghoul", baseHP: 40, baseDPS: 4 },
-    { name: "Shadow Sprite", baseHP: 35, baseDPS: 5 },
+    {
+      name: "Shadow Sprite",
+      baseHP: 35,
+      baseDPS: 5,
+      debuffs: [
+        { type: "weaken_damage", amount: 1, durationTicks: 5, chance: 0.25 }
+      ]
+    },
     { name: "Cursed Treant", baseHP: 50, baseDPS: 3 },
-    { name: "Werewolf", baseHP: 45, baseDPS: 6 }
+    {
+      name: "Werewolf",
+      baseHP: 45,
+      baseDPS: 6,
+      debuffs: [
+        { type: "weaken_damage", amount: 1, durationTicks: 5, chance: 0.25 }
+      ]
+    }
   ]
 };
