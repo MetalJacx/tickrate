@@ -138,6 +138,7 @@ export function renderParty() {
       // Render filled slot with hero
       const div = document.createElement("div");
       div.className = "hero";
+      div.style.position = "relative";
       
       // Greyed out if dead
       if (hero.isDead) {
@@ -283,6 +284,32 @@ export function renderParty() {
       div.appendChild(stats);
       div.appendChild(xpDiv);
       div.appendChild(btnRow);
+
+      // Debuff indicator (e.g., weakening debuff)
+      const hasWeak = hero.tempDamageDebuffTicks && hero.tempDamageDebuffTicks > 0;
+      if (hasWeak) {
+        const debuff = document.createElement("div");
+        debuff.style.cssText = `
+          position: absolute;
+          right: 6px;
+          bottom: 6px;
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          background: #b91c1c;
+          color: #fff;
+          font-size: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: default;
+          box-shadow: 0 0 6px rgba(0,0,0,0.5);
+        `;
+        debuff.textContent = "-";
+        debuff.title = `Weakened: -${hero.tempDamageDebuffAmount || 1} damage for ${hero.tempDamageDebuffTicks} ticks`;
+        div.appendChild(debuff);
+      }
+
       container.appendChild(div);
     } else {
       // Render empty or locked slot
