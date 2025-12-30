@@ -146,6 +146,10 @@ export function loadGame() {
       if (h.abilityBar === undefined) {
         h.abilityBar = {};
       }
+      // Initialize regen tick counter
+      if (h.regenTickCounter === undefined) {
+        h.regenTickCounter = 0;
+      }
       return h;
     }) : [];
     state.partyMaxHP = data.partyMaxHP ?? 0;

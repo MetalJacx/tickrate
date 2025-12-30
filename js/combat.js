@@ -37,6 +37,9 @@ export function createHero(classKey, customName = null) {
     // Revival countdown tracking
     revivalNotifications: {},
 
+    // Regeneration tick counter (regen happens every 2 ticks)
+    regenTickCounter: 0,
+
     // Ability bar (12 slots, skill keys mapped by slot index)
     abilityBar: {},
 
@@ -343,30 +346,40 @@ export function gameTick() {
   // Determine if in combat (affects regen rates)
   const inCombat = state.currentEnemies.length > 0;
   
-  // 1) Regenerate resources for all living members
+  // 1) Regenerate resources for all living members (every 2 ticks)
   for (const hero of state.party) {
     if (hero.isDead) continue;
     
-    // Apply regen rates: full out of combat, 1/3 in combat
-    const manaRegenRate = inCombat ? hero.manaRegenPerTick / 3 : hero.manaRegenPerTick;
-    const enduranceRegenRate = inCombat ? hero.enduranceRegenPerTick / 3 : hero.enduranceRegenPerTick;
+    // Increment regen tick counter
+    hero.regenTickCounter = (hero.regenTickCounter || 0) + 1;
     
-    if (manaRegenRate && hero.mana < hero.maxMana) {
-      hero.mana = Math.min(hero.maxMana, hero.mana + manaRegenRate);
-    }
-    if (enduranceRegenRate && hero.endurance < hero.maxEndurance) {
-      hero.endurance = Math.min(hero.maxEndurance, hero.endurance + enduranceRegenRate);
+    // Only apply regen every 2 ticks
+    if (hero.regenTickCounter >= 2) {
+      hero.regenTickCounter = 0;
+      
+      // Apply regen rates: full out of combat, 1/3 in combat
+      const manaRegenRate = inCombat ? hero.manaRegenPerTick / 3 : hero.manaRegenPerTick;
+      const enduranceRegenRate = inCombat ? hero.enduranceRegenPerTick / 3 : hero.enduranceRegenPerTick;
+      
+      if (manaRegenRate && hero.mana < hero.maxMana) {
+        hero.mana = Math.min(hero.maxMana, hero.mana + manaRegenRate);
+      }
+      if (enduranceRegenRate && hero.endurance < hero.maxEndurance) {
+        hero.endurance = Math.min(hero.maxEndurance, hero.endurance + enduranceRegenRate);
+      }
     }
   }
   
-  // 2) Apply passive health regeneration to living members only
+  // 2) Apply passive health regeneration to living members only (every 2 ticks)
   // Passive regen: full out of combat, 1/3 in combat
   const passiveRegenAmount = 2;
   const healthRegenRate = inCombat ? passiveRegenAmount / 3 : passiveRegenAmount;
   
   for (const hero of state.party) {
     if (hero.isDead) continue; // Skip dead members
-    if (healthRegenRate > 0 && hero.health < hero.maxHP) {
+    
+    // Only apply health regen every 2 ticks (same counter as resource regen)
+    if (hero.regenTickCounter === 0 && healthRegenRate > 0 && hero.health < hero.maxHP) {
       const oldHP = hero.health;
       hero.health = Math.min(hero.maxHP, hero.health + healthRegenRate);
       const actualHealed = hero.health - oldHP;
