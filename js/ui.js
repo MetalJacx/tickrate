@@ -365,6 +365,9 @@ export function renderParty() {
       div.appendChild(xpDiv);
       div.appendChild(btnRow);
 
+      // Check for unassigned ability slots
+      const hasUnassignedSlots = checkHasUnassignedSlots(hero);
+      
       // Debuff indicator (e.g., weakening debuff)
       const hasWeak = hero.tempDamageDebuffTicks && hero.tempDamageDebuffTicks > 0;
       if (hasWeak) {
@@ -388,6 +391,35 @@ export function renderParty() {
         debuff.textContent = "-";
         debuff.title = `Weakened: -${hero.tempDamageDebuffAmount || 1} damage for ${hero.tempDamageDebuffTicks} ticks`;
         div.appendChild(debuff);
+      }
+
+      // Unassigned ability slots warning
+      if (hasUnassignedSlots) {
+        const warning = document.createElement("div");
+        warning.style.cssText = `
+          position: absolute;
+          top: 6px;
+          right: 6px;
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          background: #fbbf24;
+          color: #000;
+          font-size: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: default;
+          box-shadow: 0 0 6px rgba(0,0,0,0.5);
+          font-weight: bold;
+        `;
+        warning.textContent = "!";
+        warning.title = "Unassigned ability slots available - Open character window to assign skills";
+        div.appendChild(warning);
+        
+        // Add yellow highlight to the card
+        div.style.background = "rgba(251, 191, 36, 0.1)";
+        div.style.borderColor = "#fbbf24";
       }
 
       // Add click handler to open character detail modal
@@ -737,4 +769,21 @@ function populateAbilityBar(hero) {
     
     abilityBar.appendChild(slotDiv);
   }
+}
+
+// Helper function to check if hero has unassigned unlocked ability slots
+function checkHasUnassignedSlots(hero) {
+  for (let i = 0; i < 12; i++) {
+    const unlockLevel = getAbilitySlotUnlockLevel(i);
+    const isUnlocked = hero.level >= unlockLevel;
+    
+    if (isUnlocked) {
+      const skillKey = hero.abilityBar?.[i];
+      if (!skillKey) {
+        // Found an unlocked slot with no skill assigned
+        return true;
+      }
+    }
+  }
+  return false;
 }
