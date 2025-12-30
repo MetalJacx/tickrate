@@ -224,6 +224,7 @@ function onPartyWipe() {
   
   state.currentEnemies = [];
   state.waitingToRespawn = true;
+  addLog("Your party will begin reviving in 60 seconds.", "normal");
 }
 
 export function killsRequiredForZone(z) {
