@@ -144,7 +144,14 @@ export function renderParty() {
       const left = document.createElement("div");
       const cls = getClassDef(hero.classKey);
       const symbol = cls?.symbol || "";
-      left.textContent = `${symbol} ${hero.name} (Lv ${hero.level})`;
+      
+      // For the starter hero (first in party), use characterName if hero.name is still the class name
+      let displayName = hero.name;
+      if (i === 0 && hero.name === cls?.name) {
+        displayName = state.characterName || hero.name;
+      }
+      
+      left.textContent = `${symbol} ${displayName} (Lv ${hero.level})`;
       const right = document.createElement("div");
       right.textContent = hero.role;
       header.appendChild(left);
