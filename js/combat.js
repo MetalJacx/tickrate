@@ -34,6 +34,9 @@ export function createHero(classKey, customName = null) {
     tempDamageDebuffTicks: 0,
     tempDamageDebuffAmount: 0,
 
+    // Revival countdown tracking
+    revivalNotifications: {},
+
     // cooldown tracking per hero:
     skillTimers: {}
   };
@@ -272,10 +275,48 @@ export function gameTick() {
   for (const hero of state.party) {
     if (hero.isDead && hero.deathTime) {
       const timeSinceDeath = (now - hero.deathTime) / 1000; // seconds
+      const timeRemaining = 60 - timeSinceDeath;
+      
+      // Initialize notification tracking if needed
+      if (!hero.revivalNotifications) {
+        hero.revivalNotifications = {};
+      }
+      
+      // Countdown notifications
+      if (timeRemaining <= 30 && timeRemaining > 29 && !hero.revivalNotifications['30s']) {
+        addLog(`${hero.name} will revive in 30 seconds...`, "normal");
+        hero.revivalNotifications['30s'] = true;
+      }
+      if (timeRemaining <= 10 && timeRemaining > 9 && !hero.revivalNotifications['10s']) {
+        addLog(`${hero.name} will revive in 10 seconds...`, "normal");
+        hero.revivalNotifications['10s'] = true;
+      }
+      if (timeRemaining <= 5 && timeRemaining > 4 && !hero.revivalNotifications['5s']) {
+        addLog(`${hero.name} reviving in 5...`, "normal");
+        hero.revivalNotifications['5s'] = true;
+      }
+      if (timeRemaining <= 4 && timeRemaining > 3 && !hero.revivalNotifications['4s']) {
+        addLog(`${hero.name} reviving in 4...`, "normal");
+        hero.revivalNotifications['4s'] = true;
+      }
+      if (timeRemaining <= 3 && timeRemaining > 2 && !hero.revivalNotifications['3s']) {
+        addLog(`${hero.name} reviving in 3...`, "normal");
+        hero.revivalNotifications['3s'] = true;
+      }
+      if (timeRemaining <= 2 && timeRemaining > 1 && !hero.revivalNotifications['2s']) {
+        addLog(`${hero.name} reviving in 2...`, "normal");
+        hero.revivalNotifications['2s'] = true;
+      }
+      if (timeRemaining <= 1 && timeRemaining > 0 && !hero.revivalNotifications['1s']) {
+        addLog(`${hero.name} reviving in 1...`, "normal");
+        hero.revivalNotifications['1s'] = true;
+      }
+      
       if (timeSinceDeath >= 60) {
         hero.isDead = false;
         hero.deathTime = null;
         hero.health = Math.max(1, hero.maxHP * 0.1); // Revive at 10% HP
+        hero.revivalNotifications = {}; // Reset notifications
         addLog(`${hero.name} has been automatically revived with 10% health!`);
       }
     }
