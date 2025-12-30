@@ -394,7 +394,9 @@ export function gameTick() {
     const cls = getClassDef(hero.classKey);
     if (!cls?.skills) continue;
 
-    const skills = cls.skills.filter(s => hero.level >= s.level);
+    // Get skills that are available and assigned to ability bar
+    const abilityBarSkills = new Set(Object.values(hero.abilityBar || {}));
+    const skills = cls.skills.filter(s => hero.level >= s.level && abilityBarSkills.has(s.key));
 
     for (const sk of skills) {
       if (hero.skillTimers[sk.key] == null) hero.skillTimers[sk.key] = 0;
