@@ -156,6 +156,8 @@ function spawnEnemyToList() {
   addLog(`Oh no! Your luck is not on your side—another ${enemyDef.name} takes notice of your presence!`, "damage_taken");
 }
 
+export { spawnEnemyToList };
+
 function checkForReinforcement() {
   // Each enemy has 5% chance per tick to call reinforcements (when in combat)
   if (state.currentEnemies.length > 0) {

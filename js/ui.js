@@ -1,5 +1,6 @@
 import { state } from "./state.js";
 import { heroLevelUpCost, applyHeroLevelUp, canTravelForward, travelToNextZone, travelToPreviousZone, recalcPartyTotals, killsRequiredForZone } from "./combat.js";
+import { spawnEnemyToList } from "./combat.js";
 import { CLASSES, getClassDef } from "./classes/index.js";
 import { getZoneDef } from "./zones/index.js";
 import { addLog } from "./util.js";
@@ -32,6 +33,15 @@ export function initUI({ onRecruit, onReset, onOpenRecruitModal }) {
 
   if (onReset && document.getElementById("resetBtn")) {
     document.getElementById("resetBtn").addEventListener("click", onReset);
+  }
+
+  // Test button to spawn another mob
+  const spawnAddBtn = document.getElementById("spawnAddBtn");
+  if (spawnAddBtn) {
+    spawnAddBtn.addEventListener("click", () => {
+      spawnEnemyToList();
+      renderAll();
+    });
   }
 }
 
@@ -106,82 +116,113 @@ function inferLogColor(text) {
 
 export function renderEnemy() {
   const enemies = state.currentEnemies || [];
-  const nameEl = document.getElementById("enemyName");
-  const hpFill = document.getElementById("enemyHPFill");
-  const hpLabel = document.getElementById("enemyHPLabel");
-  const dpsSpan = document.getElementById("enemyDpsSpan");
   const enemyBox = document.getElementById("enemyBox");
 
+  if (!enemyBox) return;
+
+  // Find or create enemy lineup container
+  let lineupContainer = document.getElementById("enemyLineup");
+  if (!lineupContainer) {
+    lineupContainer = document.createElement("div");
+    lineupContainer.id = "enemyLineup";
+    lineupContainer.style.cssText = `
+      background: #1a1a1a;
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 8px;
+      margin-bottom: 8px;
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      overflow-x: auto;
+    `;
+    enemyBox.parentElement.insertBefore(lineupContainer, enemyBox);
+  }
+  lineupContainer.innerHTML = "";
+
   if (!enemies || enemies.length === 0) {
-    nameEl.textContent = "No enemy";
-    hpFill.style.width = "0%";
-    hpLabel.textContent = "0 / 0";
-    dpsSpan.textContent = "0";
+    const noEnemyDiv = document.createElement("div");
+    noEnemyDiv.style.cssText = "color:#777;font-size:12px;padding:8px;";
+    noEnemyDiv.textContent = "No enemies";
+    lineupContainer.appendChild(noEnemyDiv);
     
-    // Remove extra enemy bars if they exist
-    const extraBars = enemyBox.querySelectorAll(".extra-enemy-bar");
-    extraBars.forEach(bar => bar.remove());
+    // Hide old enemy info
+    document.getElementById("enemyName").textContent = "No enemy";
+    document.getElementById("enemyHPFill").style.width = "0%";
+    document.getElementById("enemyHPLabel").textContent = "0 / 0";
+    document.getElementById("enemyDpsSpan").textContent = "0";
     return;
   }
 
-  // Main enemy (first in list)
-  const mainEnemy = enemies[0];
-  nameEl.textContent = `${mainEnemy.name} (Lv ${mainEnemy.level})`;
-  const pct = mainEnemy.hp <= 0 ? 0 : Math.max(0, Math.min(100, (mainEnemy.hp / mainEnemy.maxHP) * 100));
-  hpFill.style.width = pct + "%";
-  hpLabel.textContent = `${Math.max(0, mainEnemy.hp.toFixed(1))} / ${mainEnemy.maxHP.toFixed(1)}`;
-
-  // Total DPS of all enemies
-  const totalDPS = enemies.reduce((sum, e) => sum + e.dps, 0);
-  dpsSpan.textContent = totalDPS.toFixed(1);
-
-  // Render additional enemy bars (if more than 1 enemy)
-  if (enemies.length > 1) {
-    // Remove old extra bars
-    const oldBars = enemyBox.querySelectorAll(".extra-enemy-bar");
-    oldBars.forEach(bar => bar.remove());
-
-    // Add bars for enemies 2+
-    for (let i = 1; i < enemies.length; i++) {
-      const e = enemies[i];
-      
-      const barWrapper = document.createElement("div");
-      barWrapper.className = "extra-enemy-bar";
-      barWrapper.style.cssText = "margin-top:8px;";
-      
-      const barLabel = document.createElement("div");
-      barLabel.style.cssText = "font-size:9px;color:#aaa;margin-bottom:2px;";
-      barLabel.textContent = `${e.name} (Lv ${e.level})`;
-      
-      const barBg = document.createElement("div");
-      barBg.style.cssText = `
-        background: #222;
-        border-radius: 4px;
-        height: 8px;
-        overflow: hidden;
-        border: 1px solid #444;
-      `;
-      
-      const ePct = e.hp <= 0 ? 0 : Math.max(0, Math.min(100, (e.hp / e.maxHP) * 100));
-      const barFill = document.createElement("div");
-      barFill.style.cssText = `
-        width: ${ePct}%;
-        height: 100%;
-        background: #ef4444;
-        transition: width 0.1s;
-      `;
-      barBg.appendChild(barFill);
-      
-      const barHPLabel = document.createElement("div");
-      barHPLabel.style.cssText = "font-size:8px;color:#aaa;";
-      barHPLabel.textContent = `${Math.max(0, e.hp.toFixed(1))} / ${e.maxHP.toFixed(1)}`;
-      
-      barWrapper.appendChild(barLabel);
-      barWrapper.appendChild(barBg);
-      barWrapper.appendChild(barHPLabel);
-      enemyBox.appendChild(barWrapper);
-    }
+  // Create enemy cards
+  for (let i = 0; i < enemies.length; i++) {
+    const e = enemies[i];
+    const isMainTarget = i === 0;
+    
+    const card = document.createElement("div");
+    card.style.cssText = `
+      flex: 0 0 auto;
+      min-width: 120px;
+      padding: 6px;
+      background: ${isMainTarget ? "#2a2a2a" : "#1f1f1f"};
+      border: ${isMainTarget ? "2px solid #4ade80" : "1px solid #444"};
+      border-radius: 6px;
+      font-size: 11px;
+    `;
+    
+    // Label (MT or XT#)
+    const label = document.createElement("div");
+    label.style.cssText = "font-weight:bold;color:#aaa;margin-bottom:3px;";
+    label.textContent = isMainTarget ? `MT: ${e.name}` : `XT${i}: ${e.name}`;
+    
+    // Level
+    const levelDiv = document.createElement("div");
+    levelDiv.style.cssText = "font-size:9px;color:#777;margin-bottom:3px;";
+    levelDiv.textContent = `Lv ${e.level}`;
+    
+    // Health bar
+    const barBg = document.createElement("div");
+    barBg.style.cssText = `
+      background: #0a0a0a;
+      border-radius: 3px;
+      height: 6px;
+      overflow: hidden;
+      border: 1px solid #333;
+      margin-bottom: 2px;
+    `;
+    
+    const ePct = e.hp <= 0 ? 0 : Math.max(0, Math.min(100, (e.hp / e.maxHP) * 100));
+    const barFill = document.createElement("div");
+    barFill.style.cssText = `
+      width: ${ePct}%;
+      height: 100%;
+      background: ${isMainTarget ? "#4ade80" : "#ef4444"};
+      transition: width 0.1s;
+    `;
+    barBg.appendChild(barFill);
+    
+    // HP label
+    const hpLabel = document.createElement("div");
+    hpLabel.style.cssText = "font-size:8px;color:#aaa;text-align:center;";
+    hpLabel.textContent = `${Math.max(0, e.hp.toFixed(0))}/${e.maxHP}`;
+    
+    card.appendChild(label);
+    card.appendChild(levelDiv);
+    card.appendChild(barBg);
+    card.appendChild(hpLabel);
+    lineupContainer.appendChild(card);
   }
+
+  // Update the old enemy info section for context
+  const mainEnemy = enemies[0];
+  document.getElementById("enemyName").textContent = `${mainEnemy.name} (Lv ${mainEnemy.level})`;
+  const pct = mainEnemy.hp <= 0 ? 0 : Math.max(0, Math.min(100, (mainEnemy.hp / mainEnemy.maxHP) * 100));
+  document.getElementById("enemyHPFill").style.width = pct + "%";
+  document.getElementById("enemyHPLabel").textContent = `${Math.max(0, mainEnemy.hp.toFixed(1))} / ${mainEnemy.maxHP.toFixed(1)}`;
+  
+  // Total enemy DPS
+  const totalDPS = enemies.reduce((sum, e) => sum + e.dps, 0);
+  document.getElementById("enemyDpsSpan").textContent = totalDPS.toFixed(1);
 }
 
 export function renderParty() {
