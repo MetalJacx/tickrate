@@ -376,13 +376,10 @@ export function gameTick() {
   // Get living members
   const livingMembers = state.party.filter(h => !h.isDead);
   if (livingMembers.length > 0) {
-    // Always show what the enemy is attempting
-    addLog(`${enemy.name} attacks for ${rawDamage.toFixed(1)} damage!`, "damage_taken");
-
     // Single-target damage: pick one living member to take the full hit
     const target = livingMembers[randInt(livingMembers.length)];
     target.health = Math.max(0, target.health - rawDamage);
-    addLog(`${target.name} takes ${rawDamage.toFixed(1)} damage!`, "damage_taken");
+    addLog(`${enemy.name} deals ${rawDamage.toFixed(1)} damage to ${target.name}!`, "damage_taken");
 
     // Check for death on the target
     if (target.health <= 0 && !target.isDead) {
