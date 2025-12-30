@@ -12,6 +12,7 @@ export default {
   skills: [
     { key: "heal", name: "Heal", level: 1, type: "heal", amount: 18, cooldownSeconds: 4 },
     { key: "prayer", name: "Prayer of Protection", level: 3, type: "heal", amount: 35, cooldownSeconds: 10 },
-    { key: "smite", name: "Smite", level: 5, type: "damage", damageType: "holy", amount: 8, cooldownSeconds: 6 }
+    { key: "smite", name: "Smite", level: 5, type: "damage", damageType: "holy", amount: 8, cooldownSeconds: 6 },
+    { key: "resurrection", name: "Resurrection", level: 10, type: "resurrect", cooldownSeconds: 30 }
   ]
 };

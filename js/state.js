@@ -110,7 +110,19 @@ export function loadGame() {
     state.killsThisZone = data.killsThisZone ?? 0;
     state.killsForNextZone = data.killsForNextZone ?? 10;
     state.partySlotsUnlocked = data.partySlotsUnlocked ?? 1;
-    state.party = Array.isArray(data.party) ? data.party.map(h => ({ ...h })) : [];
+    state.party = Array.isArray(data.party) ? data.party.map(h => {
+      // Initialize health for old saves that don't have it
+      if (h.health === undefined) {
+        h.health = h.maxHP || 0;
+      }
+      if (h.isDead === undefined) {
+        h.isDead = false;
+      }
+      if (h.deathTime === undefined) {
+        h.deathTime = null;
+      }
+      return h;
+    }) : [];
     state.partyMaxHP = data.partyMaxHP ?? 0;
     state.partyHP = data.partyHP ?? 0;
     state.autoRestartHealthPercent = data.autoRestartHealthPercent ?? 100;

@@ -138,6 +138,11 @@ export function renderParty() {
       // Render filled slot with hero
       const div = document.createElement("div");
       div.className = "hero";
+      
+      // Greyed out if dead
+      if (hero.isDead) {
+        div.style.opacity = "0.6";
+      }
 
       const header = document.createElement("div");
       header.className = "hero-header";
@@ -151,15 +156,42 @@ export function renderParty() {
         displayName = state.characterName || hero.name;
       }
       
-      left.textContent = `${symbol} ${displayName} (Lv ${hero.level})`;
+      // Add death indicator
+      const statusText = hero.isDead ? " 💀 DEAD" : "";
+      left.textContent = `${symbol} ${displayName} (Lv ${hero.level})${statusText}`;
       const right = document.createElement("div");
       right.textContent = hero.role;
       header.appendChild(left);
       header.appendChild(right);
 
+      // Individual health bar
+      const healthBar = document.createElement("div");
+      healthBar.style.cssText = `
+        background: #222;
+        border-radius: 4px;
+        height: 12px;
+        margin: 6px 0;
+        overflow: hidden;
+        border: 1px solid #444;
+      `;
+      
+      const healthFill = document.createElement("div");
+      const healthPercent = hero.maxHP > 0 ? (hero.health / hero.maxHP) * 100 : 0;
+      healthFill.style.cssText = `
+        width: ${healthPercent}%;
+        height: 100%;
+        background: ${hero.isDead ? "#666" : "#4ade80"};
+        transition: width 0.1s;
+      `;
+      healthBar.appendChild(healthFill);
+      
+      const healthLabel = document.createElement("div");
+      healthLabel.style.cssText = "font-size:10px;color:#aaa;text-align:right;";
+      healthLabel.textContent = `${hero.health.toFixed(0)} / ${hero.maxHP}`;
+
       const stats = document.createElement("div");
       stats.className = "hero-stats";
-      stats.textContent = `HP: ${hero.maxHP} | DPS: ${hero.dps.toFixed(1)} | Healing: ${hero.healing.toFixed(1)}`;
+      stats.textContent = `DPS: ${hero.dps.toFixed(1)} | Healing: ${hero.healing.toFixed(1)}`;
 
       const xpDiv = document.createElement("div");
       xpDiv.style.cssText = "font-size:11px;color:#aaa;margin-top:4px;";
@@ -169,9 +201,9 @@ export function renderParty() {
       const btn = document.createElement("button");
       const cost = heroLevelUpCost(hero);
       btn.textContent = `Level Up (${cost} gold)`;
-      btn.disabled = state.gold < cost;
+      btn.disabled = state.gold < cost || hero.isDead;
       btn.addEventListener("click", function () {
-        if (state.gold >= cost) {
+        if (state.gold >= cost && !hero.isDead) {
           state.gold -= cost;
           applyHeroLevelUp(hero);
           addLog(`${hero.name} trains hard and reaches level ${hero.level}.`, "gold");
@@ -181,6 +213,8 @@ export function renderParty() {
       btnRow.appendChild(btn);
 
       div.appendChild(header);
+      div.appendChild(healthBar);
+      div.appendChild(healthLabel);
       div.appendChild(stats);
       div.appendChild(xpDiv);
       div.appendChild(btnRow);
@@ -251,7 +285,7 @@ export function renderParty() {
     }
   }
 
-  // Party HP bar
+  // Party total HP bar (aggregate percentage)
   recalcPartyTotals();
   const hpPct = state.partyMaxHP > 0 ? Math.max(0, Math.min(100, (state.partyHP / state.partyMaxHP) * 100)) : 0;
   document.getElementById("partyHPFill").style.width = hpPct + "%";

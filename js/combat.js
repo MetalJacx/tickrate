@@ -15,8 +15,11 @@ export function createHero(classKey, customName = null) {
     role: cls.role,
     level: 1,
     maxHP: cls.baseHP,
+    health: cls.baseHP,
     dps: cls.baseDPS,
     healing: cls.baseHealing,
+    isDead: false,
+    deathTime: null,
 
     // cooldown tracking per hero:
     skillTimers: {}
@@ -30,21 +33,20 @@ function getUnlockedSkills(hero) {
 }
 export function recalcPartyTotals() {
   let totalMaxHP = 0;
+  let totalCurrentHP = 0;
   let totalDPS = 0;
   let totalHealing = 0;
 
   for (const h of state.party) {
+    if (h?.isDead) continue; // Skip dead members
     totalMaxHP += h?.maxHP ?? 0;
+    totalCurrentHP += h?.health ?? 0;
     totalDPS += h?.dps ?? 0;
     totalHealing += h?.healing ?? 0;
   }
 
   state.partyMaxHP = totalMaxHP;
-  if (state.partyHP == null) {
-    state.partyHP = totalMaxHP;
-  } else {
-    state.partyHP = Math.min(state.partyHP, totalMaxHP);
-  }
+  state.partyHP = totalCurrentHP;
 
   return { totalDPS, totalHealing };
 }
@@ -196,20 +198,36 @@ export function travelToPreviousZone() {
 }
 
 export function gameTick() {
+  // Handle auto-revival for dead members (60 second timer)
+  const now = Date.now();
+  for (const hero of state.party) {
+    if (hero.isDead && hero.deathTime) {
+      const timeSinceDeath = (now - hero.deathTime) / 1000; // seconds
+      if (timeSinceDeath >= 60) {
+        hero.isDead = false;
+        hero.deathTime = null;
+        hero.health = Math.max(1, hero.maxHP * 0.1); // Revive at 10% HP
+        addLog(`${hero.name} has been automatically revived with 10% health!`);
+      }
+    }
+  }
+
   const totals = recalcPartyTotals();
   
-  // 1) Apply passive health regeneration (always, even when no enemy)
-  // Minimum 2 HP per tick + scaling bonus from healing stat
+  // 1) Apply passive health regeneration to living members only
   const baseRegenPerTick = 2;
-  const scalingRegenPerTick = totals.totalHealing * 0.2; // Additional scaling per healing point
+  const scalingRegenPerTick = totals.totalHealing * 0.2;
   const passiveRegenAmount = baseRegenPerTick + scalingRegenPerTick;
   
-  if (passiveRegenAmount > 0 && state.partyHP < state.partyMaxHP) {
-    const oldHP = state.partyHP;
-    state.partyHP = Math.min(state.partyMaxHP, state.partyHP + passiveRegenAmount);
-    const actualHealed = state.partyHP - oldHP;
-    if (actualHealed > 0.1) { // Only log if meaningful regen
-      addLog(`Party regenerates ${actualHealed.toFixed(1)} HP!`, "regen");
+  for (const hero of state.party) {
+    if (hero.isDead) continue; // Skip dead members
+    if (passiveRegenAmount > 0 && hero.health < hero.maxHP) {
+      const oldHP = hero.health;
+      hero.health = Math.min(hero.maxHP, hero.health + passiveRegenAmount);
+      const actualHealed = hero.health - oldHP;
+      if (actualHealed > 0.1) {
+        addLog(`${hero.name} regenerates ${actualHealed.toFixed(1)} HP!`, "regen");
+      }
     }
   }
   
@@ -233,6 +251,8 @@ export function gameTick() {
   let skillBonusHeal = 0;
 
   for (const hero of state.party) {
+    if (hero.isDead) continue; // Dead heroes can't use skills
+    
     const cls = getClassDef(hero.classKey);
     if (!cls?.skills) continue;
 
@@ -262,6 +282,23 @@ export function gameTick() {
           skillBonusHeal += sk.amount;
           addLog(`${hero.name} casts ${sk.name} for ${sk.amount} healing!`, "healing");
         }
+        if (sk.type === "resurrect") {
+          // Find first dead party member and revive them at 10% HP
+          let revived = false;
+          for (const target of state.party) {
+            if (target.isDead) {
+              target.isDead = false;
+              target.deathTime = null;
+              target.health = target.maxHP * 0.1;
+              addLog(`${hero.name} casts ${sk.name} and revives ${target.name} with 10% health!`, "healing");
+              revived = true;
+              break;
+            }
+          }
+          if (!revived) {
+            addLog(`${hero.name} casts ${sk.name} but no one needs revival.`);
+          }
+        }
         hero.skillTimers[sk.key] = sk.cooldownSeconds;
       }
     }
@@ -276,25 +313,43 @@ export function gameTick() {
     addLog(`Party attacks for ${totalDamage.toFixed(1)} damage!`, "damage_dealt");
   }
 
-  // 4) Apply enemy damage to party, reduced by healing (with variance)
+  // 4) Apply enemy damage to living party members
   const baseRawDamage = enemy.dps;
   const enemyVariance = baseRawDamage * 0.2; // ±20% variance
   const rawDamage = Math.max(1, baseRawDamage - enemyVariance + Math.random() * (enemyVariance * 2));
-  const effectiveHealing = totals.totalHealing + skillBonusHeal;
-  const mitigated = Math.max(rawDamage - effectiveHealing, 0);
-
-  if (mitigated > 0) {
-    state.partyHP = Math.max(0, state.partyHP - mitigated);
-    addLog(`${enemy.name} deals ${mitigated.toFixed(1)} damage!`, "damage_taken");
-  } else if (effectiveHealing > rawDamage) {
-    const healed = (effectiveHealing - rawDamage) * 0.3;
-    state.partyHP = Math.min(state.partyMaxHP, state.partyHP + healed);
-    addLog(`Party heals for ${healed.toFixed(1)} HP!`, "healing");
+  
+  // Get living members
+  const livingMembers = state.party.filter(h => !h.isDead);
+  if (livingMembers.length > 0) {
+    const damagePerMember = rawDamage / livingMembers.length;
+    const effectiveHealing = (totals.totalHealing + skillBonusHeal) / livingMembers.length;
+    const mitigatedDamage = Math.max(0, damagePerMember - effectiveHealing);
+    
+    if (mitigatedDamage > 0) {
+      // Distribute damage across living members
+      for (const hero of livingMembers) {
+        hero.health = Math.max(0, hero.health - mitigatedDamage);
+        
+        // Check for death
+        if (hero.health <= 0 && !hero.isDead) {
+          hero.isDead = true;
+          hero.deathTime = Date.now();
+          addLog(`${hero.name} has been defeated!`, "damage_taken");
+        }
+      }
+      addLog(`${enemy.name} deals ${mitigatedDamage.toFixed(1)} damage to each member!`, "damage_taken");
+    } else if (effectiveHealing > damagePerMember) {
+      const healed = (effectiveHealing - damagePerMember) * 0.3;
+      for (const hero of livingMembers) {
+        hero.health = Math.min(hero.maxHP, hero.health + healed);
+      }
+      addLog(`Party heals for ${healed.toFixed(1)} HP!`, "healing");
+    }
   }
 
   if (enemy.hp <= 0) {
     onEnemyKilled(enemy, totalDamage);
-  } else if (state.partyHP <= 0 && state.partyMaxHP > 0) {
+  } else if (livingMembers.length === 0) {
     onPartyWipe();
   }
 
