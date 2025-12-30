@@ -381,12 +381,6 @@ export function gameTick() {
 
   // Check if any party member is damaged (for heal checks)
   const anyDamaged = state.party.some(h => !h.isDead && h.health < h.maxHP);
-  
-  // If no enemies (out of combat), return early
-  if (state.currentEnemies.length === 0) {
-    checkSlotUnlocks();
-    return;
-  }
 
   // 3) Process skills and calculate bonuses
   let skillBonusDamage = 0;
