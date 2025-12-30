@@ -2,6 +2,7 @@ export default {
   zoneNumber: 3,
   name: "Ruined Castle",
   description: "An ancient stronghold in decay",
+  aggroChance: 0.12, // dangerous zone, higher add rate
   enemies: [
     { name: "Skeletal Knight", baseHP: 55, baseDPS: 6 },
     { name: "Orc Centurion", baseHP: 60, baseDPS: 7 },

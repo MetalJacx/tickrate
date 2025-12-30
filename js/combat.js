@@ -161,7 +161,8 @@ export { spawnEnemyToList };
 function checkForReinforcement() {
   // Each enemy has 5% chance per tick to call reinforcements (when in combat)
   if (state.currentEnemies.length > 0) {
-    const reinforcementChance = 0.05;
+    const zone = getZoneDef(state.zone);
+    const reinforcementChance = zone?.aggroChance ?? 0.05;
     if (Math.random() < reinforcementChance) {
       spawnEnemyToList();
     }
