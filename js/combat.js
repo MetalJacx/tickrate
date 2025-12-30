@@ -109,25 +109,38 @@ function checkSlotUnlocks() {
 }
 
 function onEnemyKilled(enemy, totalDPS) {
-  const xp = 5 + state.zone * 3 + enemy.level * 2;
+  const baseXP = 5 + state.zone * 3 + enemy.level * 2;
   const gold = 5 + state.zone * 4 + enemy.level;
 
-  state.totalXP += xp;
+  // Apply group bonus based on party size
+  const partySize = state.party.length;
+  const groupBonus = 1.0 + (partySize - 1) * 0.1; // 1.0x, 1.1x, 1.2x, 1.3x, 1.4x, 1.5x
+  const totalXP = baseXP * groupBonus;
+
+  state.totalXP += Math.floor(totalXP);
   state.gold += gold;
   state.killsThisZone += 1;
 
-  // Award combat XP to all party members
-  const combatXPPerMember = xp;
+  // Calculate level-weighted XP distribution
+  // weight = level^2
+  let totalWeight = 0;
   for (const hero of state.party) {
-    if (!hero.xp) hero.xp = 0;
-    hero.xp += combatXPPerMember;
+    totalWeight += hero.level * hero.level;
   }
 
-  // Award to account
-  state.accountLevelXP += xp;
+  // Distribute XP proportionally by level weight
+  for (const hero of state.party) {
+    if (!hero.xp) hero.xp = 0;
+    const heroWeight = hero.level * hero.level;
+    const heroShare = totalXP * (heroWeight / totalWeight);
+    hero.xp += heroShare;
+  }
+
+  // Award to account (use base XP to avoid double-counting bonus)
+  state.accountLevelXP += baseXP;
   checkAccountLevelUp();
 
-  addLog(`Your party defeats the ${enemy.name}, dealing ${totalDPS.toFixed(1)} damage. +${xp} XP, +${gold} gold.`, "gold");
+  addLog(`Your party defeats the ${enemy.name}, dealing ${totalDPS.toFixed(1)} damage. +${Math.floor(totalXP)} XP, +${gold} gold.`, "gold");
   state.currentEnemy = null;
   state.waitingToRespawn = true;
 }
