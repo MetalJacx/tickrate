@@ -3,6 +3,7 @@ import { heroLevelUpCost, applyHeroLevelUp, canTravelForward, travelToNextZone, 
 import { CLASSES, getClassDef } from "./classes/index.js";
 import { getZoneDef } from "./zones/index.js";
 import { addLog } from "./util.js";
+import { MAX_PARTY_SIZE } from "./defs.js";
 
 export function initUI({ onRecruit, onReset, onOpenRecruitModal }) {
   document.getElementById("travelBtn").addEventListener("click", () => {
@@ -129,90 +130,116 @@ export function renderParty() {
   const container = document.getElementById("partyContainer");
   container.innerHTML = "";
 
-  // Render existing heroes
-  for (const hero of state.party) {
-    const div = document.createElement("div");
-    div.className = "hero";
+  // Render all slots up to MAX_PARTY_SIZE
+  for (let i = 0; i < MAX_PARTY_SIZE; i++) {
+    const hero = state.party[i];
+    
+    if (hero) {
+      // Render filled slot with hero
+      const div = document.createElement("div");
+      div.className = "hero";
 
-    const header = document.createElement("div");
-    header.className = "hero-header";
-    const left = document.createElement("div");
-    left.textContent = `${hero.name} (Lv ${hero.level})`;
-    const right = document.createElement("div");
-    right.textContent = hero.role;
-    header.appendChild(left);
-    header.appendChild(right);
+      const header = document.createElement("div");
+      header.className = "hero-header";
+      const left = document.createElement("div");
+      left.textContent = `${hero.name} (Lv ${hero.level})`;
+      const right = document.createElement("div");
+      right.textContent = hero.role;
+      header.appendChild(left);
+      header.appendChild(right);
 
-    const stats = document.createElement("div");
-    stats.className = "hero-stats";
-    stats.textContent = `HP: ${hero.maxHP} | DPS: ${hero.dps.toFixed(1)} | Healing: ${hero.healing.toFixed(1)}`;
+      const stats = document.createElement("div");
+      stats.className = "hero-stats";
+      stats.textContent = `HP: ${hero.maxHP} | DPS: ${hero.dps.toFixed(1)} | Healing: ${hero.healing.toFixed(1)}`;
 
-    const xpDiv = document.createElement("div");
-    xpDiv.style.cssText = "font-size:11px;color:#aaa;margin-top:4px;";
-    xpDiv.textContent = `XP: ${(hero.xp || 0).toFixed(0)}`;
+      const xpDiv = document.createElement("div");
+      xpDiv.style.cssText = "font-size:11px;color:#aaa;margin-top:4px;";
+      xpDiv.textContent = `XP: ${(hero.xp || 0).toFixed(0)}`;
 
-    const btnRow = document.createElement("div");
-    const btn = document.createElement("button");
-    const cost = heroLevelUpCost(hero);
-    btn.textContent = `Level Up (${cost} gold)`;
-    btn.disabled = state.gold < cost;
-    btn.addEventListener("click", function () {
-      if (state.gold >= cost) {
-        state.gold -= cost;
-        applyHeroLevelUp(hero);
-        addLog(`${hero.name} trains hard and reaches level ${hero.level}.`, "gold");
-        renderAll();
+      const btnRow = document.createElement("div");
+      const btn = document.createElement("button");
+      const cost = heroLevelUpCost(hero);
+      btn.textContent = `Level Up (${cost} gold)`;
+      btn.disabled = state.gold < cost;
+      btn.addEventListener("click", function () {
+        if (state.gold >= cost) {
+          state.gold -= cost;
+          applyHeroLevelUp(hero);
+          addLog(`${hero.name} trains hard and reaches level ${hero.level}.`, "gold");
+          renderAll();
+        }
+      });
+      btnRow.appendChild(btn);
+
+      div.appendChild(header);
+      div.appendChild(stats);
+      div.appendChild(xpDiv);
+      div.appendChild(btnRow);
+      container.appendChild(div);
+    } else {
+      // Render empty or locked slot
+      const isUnlocked = i < state.partySlotsUnlocked;
+      
+      const div = document.createElement("div");
+      div.className = "hero";
+      
+      if (isUnlocked) {
+        // Unlocked empty slot - clickable
+        div.style.cssText = `
+          cursor: pointer;
+          border: 2px dashed #555;
+          background: #0f0f0f;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 80px;
+          transition: all 0.2s;
+        `;
+        
+        div.innerHTML = `
+          <div style="text-align:center;color:#888;">
+            <div style="font-size:24px;margin-bottom:4px;">+</div>
+            <div style="font-size:12px;">Click to recruit</div>
+          </div>
+        `;
+        
+        div.addEventListener("mouseenter", () => {
+          div.style.borderColor = "#888";
+          div.style.background = "#151515";
+        });
+        
+        div.addEventListener("mouseleave", () => {
+          div.style.borderColor = "#555";
+          div.style.background = "#0f0f0f";
+        });
+        
+        div.addEventListener("click", () => {
+          if (window.__openRecruitModal) {
+            window.__openRecruitModal();
+          }
+        });
+      } else {
+        // Locked slot
+        div.style.cssText = `
+          border: 2px solid #333;
+          background: #0a0a0a;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 80px;
+          opacity: 0.5;
+        `;
+        
+        div.innerHTML = `
+          <div style="text-align:center;color:#555;">
+            <div style="font-size:20px;margin-bottom:4px;">🔒</div>
+            <div style="font-size:11px;">Unlock in higher zones</div>
+          </div>
+        `;
       }
-    });
-    btnRow.appendChild(btn);
-
-    div.appendChild(header);
-    div.appendChild(stats);
-    div.appendChild(xpDiv);
-    div.appendChild(btnRow);
-    container.appendChild(div);
-  }
-
-  // Render empty slots for unlocked positions
-  const emptySlots = state.partySlotsUnlocked - state.party.length;
-  for (let i = 0; i < emptySlots; i++) {
-    const div = document.createElement("div");
-    div.className = "hero";
-    div.style.cssText = `
-      cursor: pointer;
-      border: 2px dashed #555;
-      background: #0f0f0f;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 80px;
-      transition: all 0.2s;
-    `;
-    
-    div.innerHTML = `
-      <div style="text-align:center;color:#888;">
-        <div style="font-size:24px;margin-bottom:4px;">+</div>
-        <div style="font-size:12px;">Click to recruit</div>
-      </div>
-    `;
-    
-    div.addEventListener("mouseenter", () => {
-      div.style.borderColor = "#888";
-      div.style.background = "#151515";
-    });
-    
-    div.addEventListener("mouseleave", () => {
-      div.style.borderColor = "#555";
-      div.style.background = "#0f0f0f";
-    });
-    
-    div.addEventListener("click", () => {
-      if (window.__openRecruitModal) {
-        window.__openRecruitModal();
-      }
-    });
-    
-    container.appendChild(div);
+      
+      container.appendChild(div);
+    }
   }
 
   // Party HP bar
