@@ -187,8 +187,8 @@ export function renderParty() {
       healthBar.appendChild(healthFill);
       
       const healthLabel = document.createElement("div");
-      healthLabel.style.cssText = "font-size:10px;color:#aaa;text-align:right;";
-      healthLabel.textContent = `${hero.health.toFixed(0)} / ${hero.maxHP}`;
+      healthLabel.style.cssText = "font-size:10px;color:#4ade80;text-align:left;margin-top:2px;";
+      healthLabel.textContent = `HP: ${hero.health.toFixed(0)} / ${hero.maxHP}`;
 
       // Resource bars (mana/endurance)
       let resourceBars = [];
