@@ -2,7 +2,7 @@ export default {
   zoneNumber: 2,
   name: "Dark Forest",
   description: "An eerie woodland",
-  aggroChance: 0.08, // higher chance of adds in this zone
+  aggroChance: 0.05,
   enemies: [
     { name: "Forest Ghoul", baseHP: 40, baseDPS: 4 },
     {
