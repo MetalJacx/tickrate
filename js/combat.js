@@ -4,14 +4,14 @@ import { getZoneDef, getEnemyForZone, MAX_ZONE } from "./zones/index.js";
 import { addLog, randInt } from "./util.js";
 import { SLOT_UNLOCKS } from "./defs.js";
 
-export function createHero(classKey) {
+export function createHero(classKey, customName = null) {
   const cls = getClassDef(classKey);
   if (!cls) return null;
 
   return {
     id: nextHeroId(),
     classKey: cls.key,
-    name: cls.name,
+    name: customName || cls.name,
     role: cls.role,
     level: 1,
     maxHP: cls.baseHP,

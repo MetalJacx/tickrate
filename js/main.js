@@ -313,9 +313,11 @@ function wireRecruitModal() {
   const closeBtn = document.getElementById("recruitCloseBtn");
   const confirmBtn = document.getElementById("recruitConfirmBtn");
   const buttonContainer = document.getElementById("recruitClassButtonContainer");
+  const nameInput = document.getElementById("recruitHeroNameInput");
   
   function openRecruitModal() {
     selectedRecruitClassKey = null;
+    nameInput.value = "";
     modal.style.display = "block";
     renderRecruitClassCards();
     renderRecruitDetails();
@@ -324,6 +326,7 @@ function wireRecruitModal() {
   function closeRecruitModal() {
     modal.style.display = "none";
     selectedRecruitClassKey = null;
+    nameInput.value = "";
   }
   
   function renderRecruitClassCards() {
@@ -430,7 +433,10 @@ function wireRecruitModal() {
     const hasSpace = state.party.length < state.partySlotsUnlocked;
     
     confirmBtn.textContent = `Recruit for ${cls.cost} gold`;
-    confirmBtn.disabled = !canAfford || !hasSpace;
+    
+    // Enable button only if has space, can afford, AND has a name entered
+    const hasName = nameInput.value.trim().length > 0;
+    confirmBtn.disabled = !canAfford || !hasSpace || !hasName;
     
     if (!hasSpace) {
       errorDiv.textContent = "No party slots available";
@@ -438,8 +444,18 @@ function wireRecruitModal() {
     } else if (!canAfford) {
       errorDiv.textContent = `Need ${cls.cost - state.gold} more gold`;
       errorDiv.style.display = "block";
+    } else if (!hasName) {
+      errorDiv.textContent = "Enter a hero name";
+      errorDiv.style.display = "block";
     }
   }
+  
+  // Update button state when name input changes
+  nameInput.addEventListener("input", () => {
+    if (selectedRecruitClassKey) {
+      renderRecruitDetails();
+    }
+  });
   
   closeBtn.addEventListener("click", closeRecruitModal);
   
@@ -455,6 +471,12 @@ function wireRecruitModal() {
     const cls = getClassDef(selectedRecruitClassKey);
     if (!cls) return;
     
+    const heroName = nameInput.value.trim();
+    if (!heroName) {
+      showToast("Please enter a hero name!", true);
+      return;
+    }
+    
     if (state.party.length >= state.partySlotsUnlocked) {
       showToast("No party slots available!", true);
       return;
@@ -466,12 +488,12 @@ function wireRecruitModal() {
     }
     
     state.gold -= cls.cost;
-    const hero = createHero(selectedRecruitClassKey);
+    const hero = createHero(selectedRecruitClassKey, heroName);
     state.party.push(hero);
     state.partyHP += hero.maxHP;
     state.partyMaxHP += hero.maxHP;
-    addLog(`A ${cls.name} joins your party at the campfire.`);
-    showToast(`${cls.name} recruited!`);
+    addLog(`${heroName} the ${cls.name} joins your party at the campfire.`);
+    showToast(`${heroName} recruited!`);
     renderAll();
     closeRecruitModal();
   });
