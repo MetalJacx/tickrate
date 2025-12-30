@@ -321,14 +321,15 @@ export function gameTick() {
   // Get living members
   const livingMembers = state.party.filter(h => !h.isDead);
   if (livingMembers.length > 0) {
-    const damagePerMember = rawDamage / livingMembers.length;
-    const effectiveHealing = (totals.totalHealing + skillBonusHeal) / livingMembers.length;
-    const mitigatedDamage = Math.max(0, damagePerMember - effectiveHealing);
+    // Apply healing reduction to total damage FIRST, then split among members
+    const effectiveHealing = totals.totalHealing + skillBonusHeal;
+    const mitigatedTotal = Math.max(0, rawDamage - effectiveHealing);
+    const damagePerMember = mitigatedTotal / livingMembers.length;
     
-    if (mitigatedDamage > 0) {
+    if (mitigatedTotal > 0) {
       // Distribute damage across living members
       for (const hero of livingMembers) {
-        hero.health = Math.max(0, hero.health - mitigatedDamage);
+        hero.health = Math.max(0, hero.health - damagePerMember);
         
         // Check for death
         if (hero.health <= 0 && !hero.isDead) {
@@ -337,9 +338,9 @@ export function gameTick() {
           addLog(`${hero.name} has been defeated!`, "damage_taken");
         }
       }
-      addLog(`${enemy.name} deals ${mitigatedDamage.toFixed(1)} damage to each member!`, "damage_taken");
-    } else if (effectiveHealing > damagePerMember) {
-      const healed = (effectiveHealing - damagePerMember) * 0.3;
+      addLog(`${enemy.name} deals ${damagePerMember.toFixed(1)} damage to each member!`, "damage_taken");
+    } else if (effectiveHealing > rawDamage) {
+      const healed = (effectiveHealing - rawDamage) * 0.3;
       for (const hero of livingMembers) {
         hero.health = Math.min(hero.maxHP, hero.health + healed);
       }
