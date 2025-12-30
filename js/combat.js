@@ -264,7 +264,6 @@ export function gameTick() {
   }
 
   const enemy = state.currentEnemy;
-  if (!enemy) return;
 
   // Check if any party member is damaged (for heal checks)
   const anyDamaged = state.party.some(h => !h.isDead && h.health < h.maxHP);
@@ -288,6 +287,10 @@ export function gameTick() {
 
       // Fire if ready
       if (hero.skillTimers[sk.key] === 0) {
+        // If this is a damage skill but no enemy is present, hold fire until combat starts
+        if (sk.type === "damage" && !enemy) {
+          continue;
+        }
         // Check resource availability
         const costType = sk.costType || (hero.resourceType === "mana" ? "mana" : (hero.resourceType === "endurance" ? "endurance" : "mana"));
         const cost = sk.cost || 0;
@@ -371,6 +374,12 @@ export function gameTick() {
         hero.skillTimers[sk.key] = sk.cooldownSeconds;
       }
     }
+  }
+
+  // If no enemy (out of combat), stop after processing utility/heal skills
+  if (!enemy) {
+    checkSlotUnlocks();
+    return;
   }
 
   // 3) Apply damage to enemy (with variance)
