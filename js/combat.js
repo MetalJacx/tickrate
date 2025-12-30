@@ -389,6 +389,9 @@ export function gameTick() {
       for (const hero of livingMembers) {
         hero.health = Math.max(0, hero.health - damagePerMember);
         
+        // Log damage for this specific hero
+        addLog(`${hero.name} takes ${damagePerMember.toFixed(1)} damage!`, "damage_taken");
+        
         // Check for death
         if (hero.health <= 0 && !hero.isDead) {
           hero.isDead = true;
@@ -396,7 +399,6 @@ export function gameTick() {
           addLog(`${hero.name} has been defeated!`, "damage_taken");
         }
       }
-      addLog(`Party takes ${damagePerMember.toFixed(1)} damage per member!`, "damage_taken");
     } else if (effectiveHealing > rawDamage) {
       const healed = (effectiveHealing - rawDamage) * 0.3;
       for (const hero of livingMembers) {

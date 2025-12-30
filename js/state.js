@@ -1,4 +1,5 @@
 import { SAVE_KEY } from "./defs.js";
+import { getClassDef } from "./classes/index.js";
 
 let heroIdCounter = 1;
 
@@ -121,16 +122,17 @@ export function loadGame() {
       if (h.deathTime === undefined) {
         h.deathTime = null;
       }
-      // Initialize resources for old saves or new heroes
+      // Initialize resources from class definition if missing
+      const cls = getClassDef(h.classKey);
       if (h.maxMana === undefined) {
-        h.maxMana = 0;
-        h.mana = 0;
-        h.manaRegenPerTick = 0;
+        h.maxMana = cls?.maxMana || 0;
+        h.mana = cls?.maxMana || 0;
+        h.manaRegenPerTick = cls?.manaRegenPerTick || 0;
       }
       if (h.maxEndurance === undefined) {
-        h.maxEndurance = 0;
-        h.endurance = 0;
-        h.enduranceRegenPerTick = 0;
+        h.maxEndurance = cls?.maxEndurance || 0;
+        h.endurance = cls?.maxEndurance || 0;
+        h.enduranceRegenPerTick = cls?.enduranceRegenPerTick || 0;
       }
       return h;
     }) : [];
