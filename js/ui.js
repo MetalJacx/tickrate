@@ -4,18 +4,7 @@ import { CLASSES, getClassDef } from "./classes/index.js";
 import { getZoneDef } from "./zones/index.js";
 import { addLog } from "./util.js";
 
-export function initUI({ onRecruit, onReset }) {
-  // Populate recruit dropdown
-  const select = document.getElementById("recruitSelect");
-  select.innerHTML = "";
-  for (const cls of CLASSES) {
-    const opt = document.createElement("option");
-    opt.value = cls.key;
-    opt.textContent = `${cls.name} (${cls.role})`;
-    select.appendChild(opt);
-  }
-
-  document.getElementById("recruitBtn").addEventListener("click", onRecruit);
+export function initUI({ onRecruit, onReset, onOpenRecruitModal }) {
   document.getElementById("travelBtn").addEventListener("click", () => {
     travelToNextZone();
     renderAll();
@@ -25,7 +14,10 @@ export function initUI({ onRecruit, onReset }) {
     renderAll();
   });
 
-  select.addEventListener("change", renderRecruitBox);
+  // Store the callback for opening recruit modal
+  if (onOpenRecruitModal) {
+    window.__openRecruitModal = onOpenRecruitModal;
+  }
 
   // Health threshold slider
   const healthSlider = document.getElementById("healthThresholdInput");
@@ -55,7 +47,6 @@ export function renderAll() {
   renderEnemy();
   renderParty();
   renderMeta();
-  renderRecruitBox();
   renderLog();
 }
 
@@ -138,6 +129,7 @@ export function renderParty() {
   const container = document.getElementById("partyContainer");
   container.innerHTML = "";
 
+  // Render existing heroes
   for (const hero of state.party) {
     const div = document.createElement("div");
     div.className = "hero";
@@ -181,6 +173,48 @@ export function renderParty() {
     container.appendChild(div);
   }
 
+  // Render empty slots for unlocked positions
+  const emptySlots = state.partySlotsUnlocked - state.party.length;
+  for (let i = 0; i < emptySlots; i++) {
+    const div = document.createElement("div");
+    div.className = "hero";
+    div.style.cssText = `
+      cursor: pointer;
+      border: 2px dashed #555;
+      background: #0f0f0f;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 80px;
+      transition: all 0.2s;
+    `;
+    
+    div.innerHTML = `
+      <div style="text-align:center;color:#888;">
+        <div style="font-size:24px;margin-bottom:4px;">+</div>
+        <div style="font-size:12px;">Click to recruit</div>
+      </div>
+    `;
+    
+    div.addEventListener("mouseenter", () => {
+      div.style.borderColor = "#888";
+      div.style.background = "#151515";
+    });
+    
+    div.addEventListener("mouseleave", () => {
+      div.style.borderColor = "#555";
+      div.style.background = "#0f0f0f";
+    });
+    
+    div.addEventListener("click", () => {
+      if (window.__openRecruitModal) {
+        window.__openRecruitModal();
+      }
+    });
+    
+    container.appendChild(div);
+  }
+
   // Party HP bar
   recalcPartyTotals();
   const hpPct = state.partyMaxHP > 0 ? Math.max(0, Math.min(100, (state.partyHP / state.partyMaxHP) * 100)) : 0;
@@ -219,17 +253,4 @@ export function renderMeta() {
   
   // Back button: can always go back except at zone 1
   document.getElementById("travelBackBtn").disabled = state.zone <= 1;
-}
-
-export function renderRecruitBox() {
-  const select = document.getElementById("recruitSelect");
-  const btn = document.getElementById("recruitBtn");
-  const info = document.getElementById("recruitCostInfo");
-
-  const cls = getClassDef(select.value);
-  info.textContent = cls ? `${cls.name}: ${cls.desc} (Cost: ${cls.cost} gold)` : "";
-
-  const canRecruitMore = state.party.length < state.partySlotsUnlocked;
-  const costOk = cls && state.gold >= cls.cost;
-  btn.disabled = !(canRecruitMore && costOk);
 }

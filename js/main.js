@@ -9,6 +9,7 @@ import { initSettings } from "./settings.js";
 let tickTimer = null; // requestAnimationFrame id
 let saveTimer = null;
 let selectedClassKey = null;
+let selectedRecruitClassKey = null;
 
 function showToast(message, isError = false) {
   const toast = document.getElementById("toast");
@@ -307,6 +308,177 @@ function wireClassScreen(onConfirmed) {
   });
 }
 
+function wireRecruitModal() {
+  const modal = document.getElementById("recruitModal");
+  const closeBtn = document.getElementById("recruitCloseBtn");
+  const confirmBtn = document.getElementById("recruitConfirmBtn");
+  const buttonContainer = document.getElementById("recruitClassButtonContainer");
+  
+  function openRecruitModal() {
+    selectedRecruitClassKey = null;
+    modal.style.display = "block";
+    renderRecruitClassCards();
+    renderRecruitDetails();
+  }
+  
+  function closeRecruitModal() {
+    modal.style.display = "none";
+    selectedRecruitClassKey = null;
+  }
+  
+  function renderRecruitClassCards() {
+    buttonContainer.innerHTML = "";
+    
+    for (const cls of CLASSES) {
+      const btn = document.createElement("button");
+      btn.textContent = cls.name;
+      btn.style.cssText = `
+        padding: 10px;
+        border-radius: 6px;
+        border: 1px solid #555;
+        background: #222;
+        color: #eee;
+        cursor: pointer;
+        text-align: left;
+        font-size: 13px;
+        transition: all 0.2s;
+      `;
+      
+      btn.addEventListener("mouseenter", () => {
+        btn.style.background = "#333";
+        btn.style.borderColor = "#777";
+      });
+      
+      btn.addEventListener("mouseleave", () => {
+        if (selectedRecruitClassKey !== cls.key) {
+          btn.style.background = "#222";
+          btn.style.borderColor = "#555";
+        }
+      });
+      
+      btn.addEventListener("click", () => {
+        selectedRecruitClassKey = cls.key;
+        renderRecruitClassCards();
+        renderRecruitDetails();
+      });
+      
+      if (selectedRecruitClassKey === cls.key) {
+        btn.style.background = "#444";
+        btn.style.borderColor = "#888";
+      }
+      
+      buttonContainer.appendChild(btn);
+    }
+  }
+  
+  function renderRecruitDetails() {
+    const detailContainer = document.getElementById("recruitDetailContainer");
+    const promptContainer = document.getElementById("recruitSelectPrompt");
+    const errorDiv = document.getElementById("recruitError");
+    
+    errorDiv.style.display = "none";
+    
+    if (!selectedRecruitClassKey) {
+      detailContainer.style.display = "none";
+      promptContainer.style.display = "flex";
+      confirmBtn.disabled = true;
+      return;
+    }
+    
+    const cls = getClassDef(selectedRecruitClassKey);
+    if (!cls) return;
+    
+    detailContainer.style.display = "flex";
+    promptContainer.style.display = "none";
+    
+    document.getElementById("recruitSelectedClassName").textContent = cls.name;
+    
+    const statsHtml = `
+      HP: ${cls.baseHP}<br>
+      Damage: ${cls.baseDPS}<br>
+      Healing: ${cls.baseHealing}<br>
+      Cost: ${cls.cost}g<br>
+      Role: ${cls.role}
+    `;
+    document.getElementById("recruitClassStats").innerHTML = statsHtml;
+    
+    const skillsContainer = document.getElementById("recruitClassSkills");
+    skillsContainer.innerHTML = "";
+    for (const sk of cls.skills) {
+      const skillDiv = document.createElement("div");
+      let typeLabel = sk.type === "damage" ? "DMG" : "HEAL";
+      if (sk.damageType) {
+        typeLabel += ` (${sk.damageType})`;
+      }
+      skillDiv.style.cssText = `
+        background: #111;
+        padding: 8px;
+        border-radius: 4px;
+        border: 1px solid #333;
+        font-size: 11px;
+        line-height: 1.4;
+      `;
+      skillDiv.innerHTML = `
+        <div style="font-weight:bold;margin-bottom:2px;">${sk.name} (Lv${sk.level})</div>
+        <div style="color:#aaa;">${typeLabel} +${sk.amount} | CD ${sk.cooldownSeconds}s</div>
+      `;
+      skillsContainer.appendChild(skillDiv);
+    }
+    
+    // Update confirm button
+    const canAfford = state.gold >= cls.cost;
+    const hasSpace = state.party.length < state.partySlotsUnlocked;
+    
+    confirmBtn.textContent = `Recruit for ${cls.cost} gold`;
+    confirmBtn.disabled = !canAfford || !hasSpace;
+    
+    if (!hasSpace) {
+      errorDiv.textContent = "No party slots available";
+      errorDiv.style.display = "block";
+    } else if (!canAfford) {
+      errorDiv.textContent = `Need ${cls.cost - state.gold} more gold`;
+      errorDiv.style.display = "block";
+    }
+  }
+  
+  closeBtn.addEventListener("click", closeRecruitModal);
+  
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) {
+      closeRecruitModal();
+    }
+  });
+  
+  confirmBtn.addEventListener("click", () => {
+    if (!selectedRecruitClassKey) return;
+    
+    const cls = getClassDef(selectedRecruitClassKey);
+    if (!cls) return;
+    
+    if (state.party.length >= state.partySlotsUnlocked) {
+      showToast("No party slots available!", true);
+      return;
+    }
+    
+    if (state.gold < cls.cost) {
+      showToast("Not enough gold!", true);
+      return;
+    }
+    
+    state.gold -= cls.cost;
+    const hero = createHero(selectedRecruitClassKey);
+    state.party.push(hero);
+    state.partyHP += hero.maxHP;
+    state.partyMaxHP += hero.maxHP;
+    addLog(`A ${cls.name} joins your party at the campfire.`);
+    showToast(`${cls.name} recruited!`);
+    renderAll();
+    closeRecruitModal();
+  });
+  
+  return { openRecruitModal };
+}
+
 function start() {
   // Wire Export/Import buttons via Settings module
   initSettings({
@@ -318,33 +490,12 @@ function start() {
     }
   });
 
-  // Init UI handlers for the game screen buttons (recruit/travel etc.)
+  // Wire recruitment modal
+  const { openRecruitModal } = wireRecruitModal();
+
+  // Init UI handlers for the game screen buttons (travel etc.)
   initUI({
-    onRecruit: () => {
-      const select = document.getElementById("recruitSelect");
-      const clsKey = select.value;
-      const cls = getClassDef(clsKey);
-      if (!cls) return;
-
-      if (state.party.length >= state.partySlotsUnlocked) {
-        addLog("You don't have any open party slots.");
-        renderAll();
-        return;
-      }
-      if (state.gold < cls.cost) {
-        addLog("You don't have enough gold to recruit that class.");
-        renderAll();
-        return;
-      }
-
-      state.gold -= cls.cost;
-      const hero = createHero(clsKey);
-      state.party.push(hero);
-      state.partyHP += hero.maxHP;
-      state.partyMaxHP += hero.maxHP;
-      addLog(`A ${cls.name} joins your party at the campfire.`);
-      renderAll();
-    },
+    onOpenRecruitModal: openRecruitModal,
     onReset: () => {
       if (!confirm("Reset all progress?")) return;
       clearSave();
