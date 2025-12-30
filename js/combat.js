@@ -4,6 +4,9 @@ import { getZoneDef, getEnemyForZone, MAX_ZONE } from "./zones/index.js";
 import { addLog, randInt } from "./util.js";
 import { SLOT_UNLOCKS } from "./defs.js";
 
+// Hunt timer configuration (milliseconds)
+const HUNT_TIME_MS = 4000; // 4 seconds between kills
+
 export function createHero(classKey, customName = null) {
   const cls = getClassDef(classKey);
   if (!cls) return null;
@@ -228,6 +231,7 @@ function onEnemyKilled(enemy, totalDPS) {
   addLog(`Your party defeats the ${enemy.name}, dealing ${totalDPS.toFixed(1)} damage. +${Math.floor(totalXP)} XP, +${gold} gold.`, "gold");
   state.currentEnemy = null;
   state.waitingToRespawn = true;
+  state.huntRemaining = HUNT_TIME_MS; // Start hunt timer
 }
 
 function onPartyWipe() {
@@ -397,8 +401,16 @@ export function gameTick() {
   
   const livingAlive = state.party.some(h => !h.isDead);
 
-  // Check if we should respawn (only if someone is alive and we're out of combat)
-  if (state.waitingToRespawn && state.currentEnemies.length === 0 && livingAlive) {
+  // Hunt timer countdown (3000ms per tick)
+  if (state.waitingToRespawn && state.huntRemaining > 0) {
+    state.huntRemaining -= 3000; // Decrement by tick duration
+    if (state.huntRemaining < 0) {
+      state.huntRemaining = 0;
+    }
+  }
+
+  // Check if we should respawn (only if hunt timer finished, someone is alive, and we're out of combat)
+  if (state.waitingToRespawn && state.currentEnemies.length === 0 && livingAlive && state.huntRemaining <= 0) {
     if (state.partyMaxHP > 0) {
       const healthPercent = (state.partyHP / state.partyMaxHP) * 100;
       if (healthPercent >= state.autoRestartHealthPercent) {

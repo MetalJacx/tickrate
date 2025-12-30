@@ -23,6 +23,7 @@ export const state = {
   log: [],
   autoRestartHealthPercent: 100,
   waitingToRespawn: false,
+  huntRemaining: 0, // Milliseconds remaining for hunt timer (0 = not hunting)
   highestUnlockedZone: 1,
   logFilters: {
     healing: true,
@@ -60,6 +61,7 @@ export function serializeState() {
     currentEnemies: state.currentEnemies.map(e => ({ ...e })),
     party: state.party.map(h => ({ ...h })),
     autoRestartHealthPercent: state.autoRestartHealthPercent,
+    huntRemaining: state.huntRemaining,
     highestUnlockedZone: state.highestUnlockedZone,
     logFilters: state.logFilters || {
       healing: true,
@@ -155,6 +157,7 @@ export function loadGame() {
     state.partyMaxHP = data.partyMaxHP ?? 0;
     state.partyHP = data.partyHP ?? 0;
     state.autoRestartHealthPercent = data.autoRestartHealthPercent ?? 100;
+    state.huntRemaining = data.huntRemaining ?? 0;
     state.highestUnlockedZone = data.highestUnlockedZone ?? 1;
 
     const maxId = state.party.reduce((m, h) => Math.max(m, h.id || 0), 0);
