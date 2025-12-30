@@ -20,6 +20,15 @@ export function createHero(classKey, customName = null) {
     healing: cls.baseHealing,
     isDead: false,
     deathTime: null,
+    
+    // Resource pools based on class type
+    resourceType: cls.resourceType, // "mana", "endurance", or ["mana", "endurance"] for Ranger
+    maxMana: cls.maxMana || 0,
+    mana: cls.maxMana || 0,
+    manaRegenPerTick: cls.manaRegenPerTick || 0,
+    maxEndurance: cls.maxEndurance || 0,
+    endurance: cls.maxEndurance || 0,
+    enduranceRegenPerTick: cls.enduranceRegenPerTick || 0,
 
     // cooldown tracking per hero:
     skillTimers: {}
@@ -214,7 +223,19 @@ export function gameTick() {
 
   const totals = recalcPartyTotals();
   
-  // 1) Apply passive health regeneration to living members only
+  // 1) Regenerate resources for all living members
+  for (const hero of state.party) {
+    if (hero.isDead) continue;
+    
+    if (hero.manaRegenPerTick && hero.mana < hero.maxMana) {
+      hero.mana = Math.min(hero.maxMana, hero.mana + hero.manaRegenPerTick);
+    }
+    if (hero.enduranceRegenPerTick && hero.endurance < hero.maxEndurance) {
+      hero.endurance = Math.min(hero.maxEndurance, hero.endurance + hero.enduranceRegenPerTick);
+    }
+  }
+  
+  // 2) Apply passive health regeneration to living members only
   const baseRegenPerTick = 2;
   const scalingRegenPerTick = totals.totalHealing * 0.2;
   const passiveRegenAmount = baseRegenPerTick + scalingRegenPerTick;
@@ -246,7 +267,10 @@ export function gameTick() {
   const enemy = state.currentEnemy;
   if (!enemy) return;
 
-  // 2) Process skills and calculate bonuses
+  // Check if any party member is damaged (for heal checks)
+  const anyDamaged = state.party.some(h => !h.isDead && h.health < h.maxHP);
+
+  // 3) Process skills and calculate bonuses
   let skillBonusDamage = 0;
   let skillBonusHeal = 0;
 
@@ -266,6 +290,33 @@ export function gameTick() {
 
       // Fire if ready
       if (hero.skillTimers[sk.key] === 0) {
+        // Check resource availability
+        const costType = sk.costType || (hero.resourceType === "mana" ? "mana" : (hero.resourceType === "endurance" ? "endurance" : "mana"));
+        const cost = sk.cost || 0;
+        
+        let hasResources = true;
+        if (costType === "mana" && hero.mana < cost) {
+          hasResources = false;
+        } else if (costType === "endurance" && hero.endurance < cost) {
+          hasResources = false;
+        }
+        
+        // For heals, only cast if someone is damaged
+        if (sk.type === "heal" && !anyDamaged) {
+          hasResources = false;
+        }
+        
+        if (!hasResources) {
+          continue; // Skip this skill if not enough resources or no one needs healing
+        }
+        
+        // Deduct resources
+        if (costType === "mana") {
+          hero.mana -= cost;
+        } else if (costType === "endurance") {
+          hero.endurance -= cost;
+        }
+        
         // Award ability XP for using skill
         const abilityXP = 2;
         if (!hero.xp) hero.xp = 0;
@@ -274,9 +325,13 @@ export function gameTick() {
         checkAccountLevelUp();
 
         if (sk.type === "damage") {
-          skillBonusDamage += sk.amount;
+          // Calculate damage with min/max variance
+          const minDmg = sk.minDamage || sk.amount || 0;
+          const maxDmg = sk.maxDamage || sk.amount || 0;
+          const damage = minDmg + Math.random() * (maxDmg - minDmg);
+          skillBonusDamage += damage;
           const damageTypeLabel = sk.damageType ? ` (${sk.damageType})` : "";
-          addLog(`${hero.name} uses ${sk.name}${damageTypeLabel} for ${sk.amount} damage!`, "damage_dealt");
+          addLog(`${hero.name} uses ${sk.name}${damageTypeLabel} for ${damage.toFixed(1)} damage!`, "damage_dealt");
         }
         if (sk.type === "heal") {
           skillBonusHeal += sk.amount;

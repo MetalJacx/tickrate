@@ -121,6 +121,17 @@ export function loadGame() {
       if (h.deathTime === undefined) {
         h.deathTime = null;
       }
+      // Initialize resources for old saves or new heroes
+      if (h.maxMana === undefined) {
+        h.maxMana = 0;
+        h.mana = 0;
+        h.manaRegenPerTick = 0;
+      }
+      if (h.maxEndurance === undefined) {
+        h.maxEndurance = 0;
+        h.endurance = 0;
+        h.enduranceRegenPerTick = 0;
+      }
       return h;
     }) : [];
     state.partyMaxHP = data.partyMaxHP ?? 0;

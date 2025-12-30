@@ -189,6 +189,64 @@ export function renderParty() {
       healthLabel.style.cssText = "font-size:10px;color:#aaa;text-align:right;";
       healthLabel.textContent = `${hero.health.toFixed(0)} / ${hero.maxHP}`;
 
+      // Resource bars (mana/endurance)
+      let resourceBars = [];
+      if (hero.maxMana > 0) {
+        const manaBar = document.createElement("div");
+        manaBar.style.cssText = `
+          background: #222;
+          border-radius: 4px;
+          height: 8px;
+          margin: 4px 0;
+          overflow: hidden;
+          border: 1px solid #444;
+        `;
+        
+        const manaFill = document.createElement("div");
+        const manaPercent = (hero.mana / hero.maxMana) * 100;
+        manaFill.style.cssText = `
+          width: ${manaPercent}%;
+          height: 100%;
+          background: #60a5fa;
+          transition: width 0.1s;
+        `;
+        manaBar.appendChild(manaFill);
+        
+        const manaLabel = document.createElement("div");
+        manaLabel.style.cssText = "font-size:9px;color:#60a5fa;";
+        manaLabel.textContent = `Mana: ${hero.mana.toFixed(0)} / ${hero.maxMana}`;
+        
+        resourceBars.push({ bar: manaBar, label: manaLabel });
+      }
+      
+      if (hero.maxEndurance > 0) {
+        const endBar = document.createElement("div");
+        endBar.style.cssText = `
+          background: #222;
+          border-radius: 4px;
+          height: 8px;
+          margin: 4px 0;
+          overflow: hidden;
+          border: 1px solid #444;
+        `;
+        
+        const endFill = document.createElement("div");
+        const endPercent = (hero.endurance / hero.maxEndurance) * 100;
+        endFill.style.cssText = `
+          width: ${endPercent}%;
+          height: 100%;
+          background: #fbbf24;
+          transition: width 0.1s;
+        `;
+        endBar.appendChild(endFill);
+        
+        const endLabel = document.createElement("div");
+        endLabel.style.cssText = "font-size:9px;color:#fbbf24;";
+        endLabel.textContent = `Endurance: ${hero.endurance.toFixed(0)} / ${hero.maxEndurance}`;
+        
+        resourceBars.push({ bar: endBar, label: endLabel });
+      }
+
       const stats = document.createElement("div");
       stats.className = "hero-stats";
       stats.textContent = `DPS: ${hero.dps.toFixed(1)} | Healing: ${hero.healing.toFixed(1)}`;
@@ -215,6 +273,13 @@ export function renderParty() {
       div.appendChild(header);
       div.appendChild(healthBar);
       div.appendChild(healthLabel);
+      
+      // Append resource bars
+      resourceBars.forEach(res => {
+        div.appendChild(res.bar);
+        div.appendChild(res.label);
+      });
+      
       div.appendChild(stats);
       div.appendChild(xpDiv);
       div.appendChild(btnRow);
