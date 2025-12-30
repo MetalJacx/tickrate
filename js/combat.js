@@ -236,9 +236,8 @@ export function gameTick() {
   }
   
   // 2) Apply passive health regeneration to living members only
-  const baseRegenPerTick = 2;
-  const scalingRegenPerTick = totals.totalHealing * 0.2;
-  const passiveRegenAmount = baseRegenPerTick + scalingRegenPerTick;
+  // Passive regen: flat amount only (no scaling with healing stats)
+  const passiveRegenAmount = 2;
   
   for (const hero of state.party) {
     if (hero.isDead) continue; // Skip dead members
