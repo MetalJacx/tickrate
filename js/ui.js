@@ -89,6 +89,111 @@ export function initUI({ onRecruit, onReset, onOpenRecruitModal }) {
       renderAll();
     });
   }
+
+  // Party header click to open automation modal
+  const partyHeaderBtn = document.getElementById("partyHeaderBtn");
+  if (partyHeaderBtn) {
+    partyHeaderBtn.addEventListener("click", openAutomationModal);
+  }
+
+  // Automation modal handlers
+  const automationCloseBtn = document.getElementById("automationCloseBtn");
+  if (automationCloseBtn) {
+    automationCloseBtn.addEventListener("click", closeAutomationModal);
+  }
+
+  const automationModal = document.getElementById("automationModal");
+  if (automationModal) {
+    automationModal.addEventListener("click", (e) => {
+      if (e.target === automationModal) {
+        closeAutomationModal();
+      }
+    });
+  }
+
+  const automationAddRuleBtn = document.getElementById("automationAddRuleBtn");
+  if (automationAddRuleBtn) {
+    automationAddRuleBtn.addEventListener("click", () => {
+      const variable = document.getElementById("automationVariable")?.value;
+      const operator = document.getElementById("automationOperator")?.value;
+      const value = parseFloat(document.getElementById("automationValue")?.value || "50");
+
+      if (variable && operator && !isNaN(value) && value >= 0 && value <= 100) {
+        state.automationRules.push({ variable, operator, value });
+        document.getElementById("automationValue").value = "50";
+        renderAutomationRules();
+      }
+    });
+  }
+}
+
+function closeAutomationModal() {
+  const modal = document.getElementById("automationModal");
+  if (modal) modal.style.display = "none";
+}
+
+function openAutomationModal() {
+  const modal = document.getElementById("automationModal");
+  if (modal) {
+    modal.style.display = "flex";
+    renderAutomationRules();
+  }
+}
+
+function renderAutomationRules() {
+  const rulesList = document.getElementById("automationRulesList");
+  if (!rulesList) return;
+
+  rulesList.innerHTML = "";
+
+  if (state.automationRules.length === 0) {
+    const empty = document.createElement("div");
+    empty.style.cssText = "font-size:11px;color:#666;padding:8px;";
+    empty.textContent = "No automation rules yet.";
+    rulesList.appendChild(empty);
+    return;
+  }
+
+  for (let i = 0; i < state.automationRules.length; i++) {
+    const rule = state.automationRules[i];
+    const ruleDiv = document.createElement("div");
+    ruleDiv.style.cssText = `
+      padding: 10px;
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    `;
+
+    const ruleText = document.createElement("div");
+    ruleText.style.cssText = "font-size:12px;color:#ddd;";
+    const opSymbol = rule.operator === "==" ? "==" : rule.operator === "!=" ? "≠" : rule.operator;
+    ruleText.textContent = `When ${rule.variable.toUpperCase()} ${opSymbol} ${rule.value}%`;
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.textContent = "✕";
+    deleteBtn.style.cssText = `
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      background: #b91c1c;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    `;
+    deleteBtn.addEventListener("click", () => {
+      state.automationRules.splice(i, 1);
+      renderAutomationRules();
+    });
+
+    ruleDiv.appendChild(ruleText);
+    ruleDiv.appendChild(deleteBtn);
+    rulesList.appendChild(ruleDiv);
+  }
 }
 
 function renderHealthThreshold() {

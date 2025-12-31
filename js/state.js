@@ -34,7 +34,8 @@ export const state = {
     gold: true
   },
   offlineSummary: null,
-  zoneDiscoveries: {}
+  zoneDiscoveries: {},
+  automationRules: [] // Array of {variable, operator, value} conditions
 };
 
 export function nextHeroId() {
@@ -75,6 +76,7 @@ export function serializeState() {
       normal: true,
       gold: true
     },
+    automationRules: state.automationRules || [],
     lastSavedAt: Date.now()
   };
 }
@@ -166,6 +168,7 @@ export function loadGame() {
     state.huntRemaining = data.huntRemaining ?? 0;
     state.highestUnlockedZone = data.highestUnlockedZone ?? 1;
     state.zoneDiscoveries = data.zoneDiscoveries ?? {};
+    state.automationRules = data.automationRules ?? [];
 
     const maxId = state.party.reduce((m, h) => Math.max(m, h.id || 0), 0);
     bumpHeroIdCounterToAtLeast(maxId + 1);

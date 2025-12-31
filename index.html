@@ -47,6 +47,49 @@
     <button id="settingsBtn" style="background:none;border:none;color:#eee;cursor:pointer;font-size:20px;padding:4px;" title="Settings">⚙️</button>
   </header>
 
+  <!-- Automation Modal -->
+  <div id="automationModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;">
+    <div style="background:#181818;border:1px solid #333;border-radius:10px;padding:20px;width:90%;max-width:700px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div style="font-size:18px;font-weight:bold;">Automation</div>
+        <button id="automationCloseBtn" style="background:none;border:none;color:#eee;cursor:pointer;font-size:20px;padding:0;width:24px;height:24px;">✕</button>
+      </div>
+      
+      <div style="flex:1;overflow-y:auto;margin-bottom:16px;padding-right:8px;">
+        <div style="font-size:12px;color:#aaa;margin-bottom:8px;font-weight:bold;">Active Rules</div>
+        <div id="automationRulesList" style="display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+
+      <div style="border-top:1px solid #333;padding-top:12px;">
+        <div style="font-size:12px;color:#aaa;margin-bottom:8px;font-weight:bold;">Create New Rule</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+          <div style="flex:1;min-width:120px;">
+            <label style="font-size:11px;color:#888;display:block;margin-bottom:4px;">Variable</label>
+            <select id="automationVariable" style="width:100%;padding:6px;background:#111;border:1px solid #444;border-radius:4px;color:#eee;font-size:11px;">
+              <option value="hp">HP (%)</option>
+              <option value="mana">Mana (%)</option>
+              <option value="endurance">Endurance (%)</option>
+            </select>
+          </div>
+          <div style="flex:1;min-width:100px;">
+            <label style="font-size:11px;color:#888;display:block;margin-bottom:4px;">Operator</label>
+            <select id="automationOperator" style="width:100%;padding:6px;background:#111;border:1px solid #444;border-radius:4px;color:#eee;font-size:11px;">
+              <option value="<">&lt; (Less Than)</option>
+              <option value=">">&gt; (Greater Than)</option>
+              <option value="==">=== (Equal)</option>
+              <option value="!=">&ne; (Not Equal)</option>
+            </select>
+          </div>
+          <div style="flex:1;min-width:80px;">
+            <label style="font-size:11px;color:#888;display:block;margin-bottom:4px;">Value (%)</label>
+            <input id="automationValue" type="number" min="0" max="100" value="50" style="width:100%;padding:6px;background:#111;border:1px solid #444;border-radius:4px;color:#eee;font-size:11px;box-sizing:border-box;">
+          </div>
+          <button id="automationAddRuleBtn" style="padding:6px 12px;background:#4ade80;color:#000;border:1px solid #22c55e;border-radius:4px;font-weight:bold;cursor:pointer;font-size:11px;">Add Rule</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Settings Modal -->
   <div id="settingsModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9998;">
     <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:90%;max-width:400px;background:#181818;border:1px solid #333;border-radius:10px;padding:20px;box-sizing:border-box;">
@@ -60,7 +103,7 @@
 
   <main>
     <section id="partyPanel" class="panel">
-      <h2>Party</h2>
+      <h2 id="partyHeaderBtn" style="cursor: pointer; user-select: none;">Party</h2>
       <div id="partyHPBar" class="bar-bg">
         <div id="partyHPFill" class="bar-fill" style="width:0%"></div>
       </div>
