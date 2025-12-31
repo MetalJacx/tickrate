@@ -40,35 +40,77 @@ export function initUI({ onRecruit, onReset, onOpenRecruitModal }) {
     });
   }
 
-  // Character modal close buttons
+  // Character modal close buttons and backdrop clicks
+  const statsModal = document.getElementById("statsModal");
   const statsModalCloseBtn = document.getElementById("statsModalCloseBtn");
   if (statsModalCloseBtn) {
     statsModalCloseBtn.addEventListener("click", () => {
-      document.getElementById("statsModal").style.display = "none";
+      statsModal.style.display = "none";
+    });
+  }
+  if (statsModal) {
+    statsModal.addEventListener("click", (e) => {
+      if (e.target === statsModal) {
+        statsModal.style.display = "none";
+      }
     });
   }
 
+  const inventoryModal = document.getElementById("inventoryModal");
   const inventoryModalCloseBtn = document.getElementById("inventoryModalCloseBtn");
   if (inventoryModalCloseBtn) {
     inventoryModalCloseBtn.addEventListener("click", () => {
-      document.getElementById("inventoryModal").style.display = "none";
+      inventoryModal.style.display = "none";
+    });
+  }
+  if (inventoryModal) {
+    inventoryModal.addEventListener("click", (e) => {
+      if (e.target === inventoryModal) {
+        inventoryModal.style.display = "none";
+      }
     });
   }
 
+  const abilitiesModal = document.getElementById("abilitiesModal");
   const abilitiesModalCloseBtn = document.getElementById("abilitiesModalCloseBtn");
   if (abilitiesModalCloseBtn) {
     abilitiesModalCloseBtn.addEventListener("click", () => {
-      document.getElementById("abilitiesModal").style.display = "none";
+      abilitiesModal.style.display = "none";
+    });
+  }
+  if (abilitiesModal) {
+    abilitiesModal.addEventListener("click", (e) => {
+      if (e.target === abilitiesModal) {
+        abilitiesModal.style.display = "none";
+      }
+    });
+  }
+
+  // Camp thresholds modal
+  const campThresholdsModal = document.getElementById("campThresholdsModal");
+  if (campThresholdsModal) {
+    campThresholdsModal.addEventListener("click", (e) => {
+      if (e.target === campThresholdsModal) {
+        campThresholdsModal.style.display = "none";
+      }
     });
   }
 
   // Offline modal close button
+  const offlineModal = document.getElementById("offlineModal");
   const offlineCloseBtn = document.getElementById("offlineModalCloseBtn");
   if (offlineCloseBtn) {
     offlineCloseBtn.addEventListener("click", () => {
-      const modal = document.getElementById("offlineModal");
-      if (modal) modal.style.display = "none";
+      if (offlineModal) offlineModal.style.display = "none";
       state.offlineSummary = null;
+    });
+  }
+  if (offlineModal) {
+    offlineModal.addEventListener("click", (e) => {
+      if (e.target === offlineModal) {
+        offlineModal.style.display = "none";
+        state.offlineSummary = null;
+      }
     });
   }
 
