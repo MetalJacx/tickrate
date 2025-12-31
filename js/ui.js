@@ -40,10 +40,26 @@ export function initUI({ onRecruit, onReset, onOpenRecruitModal }) {
     });
   }
 
-  // Character modal close button
-  const characterModalCloseBtn = document.getElementById("characterModalCloseBtn");
-  if (characterModalCloseBtn) {
-    characterModalCloseBtn.addEventListener("click", closeCharacterModal);
+  // Character modal close buttons
+  const statsModalCloseBtn = document.getElementById("statsModalCloseBtn");
+  if (statsModalCloseBtn) {
+    statsModalCloseBtn.addEventListener("click", () => {
+      document.getElementById("statsModal").style.display = "none";
+    });
+  }
+
+  const inventoryModalCloseBtn = document.getElementById("inventoryModalCloseBtn");
+  if (inventoryModalCloseBtn) {
+    inventoryModalCloseBtn.addEventListener("click", () => {
+      document.getElementById("inventoryModal").style.display = "none";
+    });
+  }
+
+  const abilitiesModalCloseBtn = document.getElementById("abilitiesModalCloseBtn");
+  if (abilitiesModalCloseBtn) {
+    abilitiesModalCloseBtn.addEventListener("click", () => {
+      document.getElementById("abilitiesModal").style.display = "none";
+    });
   }
 
   // Offline modal close button
@@ -513,7 +529,7 @@ export function renderParty() {
       statsBtn.textContent = "Stats";
       statsBtn.addEventListener("click", (e) => {
         e.stopPropagation();
-        openCharacterModal(hero);
+        openStatsModal(hero);
       });
       btnRow.appendChild(statsBtn);
 
@@ -521,7 +537,7 @@ export function renderParty() {
       invBtn.textContent = "Inventory";
       invBtn.addEventListener("click", (e) => {
         e.stopPropagation();
-        openCharacterModal(hero);
+        openInventoryModal(hero);
       });
       btnRow.appendChild(invBtn);
 
@@ -529,7 +545,7 @@ export function renderParty() {
       abilBtn.textContent = "Abilities";
       abilBtn.addEventListener("click", (e) => {
         e.stopPropagation();
-        openCharacterModal(hero);
+        openAbilitiesModal(hero);
       });
       btnRow.appendChild(abilBtn);
 
@@ -886,29 +902,38 @@ function renderZones() {
   }
 }
 // Character Modal Functions
-function openCharacterModal(hero) {
-  const modal = document.getElementById("characterModal");
-  const title = document.getElementById("characterModalTitle");
+function openStatsModal(hero) {
+  const modal = document.getElementById("statsModal");
+  const title = document.getElementById("statsModalTitle");
   const cls = getClassDef(hero.classKey);
   
   title.textContent = `${hero.name} (${cls?.name || 'Unknown'}) - Lv ${hero.level}`;
   populateStatsSection(hero);
   
-  // Populate equipment section
+  modal.style.display = "flex";
+}
+
+function openInventoryModal(hero) {
+  const modal = document.getElementById("inventoryModal");
+  const title = document.getElementById("inventoryModalTitle");
+  const cls = getClassDef(hero.classKey);
+  
+  title.textContent = `${hero.name} (${cls?.name || 'Unknown'}) - Lv ${hero.level}`;
   populateEquipmentSection(hero);
-  
-  // Populate skills section
-  populateSkillsSection(hero);
-  
-  // Populate ability bar
-  populateAbilityBar(hero);
   
   modal.style.display = "flex";
 }
 
-function closeCharacterModal() {
-  const modal = document.getElementById("characterModal");
-  modal.style.display = "none";
+function openAbilitiesModal(hero) {
+  const modal = document.getElementById("abilitiesModal");
+  const title = document.getElementById("abilitiesModalTitle");
+  const cls = getClassDef(hero.classKey);
+  
+  title.textContent = `${hero.name} (${cls?.name || 'Unknown'}) - Lv ${hero.level}`;
+  populateSkillsSection(hero);
+  populateAbilityBar(hero);
+  
+  modal.style.display = "flex";
 }
 
 function populateEquipmentSection(hero) {

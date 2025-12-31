@@ -263,42 +263,47 @@
 </div>
 
 <!-- Character Detail Modal -->
-<div id="characterModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9998;">
-  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:90%;max-width:900px;max-height:90vh;background:#181818;border:1px solid #333;border-radius:10px;padding:20px;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;">
+<!-- Character Stats Modal -->
+<div id="statsModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9998;">
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:90%;max-width:400px;max-height:80vh;background:#181818;border:1px solid #d32f2f;border-radius:10px;padding:20px;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-      <div style="font-size:18px;font-weight:bold;" id="characterModalTitle">Character</div>
-      <button id="characterModalCloseBtn" style="background:none;border:none;color:#eee;cursor:pointer;font-size:20px;padding:0;width:24px;height:24px;">✕</button>
+      <div style="font-size:18px;font-weight:bold;" id="statsModalTitle">Stats</div>
+      <button id="statsModalCloseBtn" style="background:none;border:none;color:#eee;cursor:pointer;font-size:20px;padding:0;width:24px;height:24px;">✕</button>
     </div>
+    <div id="characterStatsContainer" style="padding:10px;background:#111;border-radius:6px;border:1px solid #333;flex:1;overflow-y:auto;font-size:12px;line-height:1.8;color:#ddd;"></div>
+  </div>
+</div>
 
-    <div style="flex:1;display:flex;gap:20px;overflow:hidden;min-height:0;">
-      <!-- Stats Section -->
-      <div style="width:180px;display:flex;flex-direction:column;">
-        <div style="font-size:12px;color:#aaa;margin-bottom:8px;font-weight:bold;">STATS</div>
-        <div id="characterStatsContainer" style="padding:10px;background:#111;border-radius:6px;border:1px solid #333;flex:1;overflow-y:auto;font-size:12px;line-height:1.5;color:#ddd;"></div>
-      </div>
+<!-- Character Inventory Modal -->
+<div id="inventoryModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9998;">
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:90%;max-width:400px;max-height:80vh;background:#181818;border:1px solid #f57f17;border-radius:10px;padding:20px;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div style="font-size:18px;font-weight:bold;" id="inventoryModalTitle">Inventory</div>
+      <button id="inventoryModalCloseBtn" style="background:none;border:none;color:#eee;cursor:pointer;font-size:20px;padding:0;width:24px;height:24px;">✕</button>
+    </div>
+    <div id="characterEquipmentGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;padding:10px;background:#111;border-radius:6px;border:1px solid #333;flex:1;overflow-y:auto;"></div>
+  </div>
+</div>
 
-      <!-- Equipment Section -->
-      <div style="width:200px;display:flex;flex-direction:column;">
-        <div style="font-size:12px;color:#aaa;margin-bottom:8px;font-weight:bold;">EQUIPMENT</div>
-        <div id="characterEquipmentGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;padding:10px;background:#111;border-radius:6px;border:1px solid #333;flex:1;overflow-y:auto;">
-          <!-- Equipment slots will be populated here -->
-        </div>
-      </div>
-
-      <!-- Skills Section -->
-      <div style="flex:1;display:flex;flex-direction:column;">
+<!-- Character Abilities Modal -->
+<div id="abilitiesModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9998;">
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:90%;max-width:500px;max-height:80vh;background:#181818;border:1px solid #2e7d32;border-radius:10px;padding:20px;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div style="font-size:18px;font-weight:bold;" id="abilitiesModalTitle">Abilities</div>
+      <button id="abilitiesModalCloseBtn" style="background:none;border:none;color:#eee;cursor:pointer;font-size:20px;padding:0;width:24px;height:24px;">✕</button>
+    </div>
+    
+    <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+      <!-- Available Skills Section -->
+      <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;margin-bottom:16px;">
         <div style="font-size:12px;color:#aaa;margin-bottom:8px;font-weight:bold;">AVAILABLE SKILLS</div>
-        <div id="characterSkillsContainer" style="display:flex;flex-direction:column;gap:6px;padding:10px;background:#111;border-radius:6px;border:1px solid #333;flex:1;overflow-y:auto;">
-          <!-- Skills will be populated here -->
-        </div>
+        <div id="characterSkillsContainer" style="display:flex;flex-direction:column;gap:6px;padding:10px;background:#111;border-radius:6px;border:1px solid #333;flex:1;overflow-y:auto;"></div>
       </div>
-    </div>
-
-    <!-- Ability Bar -->
-    <div style="margin-top:16px;border-top:1px solid #333;padding-top:12px;">
-      <div style="font-size:12px;color:#aaa;margin-bottom:8px;font-weight:bold;">ABILITY BAR</div>
-      <div id="characterAbilityBar" style="display:flex;gap:4px;padding:8px;background:#111;border-radius:6px;border:1px solid #333;">
-        <!-- Ability slots will be populated here -->
+      
+      <!-- Ability Bar Section -->
+      <div style="display:flex;flex-direction:column;border-top:1px solid #333;padding-top:12px;">
+        <div style="font-size:12px;color:#aaa;margin-bottom:8px;font-weight:bold;">ABILITY BAR</div>
+        <div id="characterAbilityBar" style="display:flex;gap:4px;padding:8px;background:#111;border-radius:6px;border:1px solid #333;flex-wrap:wrap;"></div>
       </div>
     </div>
   </div>
