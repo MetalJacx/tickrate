@@ -791,7 +791,7 @@ function renderZones() {
       name.textContent = discovered ? sub.name : "???";
       const badge = document.createElement("div");
       badge.style.cssText = "font-size:10px;color:#9ca3af;";
-      badge.textContent = isSelected ? "Selected" : (discovered ? "Available" : "Hidden");
+      badge.textContent = isSelected ? "Selected" : (discovered ? "Discovered" : "Undiscovered");
       if (isSelected) badge.style.color = "#4ade80";
       
       row.appendChild(name);
