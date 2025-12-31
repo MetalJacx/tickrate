@@ -649,12 +649,22 @@ function renderZones() {
   zoneList.innerHTML = "";
   subAreaList.innerHTML = "";
 
-  const zones = listZones();
+  const zones = listZones() || [];
+  if (!zones.length) {
+    const empty = document.createElement("div");
+    empty.style.cssText = "font-size:11px;color:#666;";
+    empty.textContent = "No zones available";
+    zoneList.appendChild(empty);
+    return;
+  }
+
   const activeZone = zones.find(z => z.zoneNumber === state.zone) || zones[0];
+
+  const highest = state.highestUnlockedZone || 1;
 
   for (const z of zones) {
     const btn = document.createElement("button");
-    const unlocked = z.zoneNumber <= state.highestUnlockedZone;
+    const unlocked = z.zoneNumber <= highest;
     btn.textContent = `${z.name} (${z.levelRange?.[0] ?? "?"}-${z.levelRange?.[1] ?? "?"})`;
     btn.style.cssText = `
       width: 100%;
@@ -679,12 +689,27 @@ function renderZones() {
     zoneList.appendChild(btn);
   }
 
+  if (zoneList.childNodes.length === 0) {
+    const none = document.createElement("div");
+    none.style.cssText = "font-size:11px;color:#666;";
+    none.textContent = "No unlocked zones";
+    zoneList.appendChild(none);
+  }
+
   if (!activeZone) return;
   const disc = ensureZoneDiscovery(activeZone, state.zoneDiscoveries[zoneKey(activeZone)]);
   state.zoneDiscoveries[zoneKey(activeZone)] = disc;
   const activeSub = getActiveSubArea(activeZone, disc);
 
-  for (const sub of activeZone.subAreas || []) {
+  if (!activeZone.subAreas || activeZone.subAreas.length === 0) {
+    const none = document.createElement("div");
+    none.style.cssText = "font-size:11px;color:#666;";
+    none.textContent = "No sub-areas";
+    subAreaList.appendChild(none);
+    return;
+  }
+
+  for (const sub of activeZone.subAreas) {
     const discovered = disc[sub.id] ?? sub.discovered;
     const row = document.createElement("div");
     row.style.cssText = `
