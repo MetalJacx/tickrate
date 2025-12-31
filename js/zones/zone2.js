@@ -34,7 +34,8 @@ export default {
         { type: "weaken_damage", amount: 1, durationTicks: 5, chance: 0.25 }
       ],
       weight: 1.0
-    }
+    },
+    { id: "wood_spirit", name: "Wood Spirit", baseHP: 38, baseDPS: 7, xp: 180, weight: 0 }
   ],
   subAreas: [
     {
@@ -53,7 +54,8 @@ export default {
         forest_ghoul: 1.2,
         shadow_sprite: 1.0,
         cursed_treant: 0.9,
-        werewolf: 0.9
+        werewolf: 0.9,
+        wood_spirit: 0
       }
     },
     {
@@ -65,7 +67,8 @@ export default {
         shadow_sprite: 1.5,
         forest_ghoul: 0.9,
         cursed_treant: 1.1,
-        werewolf: 1.0
+        werewolf: 1.0,
+        wood_spirit: 0.12
       }
     },
     {
@@ -77,7 +80,8 @@ export default {
         cursed_treant: 1.6,
         forest_ghoul: 1.0,
         shadow_sprite: 0.8,
-        werewolf: 1.0
+        werewolf: 1.0,
+        wood_spirit: 0.18
       }
     }
   ]

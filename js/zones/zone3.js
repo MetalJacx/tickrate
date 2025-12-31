@@ -14,7 +14,8 @@ export default {
     { id: "skeletal_knight", name: "Skeletal Knight", baseHP: 55, baseDPS: 6, xp: 75, weight: 1.0 },
     { id: "orc_centurion", name: "Orc Centurion", baseHP: 60, baseDPS: 7, xp: 75, weight: 1.0 },
     { id: "dark_wolf", name: "Dark Wolf", baseHP: 50, baseDPS: 7, xp: 75, weight: 1.0 },
-    { id: "bloodsaber_acolyte", name: "Bloodsaber Acolyte", baseHP: 45, baseDPS: 8, xp: 75, weight: 1.0 }
+    { id: "bloodsaber_acolyte", name: "Bloodsaber Acolyte", baseHP: 45, baseDPS: 8, xp: 75, weight: 1.0 },
+    { id: "castle_specter", name: "Castle Specter", baseHP: 48, baseDPS: 9, xp: 200, weight: 0 }
   ],
   subAreas: [
     {
@@ -33,7 +34,8 @@ export default {
         skeletal_knight: 1.1,
         orc_centurion: 1.1,
         dark_wolf: 0.9,
-        bloodsaber_acolyte: 0.9
+        bloodsaber_acolyte: 0.9,
+        castle_specter: 0
       }
     },
     {
@@ -45,7 +47,8 @@ export default {
         skeletal_knight: 1.8,
         bloodsaber_acolyte: 1.2,
         dark_wolf: 0.8,
-        orc_centurion: 0.9
+        orc_centurion: 0.9,
+        castle_specter: 0.2
       }
     },
     {
@@ -57,7 +60,8 @@ export default {
         dark_wolf: 1.4,
         skeletal_knight: 1.0,
         bloodsaber_acolyte: 1.1,
-        orc_centurion: 0.9
+        orc_centurion: 0.9,
+        castle_specter: 0.25
       }
     },
     {
@@ -69,7 +73,8 @@ export default {
         bloodsaber_acolyte: 1.6,
         skeletal_knight: 1.2,
         dark_wolf: 0.8,
-        orc_centurion: 0.9
+        orc_centurion: 0.9,
+        castle_specter: 0.22
       }
     }
   ]
