@@ -27,16 +27,6 @@ export function initUI({ onRecruit, onReset, onOpenRecruitModal }) {
     window.__openRecruitModal = onOpenRecruitModal;
   }
 
-  // Health threshold slider
-  const healthSlider = document.getElementById("healthThresholdInput");
-  if (healthSlider) {
-    healthSlider.addEventListener("input", (e) => {
-      state.autoRestartHealthPercent = parseInt(e.target.value);
-      renderHealthThreshold();
-    });
-    renderHealthThreshold();
-  }
-
   if (onReset && document.getElementById("resetBtn")) {
     document.getElementById("resetBtn").addEventListener("click", onReset);
   }
@@ -157,16 +147,6 @@ function openCampThresholdsModal() {
     if (enduranceInput) enduranceInput.value = state.campThresholds.endurance;
   }
 }
-
-function renderHealthThreshold() {
-  const slider = document.getElementById("healthThresholdInput");
-  const label = document.getElementById("healthThresholdLabel");
-  if (slider && label) {
-    slider.value = state.autoRestartHealthPercent;
-    label.textContent = state.autoRestartHealthPercent + "%";
-  }
-}
-
 export function renderAll() {
   renderEnemy();
   renderParty();
@@ -695,6 +675,34 @@ export function renderParty() {
   document.getElementById("partyHPFill").style.width = hpPct + "%";
   document.getElementById("partyHPLabel").textContent =
     `${Math.floor(state.partyHP)} / ${Math.floor(state.partyMaxHP)}`;
+
+  // Calculate and display party total mana
+  let totalMana = 0;
+  let maxMana = 0;
+  for (const hero of state.party) {
+    if (!hero.isDead) {
+      totalMana += hero.mana || 0;
+      maxMana += hero.maxMana || 0;
+    }
+  }
+  const manaPct = maxMana > 0 ? Math.max(0, Math.min(100, (totalMana / maxMana) * 100)) : 0;
+  document.getElementById("partyManaFill").style.width = manaPct + "%";
+  document.getElementById("partyManaLabel").textContent =
+    `${Math.floor(totalMana)} / ${Math.floor(maxMana)}`;
+
+  // Calculate and display party total endurance
+  let totalEndurance = 0;
+  let maxEndurance = 0;
+  for (const hero of state.party) {
+    if (!hero.isDead) {
+      totalEndurance += hero.endurance || 0;
+      maxEndurance += hero.maxEndurance || 0;
+    }
+  }
+  const endurancePct = maxEndurance > 0 ? Math.max(0, Math.min(100, (totalEndurance / maxEndurance) * 100)) : 0;
+  document.getElementById("partyEnduranceFill").style.width = endurancePct + "%";
+  document.getElementById("partyEnduranceLabel").textContent =
+    `${Math.floor(totalEndurance)} / ${Math.floor(maxEndurance)}`;
 }
 
 export function renderMeta() {

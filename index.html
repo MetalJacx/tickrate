@@ -86,11 +86,33 @@
 
   <main>
     <section id="partyPanel" class="panel">
-      <h2 id="partyHeaderBtn" style="cursor: pointer; user-select: none;">Party</h2>
-      <div id="partyHPBar" class="bar-bg">
-        <div id="partyHPFill" class="bar-fill" style="width:0%"></div>
+      <h2 id="partyHeaderBtn" style="cursor: pointer; user-select: none; position: relative; padding-right: 20px;">
+        Party
+        <span style="position: absolute; right: 0; top: 50%; transform: translateY(-50%); font-size: 14px; opacity: 0.5;">⚙️</span>
+      </h2>
+      <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px;">
+        <div>
+          <div style="font-size: 10px; color: #aaa; margin-bottom: 2px;">Health</div>
+          <div id="partyHPBar" class="bar-bg">
+            <div id="partyHPFill" class="bar-fill" style="width:0%"></div>
+          </div>
+          <div id="partyHPLabel" class="bar-label">0 / 0</div>
+        </div>
+        <div>
+          <div style="font-size: 10px; color: #aaa; margin-bottom: 2px;">Mana</div>
+          <div id="partyManaBar" class="bar-bg">
+            <div id="partyManaFill" class="bar-fill" style="width:0%; background: linear-gradient(90deg, #3b82f6, #1d4ed8);"></div>
+          </div>
+          <div id="partyManaLabel" class="bar-label">0 / 0</div>
+        </div>
+        <div>
+          <div style="font-size: 10px; color: #aaa; margin-bottom: 2px;">Endurance</div>
+          <div id="partyEnduranceBar" class="bar-bg">
+            <div id="partyEnduranceFill" class="bar-fill" style="width:0%; background: linear-gradient(90deg, #eab308, #ca8a04);"></div>
+          </div>
+          <div id="partyEnduranceLabel" class="bar-label">0 / 0</div>
+        </div>
       </div>
-      <div id="partyHPLabel" class="bar-label">0 / 0</div>
       <div id="partyContainer"></div>
     </section>
 
@@ -133,16 +155,6 @@
           </div>
         </div>
         <button id="travelToAreaBtn" style="width:100%;padding:10px;background:#4ade80;color:#000;border:1px solid #22c55e;border-radius:6px;font-weight:bold;cursor:pointer;">Travel to Area</button>
-      </div>
-
-      <div style="margin-top:8px;padding:8px;background:#111;border-radius:6px;border:1px solid #333;">
-        <div style="font-size:11px;color:#aaa;margin-bottom:6px;font-weight:bold;">AUTO-RESTART HEALTH</div>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <input id="healthThresholdInput" type="range" min="0" max="100" value="100" 
-            style="flex:1;cursor:pointer;">
-          <span id="healthThresholdLabel" style="font-size:12px;min-width:40px;text-align:right;">100%</span>
-        </div>
-        <div style="font-size:10px;color:#777;margin-top:4px;">Next pull when health reaches this %</div>
       </div>
 
       <button id="resetBtn" style="width:100%;margin-top:8px;">Reset Progress</button>

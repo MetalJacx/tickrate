@@ -674,19 +674,11 @@ export function gameTick() {
     // Check automation thresholds
     const shouldCamp = checkCampThresholds();
     
-    if (shouldCamp) {
-      // Don't spawn, stay camping to recover
-    } else {
-      // All thresholds met, spawn enemy if health check passes
-      if (state.partyMaxHP > 0) {
-        const healthPercent = (state.partyHP / state.partyMaxHP) * 100;
-        if (healthPercent >= state.autoRestartHealthPercent) {
-          spawnEnemy();
-        }
-      } else {
-        spawnEnemy();
-      }
+    if (!shouldCamp) {
+      // All thresholds met, spawn enemy
+      spawnEnemy();
     }
+    // If shouldCamp is true, just stay camping to recover
   }
 
   // Check if any party member is damaged (for heal checks)
