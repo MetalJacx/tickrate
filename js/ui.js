@@ -7,14 +7,20 @@ import { addLog } from "./util.js";
 import { MAX_PARTY_SIZE, ACCOUNT_SLOT_UNLOCKS } from "./defs.js";
 
 export function initUI({ onRecruit, onReset, onOpenRecruitModal }) {
-  document.getElementById("travelBtn").addEventListener("click", () => {
-    travelToNextZone();
-    renderAll();
-  });
-  document.getElementById("travelBackBtn").addEventListener("click", () => {
-    travelToPreviousZone();
-    renderAll();
-  });
+  const travelBtn = document.getElementById("travelBtn");
+  if (travelBtn) {
+    travelBtn.addEventListener("click", () => {
+      travelToNextZone();
+      renderAll();
+    });
+  }
+  const travelBackBtn = document.getElementById("travelBackBtn");
+  if (travelBackBtn) {
+    travelBackBtn.addEventListener("click", () => {
+      travelToPreviousZone();
+      renderAll();
+    });
+  }
 
   // Store the callback for opening recruit modal
   if (onOpenRecruitModal) {
@@ -625,11 +631,11 @@ export function renderMeta() {
   document.getElementById("slotsUsedSpan").textContent = state.party.length;
   document.getElementById("slotsMaxSpan").textContent = state.partySlotsUnlocked;
 
-  // Travel button: forward if zone unlocked or kills requirement met
-  document.getElementById("travelBtn").disabled = !canTravelForward();
-  
-  // Back button: can always go back except at zone 1
-  document.getElementById("travelBackBtn").disabled = state.zone <= 1;
+  // Travel controls removed from UI; guard for legacy DOM
+  const travelBtn = document.getElementById("travelBtn");
+  const travelBackBtn = document.getElementById("travelBackBtn");
+  if (travelBtn) travelBtn.disabled = !canTravelForward();
+  if (travelBackBtn) travelBackBtn.disabled = state.zone <= 1;
 }
 
 function zoneKey(zone) {

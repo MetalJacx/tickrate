@@ -40,7 +40,7 @@ export default {
     {
       id: "forest_edge",
       name: "Forest Edge",
-      discovered: true,
+      discovered: false,
       discoveryChance: 0,
       mobWeightModifiers: {
         forest_ghoul: 1.2,

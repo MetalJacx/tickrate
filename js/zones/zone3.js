@@ -20,7 +20,7 @@ export default {
     {
       id: "outer_keep",
       name: "Outer Keep",
-      discovered: true,
+      discovered: false,
       discoveryChance: 0,
       mobWeightModifiers: {
         skeletal_knight: 1.1,
