@@ -35,7 +35,11 @@ export const state = {
   },
   offlineSummary: null,
   zoneDiscoveries: {},
-  automationRules: [] // Array of {variable, operator, value} conditions
+  campThresholds: {
+    health: 80,
+    mana: 50,
+    endurance: 30
+  }
 };
 
 export function nextHeroId() {
@@ -77,6 +81,7 @@ export function serializeState() {
       gold: true
     },
     automationRules: state.automationRules || [],
+    campThresholds: state.campThresholds || { health: 80, mana: 50, endurance: 30 },
     lastSavedAt: Date.now()
   };
 }
@@ -169,6 +174,7 @@ export function loadGame() {
     state.highestUnlockedZone = data.highestUnlockedZone ?? 1;
     state.zoneDiscoveries = data.zoneDiscoveries ?? {};
     state.automationRules = data.automationRules ?? [];
+    state.campThresholds = data.campThresholds ?? { health: 80, mana: 50, endurance: 30 };
 
     const maxId = state.party.reduce((m, h) => Math.max(m, h.id || 0), 0);
     bumpHeroIdCounterToAtLeast(maxId + 1);

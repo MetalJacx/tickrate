@@ -90,111 +90,71 @@ export function initUI({ onRecruit, onReset, onOpenRecruitModal }) {
     });
   }
 
-  // Party header click to open automation modal
+  // Camp thresholds modal handlers
   const partyHeaderBtn = document.getElementById("partyHeaderBtn");
   if (partyHeaderBtn) {
-    partyHeaderBtn.addEventListener("click", openAutomationModal);
+    partyHeaderBtn.addEventListener("click", openCampThresholdsModal);
   }
 
-  // Automation modal handlers
-  const automationCloseBtn = document.getElementById("automationCloseBtn");
-  if (automationCloseBtn) {
-    automationCloseBtn.addEventListener("click", closeAutomationModal);
+  const campThresholdsCloseBtn = document.getElementById("campThresholdsCloseBtn");
+  if (campThresholdsCloseBtn) {
+    campThresholdsCloseBtn.addEventListener("click", closeCampThresholdsModal);
   }
 
-  const automationModal = document.getElementById("automationModal");
-  if (automationModal) {
-    automationModal.addEventListener("click", (e) => {
-      if (e.target === automationModal) {
-        closeAutomationModal();
+  const campThresholdsModal = document.getElementById("campThresholdsModal");
+  if (campThresholdsModal) {
+    campThresholdsModal.addEventListener("click", (e) => {
+      if (e.target === campThresholdsModal) {
+        closeCampThresholdsModal();
       }
     });
   }
 
-  const automationAddRuleBtn = document.getElementById("automationAddRuleBtn");
-  if (automationAddRuleBtn) {
-    automationAddRuleBtn.addEventListener("click", () => {
-      const variable = document.getElementById("automationVariable")?.value;
-      const operator = document.getElementById("automationOperator")?.value;
-      const value = parseFloat(document.getElementById("automationValue")?.value || "50");
-      const action = document.getElementById("automationAction")?.value;
+  // Update threshold inputs when changed
+  const campHealthInput = document.getElementById("campHealthInput");
+  if (campHealthInput) {
+    campHealthInput.addEventListener("change", (e) => {
+      const val = Math.max(0, Math.min(100, parseInt(e.target.value) || 80));
+      state.campThresholds.health = val;
+      e.target.value = val;
+    });
+  }
 
-      if (variable && operator && !isNaN(value) && value >= 0 && value <= 100 && action) {
-        state.automationRules.push({ variable, operator, value, action });
-        document.getElementById("automationValue").value = "50";
-        renderAutomationRules();
-      }
+  const campManaInput = document.getElementById("campManaInput");
+  if (campManaInput) {
+    campManaInput.addEventListener("change", (e) => {
+      const val = Math.max(0, Math.min(100, parseInt(e.target.value) || 50));
+      state.campThresholds.mana = val;
+      e.target.value = val;
+    });
+  }
+
+  const campEnduranceInput = document.getElementById("campEnduranceInput");
+  if (campEnduranceInput) {
+    campEnduranceInput.addEventListener("change", (e) => {
+      const val = Math.max(0, Math.min(100, parseInt(e.target.value) || 30));
+      state.campThresholds.endurance = val;
+      e.target.value = val;
     });
   }
 }
 
-function closeAutomationModal() {
-  const modal = document.getElementById("automationModal");
+function closeCampThresholdsModal() {
+  const modal = document.getElementById("campThresholdsModal");
   if (modal) modal.style.display = "none";
 }
 
-function openAutomationModal() {
-  const modal = document.getElementById("automationModal");
+function openCampThresholdsModal() {
+  const modal = document.getElementById("campThresholdsModal");
   if (modal) {
     modal.style.display = "flex";
-    renderAutomationRules();
-  }
-}
-
-function renderAutomationRules() {
-  const rulesList = document.getElementById("automationRulesList");
-  if (!rulesList) return;
-
-  rulesList.innerHTML = "";
-
-  if (state.automationRules.length === 0) {
-    const empty = document.createElement("div");
-    empty.style.cssText = "font-size:11px;color:#666;padding:8px;";
-    empty.textContent = "No automation rules yet.";
-    rulesList.appendChild(empty);
-    return;
-  }
-
-  for (let i = 0; i < state.automationRules.length; i++) {
-    const rule = state.automationRules[i];
-    const ruleDiv = document.createElement("div");
-    ruleDiv.style.cssText = `
-      padding: 10px;
-      background: #111;
-      border: 1px solid #333;
-      border-radius: 6px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    `;
-
-    const ruleText = document.createElement("div");
-    ruleText.style.cssText = "font-size:12px;color:#ddd;flex:1;";
-    const opSymbol = rule.operator === "==" ? "==" : rule.operator === "!=" ? "≠" : rule.operator;
-    const actionLabel = rule.action === "startHunt" ? "Start Hunt" : rule.action === "camp" ? "Camp" : rule.action;
-    ruleText.innerHTML = `<strong>When</strong> ${rule.variable.toUpperCase()} ${opSymbol} ${rule.value}% → <strong>${actionLabel}</strong>`;
-
-    const deleteBtn = document.createElement("button");
-    deleteBtn.textContent = "✕";
-    deleteBtn.style.cssText = `
-      width: 24px;
-      height: 24px;
-      padding: 0;
-      background: #b91c1c;
-      color: #fff;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 12px;
-    `;
-    deleteBtn.addEventListener("click", () => {
-      state.automationRules.splice(i, 1);
-      renderAutomationRules();
-    });
-
-    ruleDiv.appendChild(ruleText);
-    ruleDiv.appendChild(deleteBtn);
-    rulesList.appendChild(ruleDiv);
+    // Sync input values with current state
+    const healthInput = document.getElementById("campHealthInput");
+    const manaInput = document.getElementById("campManaInput");
+    const enduranceInput = document.getElementById("campEnduranceInput");
+    if (healthInput) healthInput.value = state.campThresholds.health;
+    if (manaInput) manaInput.value = state.campThresholds.mana;
+    if (enduranceInput) enduranceInput.value = state.campThresholds.endurance;
   }
 }
 

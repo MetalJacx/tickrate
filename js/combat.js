@@ -514,6 +514,37 @@ export function travelToPreviousZone() {
   checkSlotUnlocks();
 }
 
+function checkCampThresholds() {
+  // Calculate party stat percentages
+  const healthPercent = state.partyMaxHP > 0 ? (state.partyHP / state.partyMaxHP) * 100 : 100;
+  
+  // Calculate total mana and endurance
+  let totalMana = 0;
+  let maxMana = 0;
+  let totalEndurance = 0;
+  let maxEndurance = 0;
+  
+  for (const hero of state.party) {
+    if (!hero.isDead) {
+      totalMana += hero.mana || 0;
+      maxMana += hero.maxMana || 0;
+      totalEndurance += hero.endurance || 0;
+      maxEndurance += hero.maxEndurance || 0;
+    }
+  }
+  
+  const manaPercent = maxMana > 0 ? (totalMana / maxMana) * 100 : 100;
+  const endurancePercent = maxEndurance > 0 ? (totalEndurance / maxEndurance) * 100 : 100;
+  
+  // Check if any threshold is breached
+  if (healthPercent < state.campThresholds.health || 
+      manaPercent < state.campThresholds.mana || 
+      endurancePercent < state.campThresholds.endurance) {
+    return true; // Should camp
+  }
+  return false; // Should hunt
+}
+
 export function gameTick() {
   // Handle auto-revival for dead members (60 second timer)
   const now = Date.now();
@@ -640,13 +671,21 @@ export function gameTick() {
 
   // Check if we should respawn (only if hunt timer finished, someone is alive, and we're out of combat)
   if (state.waitingToRespawn && state.currentEnemies.length === 0 && livingAlive && state.huntRemaining <= 0) {
-    if (state.partyMaxHP > 0) {
-      const healthPercent = (state.partyHP / state.partyMaxHP) * 100;
-      if (healthPercent >= state.autoRestartHealthPercent) {
+    // Check automation thresholds
+    const shouldCamp = checkCampThresholds();
+    
+    if (shouldCamp) {
+      // Don't spawn, stay camping to recover
+    } else {
+      // All thresholds met, spawn enemy if health check passes
+      if (state.partyMaxHP > 0) {
+        const healthPercent = (state.partyHP / state.partyMaxHP) * 100;
+        if (healthPercent >= state.autoRestartHealthPercent) {
+          spawnEnemy();
+        }
+      } else {
         spawnEnemy();
       }
-    } else {
-      spawnEnemy();
     }
   }
 
