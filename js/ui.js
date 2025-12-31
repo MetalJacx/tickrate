@@ -373,7 +373,7 @@ export function renderParty() {
           name.textContent = c.skill.name;
           const timer = document.createElement("span");
           timer.style.cssText = "font-weight:bold;color:#fecdd3;";
-          timer.textContent = `${c.remaining.toFixed(0)}s`;
+          timer.textContent = `${c.remaining.toFixed(0)}t`;
           pill.appendChild(name);
           pill.appendChild(timer);
           cdRow.appendChild(pill);
