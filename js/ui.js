@@ -725,6 +725,8 @@ function openZonePreviewModal(zone) {
 
   modal.style.display = "block";
 }
+
+function renderZones() {
   const zoneList = document.getElementById("zoneList");
   const subAreaList = document.getElementById("subAreaList");
   const subAreaHeader = document.getElementById("subAreaHeader");
