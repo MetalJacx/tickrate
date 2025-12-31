@@ -336,6 +336,46 @@ export function renderParty() {
       xpDiv.style.cssText = "font-size:11px;color:#aaa;margin-top:4px;";
       xpDiv.textContent = `XP: ${(hero.xp || 0).toFixed(0)}`;
 
+      // Cooldown display for assigned skills that are currently cooling down
+      const cdRow = document.createElement("div");
+      cdRow.style.cssText = "display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;";
+      const clsSkills = cls?.skills || [];
+      const assignedKeys = Object.values(hero.abilityBar || {}).filter(Boolean);
+      const cooling = [];
+      for (const key of assignedKeys) {
+        const skill = clsSkills.find(s => s.key === key);
+        if (!skill) continue;
+        const remaining = hero.skillTimers?.[key] ?? 0;
+        if (remaining > 0) {
+          cooling.push({ skill, remaining });
+        }
+      }
+
+      if (cooling.length > 0) {
+        for (const c of cooling) {
+          const pill = document.createElement("div");
+          pill.style.cssText = `
+            display:flex;
+            align-items:center;
+            gap:4px;
+            padding:4px 6px;
+            border-radius:4px;
+            background:#2a1a1a;
+            color:#fca5a5;
+            border:1px solid #7f1d1d;
+            font-size:10px;
+          `;
+          const name = document.createElement("span");
+          name.textContent = c.skill.name;
+          const timer = document.createElement("span");
+          timer.style.cssText = "font-weight:bold;color:#fecdd3;";
+          timer.textContent = `${c.remaining.toFixed(0)}s`;
+          pill.appendChild(name);
+          pill.appendChild(timer);
+          cdRow.appendChild(pill);
+        }
+      }
+
       const btnRow = document.createElement("div");
       btnRow.style.cssText = "display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;";
 
@@ -374,6 +414,9 @@ export function renderParty() {
       
       div.appendChild(stats);
       div.appendChild(xpDiv);
+      if (cdRow.childNodes.length > 0) {
+        div.appendChild(cdRow);
+      }
       div.appendChild(btnRow);
 
       // Check for unassigned ability slots
