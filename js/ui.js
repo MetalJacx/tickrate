@@ -871,9 +871,9 @@ function populateStatsSection(hero) {
   statsBox.innerHTML = "";
   const stats = hero.stats || {};
   const derived = {
-    hp: `${hero.health.toFixed(0)} / ${hero.maxHP.toFixed(0)}`,
-    mana: hero.maxMana > 0 ? `${hero.mana.toFixed(0)} / ${hero.maxMana.toFixed(0)}` : "-",
-    endurance: hero.maxEndurance > 0 ? `${hero.endurance.toFixed(0)} / ${hero.maxEndurance.toFixed(0)}` : "-",
+    hp: `${Math.floor(hero.health)} / ${Math.floor(hero.maxHP)}`,
+    mana: hero.maxMana > 0 ? `${Math.floor(hero.mana)} / ${Math.floor(hero.maxMana)}` : "-",
+    endurance: hero.maxEndurance > 0 ? `${Math.floor(hero.endurance)} / ${Math.floor(hero.maxEndurance)}` : "-",
     dps: hero.dps?.toFixed ? hero.dps.toFixed(1) : hero.dps || 0,
     healing: hero.healing?.toFixed ? hero.healing.toFixed(1) : hero.healing || 0
   };
