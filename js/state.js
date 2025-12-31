@@ -39,7 +39,8 @@ export const state = {
     mana: 50,
     endurance: 30
   },
-  lastCampLogTick: 10 // Counter for periodic camping messages
+  lastCampLogTick: 0, // Counter for periodic camping messages
+  lastCampLogTime: 0 // Timestamp of last camping log (ms)
 };
 
 export function nextHeroId() {
@@ -81,6 +82,8 @@ export function serializeState() {
     },
     automationRules: state.automationRules || [],
     campThresholds: state.campThresholds || { health: 80, mana: 50, endurance: 30 },
+    lastCampLogTick: state.lastCampLogTick ?? 0,
+    lastCampLogTime: state.lastCampLogTime ?? 0,
     lastSavedAt: Date.now()
   };
 }
@@ -173,6 +176,8 @@ export function loadGame() {
     state.zoneDiscoveries = data.zoneDiscoveries ?? {};
     state.automationRules = data.automationRules ?? [];
     state.campThresholds = data.campThresholds ?? { health: 80, mana: 50, endurance: 30 };
+    state.lastCampLogTick = data.lastCampLogTick ?? 0;
+    state.lastCampLogTime = data.lastCampLogTime ?? 0;
 
     const maxId = state.party.reduce((m, h) => Math.max(m, h.id || 0), 0);
     bumpHeroIdCounterToAtLeast(maxId + 1);

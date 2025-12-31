@@ -686,13 +686,22 @@ export function gameTick() {
     if (!campCheck.shouldCamp) {
       // All thresholds met, spawn enemy
       spawnEnemy();
+      // Reset camping log counters when we resume hunting
+      state.lastCampLogTick = 0;
+      state.lastCampLogTime = 0;
     } else {
-      // Log camping reason periodically (every 10 ticks to avoid spam)
-      if (!state.lastCampLogTick || state.lastCampLogTick >= 10) {
+      // Log camping reason periodically: every 10 ticks OR every 30s (whichever comes first)
+      const now = Date.now();
+      const ticksSinceLog = state.lastCampLogTick ?? 0;
+      const msSinceLog = state.lastCampLogTime ? now - state.lastCampLogTime : Infinity;
+      const shouldLogNow = ticksSinceLog >= 10 || msSinceLog >= 30000;
+
+      if (shouldLogNow) {
         addLog(`⛺ Camping to recover: ${campCheck.reasons.join(', ')}`, "normal");
         state.lastCampLogTick = 0;
+        state.lastCampLogTime = now;
       } else {
-        state.lastCampLogTick++;
+        state.lastCampLogTick = ticksSinceLog + 1;
       }
     }
   }
