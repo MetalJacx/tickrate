@@ -164,6 +164,7 @@ export function spawnEnemy() {
     maxHP,
     hp: maxHP,
     dps,
+    xp: enemyDef.xp,
     debuffs: enemyDef.debuffs || []
   };
   
@@ -193,6 +194,7 @@ function spawnEnemyToList() {
     maxHP,
     hp: maxHP,
     dps,
+    xp: enemyDef.xp,
     debuffs: enemyDef.debuffs || []
   };
   
@@ -223,7 +225,7 @@ function checkSlotUnlocks() {
 }
 
 function onEnemyKilled(enemy, totalDPS) {
-  const baseXP = 5 + state.zone * 3 + enemy.level * 2;
+  const baseXP = enemy.xp ?? (5 + state.zone * 3 + enemy.level * 2);
   const gold = 5 + state.zone * 4 + enemy.level;
 
   // Apply group bonus based on LIVING party size only

@@ -14,6 +14,8 @@ export function getEnemyForZone(zoneNumber) {
   if (!zone || !zone.enemies.length) return null;
   
   // Pick random enemy from the zone's enemy list
-  const enemyDef = zone.enemies[Math.floor(Math.random() * zone.enemies.length)];
-  return enemyDef;
+  const enemyTemplate = zone.enemies[Math.floor(Math.random() * zone.enemies.length)];
+  const globalDefaults = zone.global || {};
+  // Apply global defaults, then enemy-specific overrides
+  return { ...globalDefaults, ...enemyTemplate };
 }
