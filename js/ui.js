@@ -609,12 +609,6 @@ export function renderParty() {
         div.style.borderColor = "#fbbf24";
       }
 
-      // Add click handler to open character detail modal
-      div.style.cursor = "pointer";
-      div.addEventListener("click", () => {
-        openCharacterModal(hero);
-      });
-
       container.appendChild(div);
     } else {
       // Render empty or locked slot
