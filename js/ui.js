@@ -517,6 +517,22 @@ export function renderParty() {
       });
       btnRow.appendChild(statsBtn);
 
+      const invBtn = document.createElement("button");
+      invBtn.textContent = "Inventory";
+      invBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openCharacterModal(hero);
+      });
+      btnRow.appendChild(invBtn);
+
+      const abilBtn = document.createElement("button");
+      abilBtn.textContent = "Abilities";
+      abilBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openCharacterModal(hero);
+      });
+      btnRow.appendChild(abilBtn);
+
       div.appendChild(header);
       div.appendChild(healthBar);
       div.appendChild(healthLabel);
