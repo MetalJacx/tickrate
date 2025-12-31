@@ -38,6 +38,13 @@ export default {
   ],
   subAreas: [
     {
+      id: "open_world",
+      name: "Open World",
+      discovered: true,
+      discoveryChance: 0,
+      mobWeightModifiers: {}
+    },
+    {
       id: "forest_edge",
       name: "Forest Edge",
       discovered: false,
