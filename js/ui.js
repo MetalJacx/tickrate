@@ -337,6 +337,8 @@ export function renderParty() {
       xpDiv.textContent = `XP: ${(hero.xp || 0).toFixed(0)}`;
 
       const btnRow = document.createElement("div");
+      btnRow.style.cssText = "display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;";
+
       const btn = document.createElement("button");
       const cost = heroLevelUpCost(hero);
       const heroXP = hero.xp || 0;
@@ -351,6 +353,14 @@ export function renderParty() {
         }
       });
       btnRow.appendChild(btn);
+
+      const statsBtn = document.createElement("button");
+      statsBtn.textContent = "Stats";
+      statsBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openCharacterModal(hero);
+      });
+      btnRow.appendChild(statsBtn);
 
       div.appendChild(header);
       div.appendChild(healthBar);
@@ -545,6 +555,7 @@ function openCharacterModal(hero) {
   const cls = getClassDef(hero.classKey);
   
   title.textContent = `${hero.name} (${cls?.name || 'Unknown'}) - Lv ${hero.level}`;
+  populateStatsSection(hero);
   
   // Populate equipment section
   populateEquipmentSection(hero);
@@ -790,4 +801,55 @@ function checkHasUnassignedSlots(hero) {
     }
   }
   return false;
+}
+
+function statLine(label, value) {
+  const row = document.createElement("div");
+  row.style.cssText = "display:flex;justify-content:space-between;gap:6px;margin-bottom:4px;";
+  const left = document.createElement("span");
+  left.textContent = label;
+  const right = document.createElement("span");
+  right.style.color = "#9ae6b4";
+  right.textContent = value;
+  row.appendChild(left);
+  row.appendChild(right);
+  return row;
+}
+
+function populateStatsSection(hero) {
+  const statsBox = document.getElementById("characterStatsContainer");
+  if (!statsBox) return;
+  statsBox.innerHTML = "";
+  const stats = hero.stats || {};
+  const derived = {
+    hp: `${hero.health.toFixed(0)} / ${hero.maxHP.toFixed(0)}`,
+    mana: hero.maxMana > 0 ? `${hero.mana.toFixed(0)} / ${hero.maxMana.toFixed(0)}` : "-",
+    endurance: hero.maxEndurance > 0 ? `${hero.endurance.toFixed(0)} / ${hero.maxEndurance.toFixed(0)}` : "-",
+    dps: hero.dps?.toFixed ? hero.dps.toFixed(1) : hero.dps || 0,
+    healing: hero.healing?.toFixed ? hero.healing.toFixed(1) : hero.healing || 0
+  };
+
+  const primary = hero.primaryStat ? hero.primaryStat.toUpperCase() : "-";
+
+  statsBox.appendChild(statLine("Primary", primary));
+  statsBox.appendChild(statLine("HP", derived.hp));
+  statsBox.appendChild(statLine("Mana", derived.mana));
+  statsBox.appendChild(statLine("Endurance", derived.endurance));
+  statsBox.appendChild(statLine("DPS", derived.dps));
+  statsBox.appendChild(statLine("Healing", derived.healing));
+
+  statsBox.appendChild(document.createElement("hr"));
+  const coreStats = [
+    ["STR", stats.str ?? 0],
+    ["CON", stats.con ?? 0],
+    ["DEX", stats.dex ?? 0],
+    ["AGI", stats.agi ?? 0],
+    ["AC", stats.ac ?? 0],
+    ["WIS", stats.wis ?? 0],
+    ["INT", stats.int ?? 0],
+    ["CHA", stats.cha ?? 0]
+  ];
+  for (const [label, val] of coreStats) {
+    statsBox.appendChild(statLine(label, val));
+  }
 }
