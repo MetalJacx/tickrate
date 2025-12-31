@@ -31,7 +31,8 @@ export const state = {
     damage_taken: true,
     normal: true,
     gold: true
-  }
+  },
+  offlineSummary: null
 };
 
 export function nextHeroId() {

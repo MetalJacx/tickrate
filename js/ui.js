@@ -49,6 +49,16 @@ export function initUI({ onRecruit, onReset, onOpenRecruitModal }) {
   if (characterModalCloseBtn) {
     characterModalCloseBtn.addEventListener("click", closeCharacterModal);
   }
+
+  // Offline modal close button
+  const offlineCloseBtn = document.getElementById("offlineModalCloseBtn");
+  if (offlineCloseBtn) {
+    offlineCloseBtn.addEventListener("click", () => {
+      const modal = document.getElementById("offlineModal");
+      if (modal) modal.style.display = "none";
+      state.offlineSummary = null;
+    });
+  }
 }
 
 function renderHealthThreshold() {
@@ -65,6 +75,29 @@ export function renderAll() {
   renderParty();
   renderMeta();
   renderLog();
+}
+
+function formatDuration(seconds) {
+  const s = Math.floor(seconds % 60);
+  const m = Math.floor((seconds / 60) % 60);
+  const h = Math.floor(seconds / 3600);
+  const parts = [];
+  if (h > 0) parts.push(`${h}h`);
+  if (m > 0 || h > 0) parts.push(`${m}m`);
+  parts.push(`${s}s`);
+  return parts.join(" ");
+}
+
+export function showOfflineModal(summary) {
+  const modal = document.getElementById("offlineModal");
+  if (!modal || !summary) return;
+  const timeSpan = document.getElementById("offlineTimeSpan");
+  const goldSpan = document.getElementById("offlineGoldSpan");
+  const xpSpan = document.getElementById("offlineXpSpan");
+  if (timeSpan) timeSpan.textContent = formatDuration(summary.secondsSimulated || 0);
+  if (goldSpan) goldSpan.textContent = Math.floor(summary.goldGained || 0);
+  if (xpSpan) xpSpan.textContent = Math.floor(summary.xpGained || 0);
+  modal.style.display = "flex";
 }
 
 export function renderLog() {

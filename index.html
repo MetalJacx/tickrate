@@ -263,6 +263,22 @@
 <!-- Toast Notification -->
 <div id="toast" style="display:none;"></div>
 
+<!-- Offline Progress Modal -->
+<div id="offlineModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#181818;border:1px solid #333;border-radius:10px;padding:20px;width:90%;max-width:400px;box-sizing:border-box;color:#eee;box-shadow:0 10px 30px rgba(0,0,0,0.4);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <div style="font-size:18px;font-weight:bold;">Offline Progress</div>
+      <button id="offlineModalCloseBtn" style="background:none;border:none;color:#eee;cursor:pointer;font-size:18px;padding:0;width:24px;height:24px;">✕</button>
+    </div>
+    <div style="font-size:13px;color:#ccc;line-height:1.6;">
+      <div>Time simulated: <span id="offlineTimeSpan">0s</span></div>
+      <div>Gold gained: <span id="offlineGoldSpan">0</span></div>
+      <div>XP gained: <span id="offlineXpSpan">0</span></div>
+    </div>
+    <div style="margin-top:14px;font-size:11px;color:#888;">Capped at 3 hours of offline time.</div>
+  </div>
+</div>
+
 <script type="module" src="js/main.js"></script>
 </body>
 </html>

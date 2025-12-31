@@ -2,7 +2,7 @@ import { GAME_TICK_MS, AUTO_SAVE_EVERY_MS, MAX_OFFLINE_SECONDS} from "./defs.js"
 import { state, loadGame, saveGame, clearSave, serializeState } from "./state.js";
 import { addLog } from "./util.js";
 import { createHero, spawnEnemy, gameTick, travelToNextZone, travelToPreviousZone, p99XpToNext } from "./combat.js";
-import { initUI, renderAll } from "./ui.js";
+import { initUI, renderAll, showOfflineModal } from "./ui.js";
 import { CLASSES, getClassDef } from "./classes/index.js"
 import { initSettings } from "./settings.js";
 
@@ -58,10 +58,21 @@ function setClassError(msg) {
 }
 
 function simulateOfflineProgress(seconds) {
-  if (!seconds || seconds <= 0) return;
+  if (!seconds || seconds <= 0) return null;
   const capped = Math.min(seconds, MAX_OFFLINE_SECONDS);
+  const beforeGold = state.gold;
+  const beforeXP = state.totalXP;
+
   for (let i = 0; i < capped; i++) gameTick();
+
+  const summary = {
+    secondsSimulated: capped,
+    goldGained: state.gold - beforeGold,
+    xpGained: state.totalXP - beforeXP
+  };
+  state.offlineSummary = summary;
   addLog(`SYSTEM: Offline progress: simulated ${capped} seconds.`);
+  return summary;
 }
 
 function startLoops({ lastSavedAt }) {
@@ -87,12 +98,18 @@ function startLoops({ lastSavedAt }) {
     addLog("Party members are recovering. Combat will resume after revival.", "normal");
   }
 
+  let offlineSummary = null;
   if (lastSavedAt) {
     const secondsOffline = Math.floor((Date.now() - lastSavedAt) / 1000);
-    simulateOfflineProgress(secondsOffline);
+    offlineSummary = simulateOfflineProgress(secondsOffline);
   }
 
   renderAll();
+
+  if (offlineSummary && offlineSummary.secondsSimulated > 0) {
+    showOfflineModal(offlineSummary);
+    state.offlineSummary = null;
+  }
 
   // Delta-based fixed-step loop using requestAnimationFrame
   let lastTime = performance.now();
