@@ -2,7 +2,8 @@ export const GAME_TICK_MS = 3000;
 
 export const SAVE_KEY = "tickrate_save_v1";
 export const AUTO_SAVE_EVERY_MS = 5000;
-export const MAX_OFFLINE_SECONDS = 6 * 60 * 60;
+// Cap both offline and background catch-up to 3 hours
+export const MAX_OFFLINE_SECONDS = 3 * 60 * 60;
 export const MAX_PARTY_SIZE = 6;
 
 // Party slot unlocks based on Account level (not zone)

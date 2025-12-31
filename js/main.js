@@ -99,14 +99,13 @@ function startLoops({ lastSavedAt }) {
   function loop(now) {
     const deltaMs = now - lastTime;
     let ticks = Math.floor(deltaMs / GAME_TICK_MS);
-    
-    // Cap catch-up to prevent extreme spikes after long pauses
-    const MAX_CATCH_UP_TICKS = 60;
+
+    // Allow background catch-up up to the offline cap (3 hours)
+    const MAX_CATCH_UP_TICKS = Math.floor((MAX_OFFLINE_SECONDS * 1000) / GAME_TICK_MS);
     if (ticks > MAX_CATCH_UP_TICKS) {
-      console.warn(`Capping catch-up from ${ticks} to ${MAX_CATCH_UP_TICKS} ticks`);
       ticks = MAX_CATCH_UP_TICKS;
     }
-    
+
     if (ticks > 0) {
       // Advance lastTime by the ticks processed to avoid drift
       lastTime += ticks * GAME_TICK_MS;
