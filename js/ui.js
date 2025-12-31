@@ -65,6 +65,21 @@ export function initUI({ onRecruit, onReset, onOpenRecruitModal }) {
       state.offlineSummary = null;
     });
   }
+
+  // Zone preview modal close button
+  const zonePreviewCloseBtn = document.getElementById("zonePreviewCloseBtn");
+  if (zonePreviewCloseBtn) {
+    zonePreviewCloseBtn.addEventListener("click", closeZonePreviewModal);
+  }
+
+  const zonePreviewModal = document.getElementById("zonePreviewModal");
+  if (zonePreviewModal) {
+    zonePreviewModal.addEventListener("click", (e) => {
+      if (e.target === zonePreviewModal) {
+        closeZonePreviewModal();
+      }
+    });
+  }
 }
 
 function renderHealthThreshold() {
@@ -643,6 +658,46 @@ function zoneKey(zone) {
   return zone?.id || `zone_${zone?.zoneNumber ?? ""}`;
 }
 
+function closeZonePreviewModal() {
+  const modal = document.getElementById("zonePreviewModal");
+  if (modal) modal.style.display = "none";
+}
+
+function openZonePreviewModal(zone) {
+  const modal = document.getElementById("zonePreviewModal");
+  if (!modal) return;
+
+  const titleEl = document.getElementById("previewZoneName");
+  const infoEl = document.getElementById("previewZoneInfo");
+  const enemyEl = document.getElementById("previewEnemyList");
+
+  if (!titleEl || !infoEl || !enemyEl) return;
+
+  titleEl.textContent = `${zone.name} (Lv ${zone.levelRange[0]}-${zone.levelRange[1]})`;
+
+  const infoHtml = `
+    <div><strong>Description:</strong></div>
+    <div style="margin-bottom:10px;color:#aaa;">${zone.description || "A mysterious area."}</div>
+    <div><strong>Level Range:</strong> ${zone.levelRange[0]} - ${zone.levelRange[1]}</div>
+    <div><strong>XP/Kill:</strong> ${zone.global?.xp || "?"}</div>
+  `;
+  infoEl.innerHTML = infoHtml;
+
+  const enemies = zone.enemies || [];
+  let enemyHtml = "";
+  for (const enemy of enemies) {
+    enemyHtml += `
+      <div style="margin-bottom:8px;padding:6px;background:#0a0a0a;border-radius:4px;border-left:2px solid #444;">
+        <div style="font-weight:bold;">${enemy.name}</div>
+        <div style="font-size:10px;color:#aaa;">HP: ${enemy.baseHP} | DPS: ${enemy.baseDPS}</div>
+      </div>
+    `;
+  }
+  enemyEl.innerHTML = enemyHtml || "<div style='color:#666;'>No enemies found.</div>";
+
+  modal.style.display = "block";
+}
+
 function renderZones() {
   const zoneList = document.getElementById("zoneList");
   const subAreaList = document.getElementById("subAreaList");
@@ -664,11 +719,15 @@ function renderZones() {
   const highest = state.highestUnlockedZone || 1;
 
   for (const z of zones) {
-    const btn = document.createElement("button");
     const unlocked = z.zoneNumber <= highest;
+    
+    const container = document.createElement("div");
+    container.style.cssText = "display:flex;gap:6px;align-items:stretch;";
+    
+    const btn = document.createElement("button");
     btn.textContent = `${z.name} (${z.levelRange?.[0] ?? "?"}-${z.levelRange?.[1] ?? "?"})`;
     btn.style.cssText = `
-      width: 100%;
+      flex: 1;
       text-align: left;
       background: ${state.zone === z.zoneNumber ? "#1f2937" : "#222"};
       border: 1px solid ${state.zone === z.zoneNumber ? "#60a5fa" : "#444"};
@@ -687,7 +746,31 @@ function renderZones() {
         renderAll();
       }
     });
-    zoneList.appendChild(btn);
+    
+    const previewBtn = document.createElement("button");
+    previewBtn.textContent = "👁️";
+    previewBtn.style.cssText = `
+      width: 36px;
+      padding: 0;
+      background: #333;
+      border: 1px solid #444;
+      color: #aaa;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    `;
+    previewBtn.disabled = !unlocked;
+    previewBtn.title = "Preview zone";
+    previewBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (unlocked) {
+        openZonePreviewModal(z);
+      }
+    });
+    
+    container.appendChild(btn);
+    container.appendChild(previewBtn);
+    zoneList.appendChild(container);
   }
 
   if (zoneList.childNodes.length === 0) {
@@ -717,12 +800,32 @@ function renderZones() {
       padding: 8px;
       border-radius: 6px;
       border: 1px solid ${activeSub && activeSub.id === sub.id ? "#4ade80" : "#333"};
-      background: ${discovered ? "#111" : "#0d0d0d"};
+      background: ${activeSub && activeSub.id === sub.id ? "#1a3a1a" : discovered ? "#111" : "#0d0d0d"};
       color: ${discovered ? "#eee" : "#666"};
       display: flex;
       justify-content: space-between;
       align-items: center;
+      ${discovered ? "cursor: pointer;" : "cursor: not-allowed;"}
+      transition: all 0.2s;
     `;
+    
+    if (discovered) {
+      row.addEventListener("mouseenter", () => {
+        row.style.background = activeSub && activeSub.id === sub.id ? "#1a3a1a" : "#1a1a1a";
+        row.style.borderColor = "#555";
+      });
+      row.addEventListener("mouseleave", () => {
+        row.style.background = activeSub && activeSub.id === sub.id ? "#1a3a1a" : "#111";
+        row.style.borderColor = activeSub && activeSub.id === sub.id ? "#4ade80" : "#333";
+      });
+      row.addEventListener("click", () => {
+        state.activeZoneId = activeZone.id;
+        state.zone = activeZone.zoneNumber;
+        // Don't reset kills/enemies when switching sub-areas
+        renderAll();
+      });
+    }
+    
     const name = document.createElement("div");
     name.textContent = discovered ? sub.name : "???";
     const badge = document.createElement("div");
