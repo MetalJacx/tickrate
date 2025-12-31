@@ -4,7 +4,7 @@ import { spawnEnemyToList } from "./combat.js";
 import { CLASSES, getClassDef } from "./classes/index.js";
 import { getZoneDef } from "./zones/index.js";
 import { addLog } from "./util.js";
-import { MAX_PARTY_SIZE } from "./defs.js";
+import { MAX_PARTY_SIZE, ACCOUNT_SLOT_UNLOCKS } from "./defs.js";
 
 export function initUI({ onRecruit, onReset, onOpenRecruitModal }) {
   document.getElementById("travelBtn").addEventListener("click", () => {
@@ -483,11 +483,14 @@ export function renderParty() {
           min-height: 80px;
           opacity: 0.5;
         `;
-        
+
+        const unlockRule = ACCOUNT_SLOT_UNLOCKS.find(r => r.slots === i + 1);
+        const unlockText = unlockRule ? `Unlocks at Account Lv ${unlockRule.level}` : "Locked";
+
         div.innerHTML = `
           <div style="text-align:center;color:#555;">
             <div style="font-size:20px;margin-bottom:4px;">🔒</div>
-            <div style="font-size:11px;">Unlock in higher zones</div>
+            <div style="font-size:11px;">${unlockText}</div>
           </div>
         `;
       }
