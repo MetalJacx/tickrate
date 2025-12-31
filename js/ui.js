@@ -328,8 +328,12 @@ export function renderParty() {
         resourceBars.push({ bar: endBar, label: endLabel });
       }
 
+      const statsRow = document.createElement("div");
+      statsRow.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:4px;";
+
       const stats = document.createElement("div");
       stats.className = "hero-stats";
+      stats.style.marginBottom = "0";
       stats.textContent = `DPS: ${hero.dps.toFixed(1)} | Healing: ${hero.healing.toFixed(1)}`;
 
       const xpDiv = document.createElement("div");
@@ -338,7 +342,7 @@ export function renderParty() {
 
       // Cooldown display for assigned skills that are currently cooling down
       const cdRow = document.createElement("div");
-      cdRow.style.cssText = "display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;";
+      cdRow.style.cssText = "display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;";
       const clsSkills = cls?.skills || [];
       const assignedKeys = Object.values(hero.abilityBar || {}).filter(Boolean);
       const cooling = [];
@@ -412,11 +416,13 @@ export function renderParty() {
         div.appendChild(res.label);
       });
       
-      div.appendChild(stats);
-      div.appendChild(xpDiv);
+      statsRow.appendChild(stats);
       if (cdRow.childNodes.length > 0) {
-        div.appendChild(cdRow);
+        statsRow.appendChild(cdRow);
       }
+
+      div.appendChild(statsRow);
+      div.appendChild(xpDiv);
       div.appendChild(btnRow);
 
       // Check for unassigned ability slots
