@@ -2,7 +2,7 @@ import { state, nextHeroId } from "./state.js";
 import { getClassDef, CLASS_DEFS } from "./classes/index.js";
 import { getZoneDef, getEnemyForZone, MAX_ZONE } from "./zones/index.js";
 import { addLog, randInt } from "./util.js";
-import { SLOT_UNLOCKS } from "./defs.js";
+import { ACCOUNT_SLOT_UNLOCKS } from "./defs.js";
 
 // Hunt timer configuration (milliseconds)
 const HUNT_TIME_MS = 4000; // 4 seconds between kills
@@ -214,10 +214,10 @@ function checkForReinforcement() {
 }
 
 function checkSlotUnlocks() {
-  for (const rule of SLOT_UNLOCKS) {
-    if (state.zone >= rule.zone && state.partySlotsUnlocked < rule.slots) {
+  for (const rule of ACCOUNT_SLOT_UNLOCKS) {
+    if (state.accountLevel >= rule.level && state.partySlotsUnlocked < rule.slots) {
       state.partySlotsUnlocked = rule.slots;
-      addLog(`SYSTEM: Your reputation grows. You can now have up to ${rule.slots} party members.`);
+      addLog(`SYSTEM: Your growing renown allows up to ${rule.slots} party members.`);
     }
   }
 }
