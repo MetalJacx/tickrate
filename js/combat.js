@@ -537,12 +537,21 @@ function checkCampThresholds() {
   const endurancePercent = maxEndurance > 0 ? (totalEndurance / maxEndurance) * 100 : 100;
   
   // Check if any threshold is breached
-  if (healthPercent < state.campThresholds.health || 
-      manaPercent < state.campThresholds.mana || 
-      endurancePercent < state.campThresholds.endurance) {
-    return true; // Should camp
+  const reasons = [];
+  if (healthPercent < state.campThresholds.health) {
+    reasons.push(`Health ${healthPercent.toFixed(0)}% < ${state.campThresholds.health}%`);
   }
-  return false; // Should hunt
+  if (manaPercent < state.campThresholds.mana) {
+    reasons.push(`Mana ${manaPercent.toFixed(0)}% < ${state.campThresholds.mana}%`);
+  }
+  if (endurancePercent < state.campThresholds.endurance) {
+    reasons.push(`Endurance ${endurancePercent.toFixed(0)}% < ${state.campThresholds.endurance}%`);
+  }
+  
+  if (reasons.length > 0) {
+    return { shouldCamp: true, reasons };
+  }
+  return { shouldCamp: false, reasons: [] };
 }
 
 export function gameTick() {
@@ -672,13 +681,20 @@ export function gameTick() {
   // Check if we should respawn (only if hunt timer finished, someone is alive, and we're out of combat)
   if (state.waitingToRespawn && state.currentEnemies.length === 0 && livingAlive && state.huntRemaining <= 0) {
     // Check automation thresholds
-    const shouldCamp = checkCampThresholds();
+    const campCheck = checkCampThresholds();
     
-    if (!shouldCamp) {
+    if (!campCheck.shouldCamp) {
       // All thresholds met, spawn enemy
       spawnEnemy();
+    } else {
+      // Log camping reason periodically (every 10 ticks to avoid spam)
+      if (!state.lastCampLogTick || state.lastCampLogTick >= 10) {
+        addLog(`⛺ Camping to recover: ${campCheck.reasons.join(', ')}`, "normal");
+        state.lastCampLogTick = 0;
+      } else {
+        state.lastCampLogTick++;
+      }
     }
-    // If shouldCamp is true, just stay camping to recover
   }
 
   // Check if any party member is damaged (for heal checks)

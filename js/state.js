@@ -38,7 +38,8 @@ export const state = {
     health: 80,
     mana: 50,
     endurance: 30
-  }
+  },
+  lastCampLogTick: 10 // Counter for periodic camping messages
 };
 
 export function nextHeroId() {
