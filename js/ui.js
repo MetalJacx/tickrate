@@ -149,14 +149,6 @@ export function initUI({ onRecruit, onReset, onOpenRecruitModal }) {
     campThresholdsCloseBtn.addEventListener("click", closeCampThresholdsModal);
   }
 
-  const campThresholdsModal = document.getElementById("campThresholdsModal");
-  if (campThresholdsModal) {
-    campThresholdsModal.addEventListener("click", (e) => {
-      if (e.target === campThresholdsModal) {
-        closeCampThresholdsModal();
-      }
-    });
-  }
 
   // Update threshold inputs when changed
   const campHealthInput = document.getElementById("campHealthInput");

@@ -592,6 +592,14 @@ function start() {
     state.accountLevelUpCost = p99XpToNext(state.accountLevel || 1);
   }
 
+  // Debug logging
+  console.log("Game Load State:", {
+    loaded,
+    accountName: state.accountName,
+    characterName: state.characterName,
+    playerClassKey: state.playerClassKey
+  });
+
   // If we already have a created character, skip start screen
   const hasCharacter = !!state.accountName && !!state.characterName && !!state.playerClassKey;
 
