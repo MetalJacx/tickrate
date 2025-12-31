@@ -101,7 +101,7 @@ function buildEnemyFromTemplate(enemyDef, level) {
   const primaryStat = enemyDef.primaryStat || null;
   const primaryValue = primaryStat ? stats[primaryStat] || 0 : 0;
   const maxMana = computeMaxMana(baseMana, primaryValue);
-  const maxHP = computeMaxHP(baseHP, stats.con || 0);
+  const maxHP = Math.floor(computeMaxHP(baseHP, stats.con || 0));
 
   return {
     name: enemyDef.name,

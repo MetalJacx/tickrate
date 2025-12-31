@@ -97,7 +97,7 @@ export function applyACMitigation(rawDamage, defender) {
 }
 
 export function computeMaxHP(baseHP, con) {
-  return baseHP * (1 + con * COMBAT_CONSTANTS.CON_HP_PER_POINT);
+  return Math.floor(baseHP * (1 + con * COMBAT_CONSTANTS.CON_HP_PER_POINT));
 }
 
 export function computeMaxMana(baseMana, primaryStat) {

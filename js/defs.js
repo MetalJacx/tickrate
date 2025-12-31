@@ -9,7 +9,7 @@ export const MAX_PARTY_SIZE = 6;
 // Party slot unlocks based on Account level (not zone)
 export const ACCOUNT_SLOT_UNLOCKS = [
   { level: 1, slots: 1 },
-  { level: 5, slots: 2 },
+  { level: 3, slots: 2 },
   { level: 10, slots: 3 },
   { level: 14, slots: 4 },
   { level: 18, slots: 5 },
