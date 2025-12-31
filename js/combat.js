@@ -261,6 +261,38 @@ function accountXPMult(accountLevel) {
   return accountLevel <= 10 ? 1.0 : 0.6;
 }
 
+function resolveEnemyLevel(enemyDef, zoneNumber) {
+  const zoneBase = zoneNumber || 1;
+
+  // Explicit single level wins
+  if (Number.isFinite(enemyDef?.level)) {
+    return enemyDef.level;
+  }
+
+  // Range support: levelMin/levelMax (inclusive)
+  const hasMin = Number.isFinite(enemyDef?.levelMin);
+  const hasMax = Number.isFinite(enemyDef?.levelMax);
+  if (hasMin && hasMax) {
+    const min = enemyDef.levelMin;
+    const max = enemyDef.levelMax;
+    if (max <= min) return min;
+    return min + randInt(max - min + 1);
+  }
+  if (hasMin && !hasMax) {
+    return enemyDef.levelMin;
+  }
+  if (!hasMin && hasMax) {
+    // If only max provided, pick up to max but at least zone base
+    const min = zoneBase;
+    const max = enemyDef.levelMax;
+    if (max <= min) return max;
+    return min + randInt(max - min + 1);
+  }
+
+  // Default: zone-based roll (zone .. zone+2)
+  return zoneBase + randInt(3);
+}
+
 function checkAccountLevelUp() {
   if (!state.accountLevelUpCost) {
     state.accountLevelUpCost = p99XpToNext(state.accountLevel);
@@ -276,8 +308,8 @@ function checkAccountLevelUp() {
 
 export function spawnEnemy() {
   const z = state.zone;
-  const level = z + randInt(3);
-  
+  // Enemy level is zone-based by default; allow explicit level or ranges on the template
+
   // Get enemy definition from zone
   const discovery = getDiscoveryState(z);
   const enemyDef = getEnemyForZone(z, discovery);
@@ -285,6 +317,7 @@ export function spawnEnemy() {
     addLog("No enemies in this zone!");
     return;
   }
+  const level = resolveEnemyLevel(enemyDef, z);
   
   // Scale enemy stats based on level
   const enemy = buildEnemyFromTemplate(enemyDef, level);
@@ -299,12 +332,12 @@ export function spawnEnemy() {
 
 function spawnEnemyToList() {
   const z = state.zone;
-  const level = z + randInt(3);
   
   // Get enemy definition from zone
   const discovery = getDiscoveryState(z);
   const enemyDef = getEnemyForZone(z, discovery);
   if (!enemyDef) return;
+  const level = resolveEnemyLevel(enemyDef, z);
   
   // Scale enemy stats based on level
   const enemy = buildEnemyFromTemplate(enemyDef, level);
@@ -335,16 +368,49 @@ function checkSlotUnlocks() {
   }
 }
 
+function partyReferenceLevel() {
+  let lvl = 1;
+  for (const hero of state.party) {
+    lvl = Math.max(lvl, hero.level || 1);
+  }
+  return lvl;
+}
+
+function computeKillXP(enemy) {
+  const mobLevel = enemy.level || state.zone || 1;
+  const playerLevel = partyReferenceLevel();
+  const delta = mobLevel - playerLevel;
+
+  // P99-style base XP
+  const baseXP = 75 * mobLevel * mobLevel;
+
+  let levelMult = 1;
+  if (delta >= 0) {
+    const bonusDelta = Math.min(Math.max(delta, 0), 6); // clamp 0..6
+    levelMult = 1 + 0.10 * bonusDelta;
+  } else {
+    if (delta <= -10) {
+      levelMult = 0;
+    } else {
+      levelMult = 1 - (Math.abs(delta) / 10);
+    }
+  }
+
+  const killXP = Math.floor(baseXP * levelMult);
+  return { killXP, baseXP, levelMult, delta, playerLevel, mobLevel };
+}
+
 function onEnemyKilled(enemy, totalDPS) {
-  const baseXP = enemy.xp ?? (5 + state.zone * 3 + enemy.level * 2);
+  const { killXP } = computeKillXP(enemy);
   const gold = 5 + state.zone * 4 + enemy.level;
 
   // Apply group bonus based on LIVING party size only
   const livingPartySize = state.party.filter(h => !h.isDead).length;
   const groupBonus = 1.0 + (livingPartySize - 1) * 0.1; // 1.0x, 1.1x, 1.2x, 1.3x, 1.4x, 1.5x
-  const totalXP = baseXP * groupBonus;
+  const totalXP = killXP * groupBonus;
+  const totalXPRounded = Math.floor(totalXP);
 
-  state.totalXP += Math.floor(totalXP);
+  state.totalXP += totalXPRounded;
   state.gold += gold;
   state.killsThisZone += 1;
 
@@ -358,19 +424,19 @@ function onEnemyKilled(enemy, totalDPS) {
   }
 
   // Distribute XP proportionally by level weight (only to living heroes)
-  if (totalWeight > 0) {
+  if (totalWeight > 0 && totalXPRounded > 0) {
     for (const hero of state.party) {
       if (!hero.isDead) {
         if (!hero.xp) hero.xp = 0;
         const heroWeight = hero.level * hero.level;
-        const heroShare = totalXP * (heroWeight / totalWeight);
+        const heroShare = totalXPRounded * (heroWeight / totalWeight);
         hero.xp += heroShare;
       }
     }
   }
 
-  // Award to account (use base XP with account multiplier)
-  const accountXP = baseXP * accountXPMult(state.accountLevel);
+  // Award to account (use total XP with account multiplier)
+  const accountXP = totalXPRounded * accountXPMult(state.accountLevel);
   state.accountLevelXP += accountXP;
   checkAccountLevelUp();
 
