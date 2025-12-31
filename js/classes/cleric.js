@@ -28,8 +28,8 @@ export default {
   },
 
   skills: [
-    { key: "heal", name: "Heal", level: 1, type: "heal", amount: 18, cost: 20, cooldownSeconds: 4 },
-    { key: "prayer", name: "Prayer of Protection", level: 3, type: "heal", amount: 35, cost: 40, cooldownSeconds: 10 },
+    { key: "heal", name: "Heal", level: 1, type: "heal", amount: 18, cost: 5, cooldownSeconds: 4 },
+    { key: "prayer", name: "Prayer of Protection", level: 3, type: "heal", amount: 35, cost: 10, cooldownSeconds: 10 },
     { key: "smite", name: "Smite", level: 5, type: "damage", damageType: "holy", minDamage: 6, maxDamage: 10, cost: 25, cooldownSeconds: 6 },
     { key: "resurrection", name: "Resurrection", level: 10, type: "resurrect", cost: 60, cooldownSeconds: 30 }
   ]
