@@ -4,14 +4,28 @@ export default {
   symbol: "🔥",
   role: "DPS",
   cost: 60,
+  primaryStat: "int",
+  baseMana: 0,
   
   resourceType: "mana",
   maxMana: 120,
   manaRegenPerTick: 6,
 
   baseHP: 40,
+  baseDamage: 18,
   baseDPS: 18,
   baseHealing: 1,
+
+  stats: {
+    str: 6,
+    con: 7,
+    dex: 10,
+    agi: 9,
+    ac: 10,
+    wis: 8,
+    int: 12,
+    cha: 9
+  },
 
   skills: [
     { key: "fireball", name: "Fireball", level: 1, type: "damage", damageType: "fire", minDamage: 12, maxDamage: 18, cost: 30, cooldownSeconds: 5 },

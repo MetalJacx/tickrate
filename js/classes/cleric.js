@@ -4,14 +4,28 @@ export default {
   symbol: "✨",
   role: "Healer",
   cost: 55,
+  primaryStat: "wis",
+  baseMana: 0,
   
   resourceType: "mana",
   maxMana: 130,
   manaRegenPerTick: 7,
 
   baseHP: 70,
+  baseDamage: 6,
   baseDPS: 6,
   baseHealing: 16,
+
+  stats: {
+    str: 8,
+    con: 9,
+    dex: 9,
+    agi: 8,
+    ac: 12,
+    wis: 13,
+    int: 8,
+    cha: 10
+  },
 
   skills: [
     { key: "heal", name: "Heal", level: 1, type: "heal", amount: 18, cost: 20, cooldownSeconds: 4 },

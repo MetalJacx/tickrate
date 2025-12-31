@@ -2,27 +2,134 @@ import { state, nextHeroId } from "./state.js";
 import { getClassDef, CLASS_DEFS } from "./classes/index.js";
 import { getZoneDef, getEnemyForZone, MAX_ZONE } from "./zones/index.js";
 import { addLog, randInt } from "./util.js";
-import { ACCOUNT_SLOT_UNLOCKS } from "./defs.js";
+import { ACCOUNT_SLOT_UNLOCKS, GAME_TICK_MS } from "./defs.js";
+import {
+  applyACMitigation,
+  computeCritChance,
+  computeHitChance,
+  computeManaRegenPerSecond,
+  computeMaxHP,
+  computeMaxMana,
+  computeRawDamage
+} from "./combatMath.js";
 
 // Hunt timer configuration (milliseconds)
 const HUNT_TIME_MS = 4000; // 4 seconds between kills
+
+const DEFAULT_STATS = {
+  str: 10,
+  con: 10,
+  dex: 10,
+  agi: 10,
+  ac: 10,
+  wis: 8,
+  int: 8,
+  cha: 8
+};
+
+function fillStats(stats = {}) {
+  return { ...DEFAULT_STATS, ...stats };
+}
+
+function primaryStatKey(hero, cls) {
+  return hero.primaryStat || cls?.primaryStat || null;
+}
+
+function refreshHeroDerived(hero) {
+  const cls = getClassDef(hero.classKey) || {};
+  hero.stats = fillStats(hero.stats || cls.stats);
+  hero.baseHP = hero.baseHP ?? cls.baseHP ?? hero.maxHP ?? 50;
+  hero.baseDamage = hero.baseDamage ?? cls.baseDamage ?? cls.baseDPS ?? hero.dps ?? 5;
+  hero.baseMana = hero.baseMana ?? cls.baseMana ?? 0;
+  hero.primaryStat = primaryStatKey(hero, cls);
+
+  const con = hero.stats.con || 0;
+  hero.maxHP = computeMaxHP(hero.baseHP, con);
+  hero.health = Math.min(hero.health ?? hero.maxHP, hero.maxHP);
+
+  const pKey = primaryStatKey(hero, cls);
+  const primaryStat = pKey ? hero.stats[pKey] || 0 : 0;
+  const maxMana = computeMaxMana(hero.baseMana, primaryStat);
+  hero.maxMana = maxMana;
+  if (hero.mana == null) {
+    hero.mana = maxMana;
+  } else {
+    hero.mana = Math.min(hero.mana, maxMana);
+  }
+
+  const regenPerSec = pKey ? computeManaRegenPerSecond(primaryStat) : 0;
+  hero.manaRegenPerTick = regenPerSec * (GAME_TICK_MS / 1000);
+
+  // Keep legacy DPS field in sync with base damage
+  hero.dps = hero.baseDamage;
+
+  // Ensure endurance pools exist
+  hero.maxEndurance = hero.maxEndurance ?? cls.maxEndurance ?? 0;
+  if (hero.endurance == null) {
+    hero.endurance = hero.maxEndurance;
+  } else {
+    hero.endurance = Math.min(hero.endurance, hero.maxEndurance);
+  }
+  hero.enduranceRegenPerTick = hero.enduranceRegenPerTick ?? cls.enduranceRegenPerTick ?? 0;
+}
+
+function buildEnemyFromTemplate(enemyDef, level) {
+  const stats = fillStats(enemyDef.stats);
+  const levelBump = Math.max(0, level - 1);
+  stats.str += Math.floor(levelBump / 2);
+  stats.con += Math.floor(levelBump / 2);
+  stats.dex += Math.floor(levelBump / 3);
+  stats.agi += Math.floor(levelBump / 3);
+  stats.ac += Math.floor(levelBump);
+
+  const baseHP = (enemyDef.baseHP ?? 30) + level * 10;
+  const baseDamage = (enemyDef.baseDamage ?? enemyDef.baseDPS ?? 5) + Math.floor(level * 0.5);
+  const baseMana = enemyDef.baseMana ?? 0;
+  const primaryStat = enemyDef.primaryStat || null;
+  const primaryValue = primaryStat ? stats[primaryStat] || 0 : 0;
+  const maxMana = computeMaxMana(baseMana, primaryValue);
+  const maxHP = computeMaxHP(baseHP, stats.con || 0);
+
+  return {
+    name: enemyDef.name,
+    level,
+    baseHP,
+    baseDamage,
+    baseMana,
+    stats,
+    maxHP,
+    hp: maxHP,
+    dps: baseDamage,
+    xp: enemyDef.xp,
+    debuffs: enemyDef.debuffs || [],
+    resourceType: enemyDef.resourceType || null,
+    primaryStat,
+    maxMana,
+    mana: maxMana
+  };
+}
 
 export function createHero(classKey, customName = null) {
   const cls = getClassDef(classKey);
   if (!cls) return null;
 
-  return {
+  const hero = {
     id: nextHeroId(),
     classKey: cls.key,
     name: customName || cls.name,
     role: cls.role,
     level: 1,
+    baseHP: cls.baseHP,
+    baseDamage: cls.baseDamage ?? cls.baseDPS ?? cls.baseHealing ?? 5,
+    baseMana: cls.baseMana ?? 0,
+    stats: fillStats(cls.stats),
     maxHP: cls.baseHP,
     health: cls.baseHP,
-    dps: cls.baseDPS,
+    dps: cls.baseDamage ?? cls.baseDPS ?? 0,
     healing: cls.baseHealing,
     isDead: false,
     deathTime: null,
+    primaryStat: cls.primaryStat || null,
     
     // Resource pools based on class type
     resourceType: cls.resourceType, // "mana", "endurance", or ["mana", "endurance"] for Ranger
@@ -49,6 +156,11 @@ export function createHero(classKey, customName = null) {
     // cooldown tracking per hero:
     skillTimers: {}
   };
+
+  refreshHeroDerived(hero);
+  hero.health = hero.maxHP;
+  hero.mana = hero.maxMana;
+  return hero;
 }
 
 function getUnlockedSkills(hero) {
@@ -57,6 +169,10 @@ function getUnlockedSkills(hero) {
   return cls.skills.filter(s => hero.level >= s.level);
 }
 export function recalcPartyTotals() {
+  for (const h of state.party) {
+    refreshHeroDerived(h);
+  }
+
   let totalMaxHP = 0;
   let totalCurrentHP = 0;
   let totalDPS = 0;
@@ -93,10 +209,12 @@ export function applyHeroLevelUp(hero) {
 
   hero.xp -= cost;
   hero.level += 1;
-  // Simple scaling: +12% HP, +10% DPS, +10% Healing per level
-  hero.maxHP = Math.floor(hero.maxHP * 1.12);
-  hero.dps = hero.dps * 1.10;
+  // Simple scaling: +12% base HP, +10% base damage/DPS, +10% Healing per level
+  hero.baseHP = Math.floor(hero.baseHP * 1.12);
+  hero.baseDamage = hero.baseDamage * 1.10;
+  hero.dps = hero.baseDamage;
   hero.healing = hero.healing * 1.10;
+  refreshHeroDerived(hero);
   // Reset skill cooldowns so new level feels responsive
   if (hero.skillTimers) {
     for (const key of Object.keys(hero.skillTimers)) {
@@ -155,18 +273,7 @@ export function spawnEnemy() {
   }
   
   // Scale enemy stats based on level
-  const maxHP = enemyDef.baseHP + level * 10;
-  const dps = enemyDef.baseDPS + level;
-
-  const enemy = {
-    name: enemyDef.name,
-    level,
-    maxHP,
-    hp: maxHP,
-    dps,
-    xp: enemyDef.xp,
-    debuffs: enemyDef.debuffs || []
-  };
+  const enemy = buildEnemyFromTemplate(enemyDef, level);
   
   state.currentEnemies = [enemy];
   state.waitingToRespawn = false;
@@ -185,18 +292,7 @@ function spawnEnemyToList() {
   if (!enemyDef) return;
   
   // Scale enemy stats based on level
-  const maxHP = enemyDef.baseHP + level * 10;
-  const dps = enemyDef.baseDPS + level;
-
-  const enemy = {
-    name: enemyDef.name,
-    level,
-    maxHP,
-    hp: maxHP,
-    dps,
-    xp: enemyDef.xp,
-    debuffs: enemyDef.debuffs || []
-  };
+  const enemy = buildEnemyFromTemplate(enemyDef, level);
   
   state.currentEnemies.push(enemy);
   addLog(`Oh no! Your luck is not on your side—another ${enemyDef.name} takes notice of your presence!`, "damage_taken");
@@ -386,7 +482,7 @@ export function gameTick() {
     checkForReinforcement();
   }
 
-  const totals = recalcPartyTotals();
+  recalcPartyTotals();
   
   // Determine if in combat (affects regen rates)
   const inCombat = state.currentEnemies.length > 0;
@@ -460,7 +556,7 @@ export function gameTick() {
   const anyDamaged = state.party.some(h => !h.isDead && h.health < h.maxHP);
 
   // 3) Process skills and calculate bonuses
-  let skillBonusDamage = 0;
+  let totalDamageThisTick = 0;
 
   for (const hero of state.party) {
     if (hero.isDead) continue; // Dead heroes can't use skills
@@ -523,9 +619,16 @@ export function gameTick() {
           const minDmg = sk.minDamage || sk.amount || 0;
           const maxDmg = sk.maxDamage || sk.amount || 0;
           const damage = minDmg + Math.random() * (maxDmg - minDmg);
-          skillBonusDamage += damage;
           const damageTypeLabel = sk.damageType ? ` (${sk.damageType})` : "";
-          addLog(`${hero.name} uses ${sk.name}${damageTypeLabel} for ${damage.toFixed(1)} damage!`, "damage_dealt");
+          if (state.currentEnemies.length > 0) {
+            const target = state.currentEnemies[0];
+            const mitigated = applyACMitigation(damage, target);
+            target.hp = Math.max(0, target.hp - mitigated);
+            totalDamageThisTick += mitigated;
+            addLog(`${hero.name} uses ${sk.name}${damageTypeLabel} for ${mitigated.toFixed(1)} damage!`, "damage_dealt");
+          } else {
+            addLog(`${hero.name} uses ${sk.name}${damageTypeLabel}, but there is nothing to hit.`, "normal");
+          }
         }
         if (sk.type === "heal") {
           // Target the most injured living ally (by missing HP)
@@ -575,23 +678,51 @@ export function gameTick() {
     return;
   }
 
+  // Handle kills that occurred from skills before auto-attacks
+  if (state.currentEnemies[0] && state.currentEnemies[0].hp <= 0) {
+    const defeated = state.currentEnemies[0];
+    onEnemyKilled(defeated, Math.max(1, totalDamageThisTick));
+    totalDamageThisTick = 0;
+    state.currentEnemies.shift();
+    if (state.currentEnemies.length === 0) {
+      state.waitingToRespawn = true;
+      checkSlotUnlocks();
+      return;
+    }
+  }
+
   // 3) Apply damage to main enemy (first in list)
   const mainEnemy = state.currentEnemies[0];
   if (!mainEnemy) {
     checkSlotUnlocks();
     return;
   }
-  const baseTotalDamage = totals.totalDPS + skillBonusDamage;
-  const variance = baseTotalDamage * 0.2; // ±20% variance
-  const totalDamage = Math.max(1, baseTotalDamage - variance + Math.random() * (variance * 2));
-  if (totalDamage > 0) {
-    mainEnemy.hp = Math.max(0, mainEnemy.hp - totalDamage);
-    addLog(`Party attacks ${mainEnemy.name} for ${totalDamage.toFixed(1)} damage!`, "damage_dealt");
+  const livingAttackers = state.party.filter(h => !h.isDead);
+  for (const hero of livingAttackers) {
+    const debuff = hero.tempDamageDebuffTicks > 0 ? hero.tempDamageDebuffAmount || 0 : 0;
+    const attackBaseDamage = Math.max(0, (hero.baseDamage ?? hero.dps ?? 0) - debuff);
+    const hitChance = computeHitChance(hero, mainEnemy);
+    if (Math.random() > hitChance) {
+      addLog(`${hero.name} misses ${mainEnemy.name}.`, "damage_dealt");
+      continue;
+    }
+
+    const isCrit = Math.random() < computeCritChance(hero);
+    const rawDamage = computeRawDamage({ ...hero, baseDamage: attackBaseDamage }, isCrit);
+    const mitigated = applyACMitigation(rawDamage, mainEnemy);
+    mainEnemy.hp = Math.max(0, mainEnemy.hp - mitigated);
+    totalDamageThisTick += mitigated;
+    addLog(`${hero.name} hits ${mainEnemy.name} for ${mitigated.toFixed(1)}${isCrit ? " (CRIT)" : ""}!`, "damage_dealt");
+
+    if (mainEnemy.hp <= 0) {
+      break;
+    }
   }
 
   // Check if main enemy is killed
   if (mainEnemy.hp <= 0) {
-    onEnemyKilled(mainEnemy, totalDamage);
+    onEnemyKilled(mainEnemy, Math.max(1, totalDamageThisTick));
+    totalDamageThisTick = 0;
     state.currentEnemies.shift(); // Remove main enemy from list
     
     // If no more enemies, trigger respawn
@@ -605,14 +736,19 @@ export function gameTick() {
   let livingMembers = state.party.filter(h => !h.isDead);
   if (livingMembers.length > 0) {
     for (const enemy of state.currentEnemies) {
-      const baseRawDamage = enemy.dps;
-      const enemyVariance = baseRawDamage * 0.2; // ±20% variance
-      const rawDamage = Math.max(1, baseRawDamage - enemyVariance + Math.random() * (enemyVariance * 2));
-      
       // Single-target damage: pick one living member to take the hit
       const target = livingMembers[randInt(livingMembers.length)];
-      target.health = Math.max(0, target.health - rawDamage);
-      addLog(`${enemy.name} deals ${rawDamage.toFixed(1)} damage to ${target.name}!`, "damage_taken");
+      const hitChance = computeHitChance(enemy, target);
+      if (Math.random() > hitChance) {
+        addLog(`${enemy.name} misses ${target.name}.`, "damage_taken");
+        continue;
+      }
+
+      const isCrit = Math.random() < computeCritChance(enemy);
+      const rawDamage = computeRawDamage(enemy, isCrit);
+      const mitigated = applyACMitigation(rawDamage, target);
+      target.health = Math.max(0, target.health - mitigated);
+      addLog(`${enemy.name} hits ${target.name} for ${mitigated.toFixed(1)}${isCrit ? " (CRIT)" : ""}!`, "damage_taken");
 
       // Apply any enemy-sourced debuffs defined on the enemy
       if (enemy.debuffs && enemy.debuffs.length) {

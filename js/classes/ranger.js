@@ -4,6 +4,8 @@ export default {
   symbol: "🏹",
   role: "DPS",
   cost: 45,
+  primaryStat: "wis",
+  baseMana: 0,
   
   resourceType: ["mana", "endurance"],
   maxMana: 80,
@@ -12,8 +14,20 @@ export default {
   enduranceRegenPerTick: 3,
 
   baseHP: 60,
+  baseDamage: 14,
   baseDPS: 14,
   baseHealing: 3,
+
+  stats: {
+    str: 12,
+    con: 10,
+    dex: 13,
+    agi: 12,
+    ac: 14,
+    wis: 8,
+    int: 8,
+    cha: 9
+  },
 
   skills: [
     { key: "shot", name: "Shot", level: 1, type: "damage", damageType: "physical", minDamage: 8, maxDamage: 12, cost: 10, costType: "endurance", cooldownSeconds: 3 },
