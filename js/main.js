@@ -1,7 +1,7 @@
 import { GAME_TICK_MS, AUTO_SAVE_EVERY_MS, MAX_OFFLINE_SECONDS} from "./defs.js";
 import { state, loadGame, saveGame, clearSave, serializeState } from "./state.js";
 import { addLog } from "./util.js";
-import { createHero, spawnEnemy, gameTick, travelToNextZone, travelToPreviousZone } from "./combat.js";
+import { createHero, spawnEnemy, gameTick, travelToNextZone, travelToPreviousZone, p99XpToNext } from "./combat.js";
 import { initUI, renderAll } from "./ui.js";
 import { CLASSES, getClassDef } from "./classes/index.js"
 import { initSettings } from "./settings.js";
@@ -538,7 +538,7 @@ function start() {
       state.totalXP = 0;
       state.accountLevel = 1;
       state.accountLevelXP = 0;
-      state.accountLevelUpCost = 100;
+      state.accountLevelUpCost = p99XpToNext(1); // Use P99 curve
       state.zone = 1;
       state.killsThisZone = 0;
       state.killsForNextZone = 10;
@@ -563,6 +563,11 @@ function start() {
 
   // Load saved data (if any)
   const { loaded, lastSavedAt } = loadGame();
+
+  // Initialize account XP cost if missing (migration to P99 curve)
+  if (!state.accountLevelUpCost) {
+    state.accountLevelUpCost = p99XpToNext(state.accountLevel || 1);
+  }
 
   // If we already have a created character, skip start screen
   const hasCharacter = !!state.accountName && !!state.characterName && !!state.playerClassKey;

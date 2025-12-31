@@ -11,7 +11,7 @@ export const state = {
   totalXP: 0,
   accountLevel: 1,
   accountLevelXP: 0,
-  accountLevelUpCost: 100,
+  accountLevelUpCost: 0, // Will be set at runtime using P99 curve
   zone: 1,
   killsThisZone: 0,
   killsForNextZone: 10,
@@ -109,7 +109,7 @@ export function loadGame() {
     state.totalXP = data.totalXP ?? 0;
     state.accountLevel = data.accountLevel ?? 1;
     state.accountLevelXP = data.accountLevelXP ?? 0;
-    state.accountLevelUpCost = data.accountLevelUpCost ?? 100;
+    state.accountLevelUpCost = data.accountLevelUpCost ?? 0; // Will be initialized using P99 curve
     state.zone = data.zone ?? 1;
     state.killsThisZone = data.killsThisZone ?? 0;
     state.killsForNextZone = data.killsForNextZone ?? 10;

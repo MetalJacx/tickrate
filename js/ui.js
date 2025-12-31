@@ -339,12 +339,12 @@ export function renderParty() {
       const btnRow = document.createElement("div");
       const btn = document.createElement("button");
       const cost = heroLevelUpCost(hero);
-      btn.textContent = `Level Up (${cost} gold)`;
-      btn.disabled = state.gold < cost || hero.isDead;
+      const heroXP = hero.xp || 0;
+      btn.textContent = `Level Up (${cost.toFixed(0)} XP)`;
+      btn.disabled = heroXP < cost || hero.isDead;
       btn.addEventListener("click", function (e) {
         e.stopPropagation();
-        if (state.gold >= cost && !hero.isDead) {
-          state.gold -= cost;
+        if (heroXP >= cost && !hero.isDead) {
           applyHeroLevelUp(hero);
           addLog(`${hero.name} trains hard and reaches level ${hero.level}.`, "gold");
           renderAll();

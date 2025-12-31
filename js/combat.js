@@ -81,13 +81,17 @@ export function recalcPartyTotals() {
   return { totalDPS, totalHealing };
 }
 
+// XP needed for the next hero level (P99 curve)
 export function heroLevelUpCost(hero) {
-  const base = 25;
-  const scaling = Math.floor(hero.level * 15);
-  return base + scaling;
+  return p99XpToNext(hero.level);
 }
 
 export function applyHeroLevelUp(hero) {
+  const cost = heroLevelUpCost(hero);
+  if (!hero.xp) hero.xp = 0;
+  if (hero.xp < cost) return; // Not enough XP
+
+  hero.xp -= cost;
   hero.level += 1;
   // Simple scaling: +12% HP, +10% DPS, +10% Healing per level
   hero.maxHP = Math.floor(hero.maxHP * 1.12);
@@ -101,12 +105,40 @@ export function applyHeroLevelUp(hero) {
   }
 }
 
+// Project 1999-style XP curve for Account leveling
+function p99Multiplier(level) {
+  if (level >= 45) return 1.4;
+  if (level >= 40) return 1.3;
+  if (level >= 35) return 1.2;
+  if (level >= 30) return 1.1;
+  return 1.0;
+}
+
+// Total XP required at end of level (matches P99 pattern)
+function totalXpAtEnd(level) {
+  return Math.floor(1000 * Math.pow(level, 3) * p99Multiplier(level));
+}
+
+// XP needed to complete current level (exported for reuse)
+export function p99XpToNext(level) {
+  if (level <= 0) return 0;
+  return totalXpAtEnd(level) - totalXpAtEnd(level - 1);
+}
+
+// Account XP gain multiplier (slower after level 10)
+function accountXPMult(accountLevel) {
+  return accountLevel <= 10 ? 1.0 : 0.6;
+}
+
 function checkAccountLevelUp() {
+  if (!state.accountLevelUpCost) {
+    state.accountLevelUpCost = p99XpToNext(state.accountLevel);
+  }
   while (state.accountLevelXP >= state.accountLevelUpCost) {
     state.accountLevelXP -= state.accountLevelUpCost;
     state.accountLevel += 1;
-    // Increase next requirement progressively
-    state.accountLevelUpCost = Math.floor(state.accountLevelUpCost * 1.5);
+    // Use P99 curve for next level requirement
+    state.accountLevelUpCost = p99XpToNext(state.accountLevel);
     addLog(`SYSTEM: Account reaches level ${state.accountLevel}!`, "xp");
   }
 }
@@ -224,8 +256,9 @@ function onEnemyKilled(enemy, totalDPS) {
     }
   }
 
-  // Award to account (use base XP to avoid double-counting bonus)
-  state.accountLevelXP += baseXP;
+  // Award to account (use base XP with account multiplier)
+  const accountXP = baseXP * accountXPMult(state.accountLevel);
+  state.accountLevelXP += accountXP;
   checkAccountLevelUp();
 
   addLog(`Your party defeats the ${enemy.name}, dealing ${totalDPS.toFixed(1)} damage. +${Math.floor(totalXP)} XP, +${gold} gold.`, "gold");
@@ -480,7 +513,7 @@ export function gameTick() {
         const abilityXP = 2;
         if (!hero.xp) hero.xp = 0;
         hero.xp += abilityXP;
-        state.accountLevelXP += abilityXP;
+        state.accountLevelXP += abilityXP * accountXPMult(state.accountLevel);
         checkAccountLevelUp();
 
         if (sk.type === "damage") {
