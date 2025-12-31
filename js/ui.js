@@ -920,6 +920,7 @@ function openInventoryModal(hero) {
   
   title.textContent = `${hero.name} (${cls?.name || 'Unknown'}) - Lv ${hero.level}`;
   populateEquipmentSection(hero);
+  populateInventoryStats(hero);
   
   modal.style.display = "flex";
 }
@@ -959,6 +960,41 @@ function populateEquipmentSection(hero) {
     `;
     slotDiv.textContent = `${slot}\n(Empty)`;
     equipmentGrid.appendChild(slotDiv);
+  }
+}
+
+function populateInventoryStats(hero) {
+  const statsContainer = document.getElementById("inventoryStatsContainer");
+  statsContainer.innerHTML = "";
+  
+  const stats = [
+    { label: "HP", value: hero.maxHP },
+    { label: "Mana", value: hero.maxMana },
+    { label: "Endurance", value: hero.maxEndurance },
+    { label: "DPS", value: hero.dps.toFixed(1) },
+    { label: "Healing", value: hero.healing.toFixed(1) },
+    { label: "STR", value: hero.str || 0 },
+    { label: "CON", value: hero.con || 0 },
+    { label: "DEX", value: hero.dex || 0 },
+    { label: "AGI", value: hero.agi || 0 },
+    { label: "AC", value: hero.ac || 0 },
+    { label: "WIS", value: hero.wis || 0 },
+    { label: "INT", value: hero.int || 0 },
+    { label: "CHA", value: hero.cha || 0 }
+  ];
+  
+  for (const stat of stats) {
+    const line = document.createElement("div");
+    line.style.cssText = "display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #222;";
+    const label = document.createElement("span");
+    label.style.cssText = "color:#aaa;";
+    label.textContent = stat.label;
+    const value = document.createElement("span");
+    value.style.cssText = "color:#4ade80;font-weight:bold;";
+    value.textContent = stat.value;
+    line.appendChild(label);
+    line.appendChild(value);
+    statsContainer.appendChild(line);
   }
 }
 

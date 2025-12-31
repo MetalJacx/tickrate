@@ -281,7 +281,16 @@
       <div style="font-size:18px;font-weight:bold;" id="inventoryModalTitle">Inventory</div>
       <button id="inventoryModalCloseBtn" style="background:none;border:none;color:#eee;cursor:pointer;font-size:20px;padding:0;width:24px;height:24px;">✕</button>
     </div>
-    <div id="characterEquipmentGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;padding:10px;background:#111;border-radius:6px;border:1px solid #333;flex:1;overflow-y:auto;"></div>
+    <div style="flex:1;display:flex;gap:16px;overflow:hidden;min-height:0;">
+      <div style="width:200px;display:flex;flex-direction:column;">
+        <div style="font-size:12px;color:#aaa;margin-bottom:8px;font-weight:bold;">EQUIPMENT</div>
+        <div id="characterEquipmentGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;padding:10px;background:#111;border-radius:6px;border:1px solid #333;flex:1;overflow-y:auto;"></div>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;">
+        <div style="font-size:12px;color:#aaa;margin-bottom:8px;font-weight:bold;">STATS</div>
+        <div id="inventoryStatsContainer" style="padding:10px;background:#111;border-radius:6px;border:1px solid #333;flex:1;overflow-y:auto;font-size:12px;line-height:1.8;color:#ddd;"></div>
+      </div>
+    </div>
   </div>
 </div>
 
