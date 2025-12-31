@@ -614,8 +614,9 @@ export function renderMeta() {
   
   // Show current zone name
   const currentZone = getZoneDef(state.zone);
-  if (currentZone) {
-    document.getElementById("currentZoneName").textContent = currentZone.name;
+  const zoneNameEl = document.getElementById("currentZoneName");
+  if (currentZone && zoneNameEl) {
+    zoneNameEl.textContent = currentZone.name;
   }
   
   document.getElementById("killsSpan").textContent = state.killsThisZone;
