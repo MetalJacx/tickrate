@@ -117,9 +117,10 @@ export function initUI({ onRecruit, onReset, onOpenRecruitModal }) {
       const variable = document.getElementById("automationVariable")?.value;
       const operator = document.getElementById("automationOperator")?.value;
       const value = parseFloat(document.getElementById("automationValue")?.value || "50");
+      const action = document.getElementById("automationAction")?.value;
 
-      if (variable && operator && !isNaN(value) && value >= 0 && value <= 100) {
-        state.automationRules.push({ variable, operator, value });
+      if (variable && operator && !isNaN(value) && value >= 0 && value <= 100 && action) {
+        state.automationRules.push({ variable, operator, value, action });
         document.getElementById("automationValue").value = "50";
         renderAutomationRules();
       }
@@ -168,9 +169,10 @@ function renderAutomationRules() {
     `;
 
     const ruleText = document.createElement("div");
-    ruleText.style.cssText = "font-size:12px;color:#ddd;";
+    ruleText.style.cssText = "font-size:12px;color:#ddd;flex:1;";
     const opSymbol = rule.operator === "==" ? "==" : rule.operator === "!=" ? "≠" : rule.operator;
-    ruleText.textContent = `When ${rule.variable.toUpperCase()} ${opSymbol} ${rule.value}%`;
+    const actionLabel = rule.action === "startHunt" ? "Start Hunt" : rule.action === "camp" ? "Camp" : rule.action;
+    ruleText.innerHTML = `<strong>When</strong> ${rule.variable.toUpperCase()} ${opSymbol} ${rule.value}% → <strong>${actionLabel}</strong>`;
 
     const deleteBtn = document.createElement("button");
     deleteBtn.textContent = "✕";
