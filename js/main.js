@@ -2,6 +2,7 @@ import { GAME_TICK_MS, AUTO_SAVE_EVERY_MS, MAX_OFFLINE_SECONDS} from "./defs.js"
 import { state, loadGame, saveGame, clearSave, serializeState } from "./state.js";
 import { addLog } from "./util.js";
 import { createHero, spawnEnemy, gameTick, travelToNextZone, travelToPreviousZone, p99XpToNext } from "./combat.js";
+import { getZoneDef } from "./zones/index.js";
 import { initUI, renderAll, showOfflineModal } from "./ui.js";
 import { CLASSES, getClassDef } from "./classes/index.js"
 import { initSettings } from "./settings.js";
@@ -87,6 +88,12 @@ function startLoops({ lastSavedAt }) {
     const cls = getClassDef(state.playerClassKey);
     const symbol = cls?.symbol || "";
     addLog(`SYSTEM: ${state.characterName} ${symbol} ${cls?.name} begins the grind.`);
+  }
+
+  // Sync activeZoneId with current numeric zone if missing
+  const zoneDef = getZoneDef(state.zone);
+  if (zoneDef && !state.activeZoneId) {
+    state.activeZoneId = zoneDef.id;
   }
 
   // Only spawn enemy if no party members are dead

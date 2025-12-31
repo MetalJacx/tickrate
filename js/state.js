@@ -13,6 +13,7 @@ export const state = {
   accountLevelXP: 0,
   accountLevelUpCost: 0, // Will be set at runtime using P99 curve
   zone: 1,
+  activeZoneId: "graveyard",
   killsThisZone: 0,
   killsForNextZone: 10,
   partySlotsUnlocked: 1,
@@ -32,7 +33,8 @@ export const state = {
     normal: true,
     gold: true
   },
-  offlineSummary: null
+  offlineSummary: null,
+  zoneDiscoveries: {}
 };
 
 export function nextHeroId() {
@@ -54,6 +56,7 @@ export function serializeState() {
     accountLevelXP: state.accountLevelXP,
     accountLevelUpCost: state.accountLevelUpCost,
     zone: state.zone,
+    activeZoneId: state.activeZoneId,
     killsThisZone: state.killsThisZone,
     killsForNextZone: state.killsForNextZone,
     partySlotsUnlocked: state.partySlotsUnlocked,
@@ -64,6 +67,7 @@ export function serializeState() {
     autoRestartHealthPercent: state.autoRestartHealthPercent,
     huntRemaining: state.huntRemaining,
     highestUnlockedZone: state.highestUnlockedZone,
+    zoneDiscoveries: state.zoneDiscoveries,
     logFilters: state.logFilters || {
       healing: true,
       damage_dealt: true,
@@ -112,6 +116,7 @@ export function loadGame() {
     state.accountLevelXP = data.accountLevelXP ?? 0;
     state.accountLevelUpCost = data.accountLevelUpCost ?? 0; // Will be initialized using P99 curve
     state.zone = data.zone ?? 1;
+    state.activeZoneId = data.activeZoneId ?? state.activeZoneId ?? "graveyard";
     state.killsThisZone = data.killsThisZone ?? 0;
     state.killsForNextZone = data.killsForNextZone ?? 10;
     state.partySlotsUnlocked = data.partySlotsUnlocked ?? 1;
@@ -160,6 +165,7 @@ export function loadGame() {
     state.autoRestartHealthPercent = data.autoRestartHealthPercent ?? 100;
     state.huntRemaining = data.huntRemaining ?? 0;
     state.highestUnlockedZone = data.highestUnlockedZone ?? 1;
+    state.zoneDiscoveries = data.zoneDiscoveries ?? {};
 
     const maxId = state.party.reduce((m, h) => Math.max(m, h.id || 0), 0);
     bumpHeroIdCounterToAtLeast(maxId + 1);

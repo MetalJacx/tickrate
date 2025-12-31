@@ -1,8 +1,8 @@
 import { state } from "./state.js";
-import { heroLevelUpCost, applyHeroLevelUp, canTravelForward, travelToNextZone, travelToPreviousZone, recalcPartyTotals, killsRequiredForZone } from "./combat.js";
+import { heroLevelUpCost, applyHeroLevelUp, canTravelForward, travelToNextZone, travelToPreviousZone, recalcPartyTotals, killsRequiredForZone, spawnEnemy } from "./combat.js";
 import { spawnEnemyToList } from "./combat.js";
 import { CLASSES, getClassDef } from "./classes/index.js";
-import { getZoneDef } from "./zones/index.js";
+import { getZoneDef, listZones, ensureZoneDiscovery, getActiveSubArea } from "./zones/index.js";
 import { addLog } from "./util.js";
 import { MAX_PARTY_SIZE, ACCOUNT_SLOT_UNLOCKS } from "./defs.js";
 
@@ -75,6 +75,7 @@ export function renderAll() {
   renderParty();
   renderMeta();
   renderLog();
+  renderZones();
 }
 
 function formatDuration(seconds) {
@@ -629,6 +630,83 @@ export function renderMeta() {
   
   // Back button: can always go back except at zone 1
   document.getElementById("travelBackBtn").disabled = state.zone <= 1;
+}
+
+function zoneKey(zone) {
+  return zone?.id || `zone_${zone?.zoneNumber ?? ""}`;
+}
+
+function renderZones() {
+  const zoneList = document.getElementById("zoneList");
+  const subAreaList = document.getElementById("subAreaList");
+  if (!zoneList || !subAreaList) return;
+  zoneList.innerHTML = "";
+  subAreaList.innerHTML = "";
+
+  const zones = listZones();
+  const activeZone = zones.find(z => z.zoneNumber === state.zone) || zones[0];
+
+  for (const z of zones) {
+    const btn = document.createElement("button");
+    const unlocked = z.zoneNumber <= state.highestUnlockedZone;
+    btn.textContent = `${z.name} (${z.levelRange?.[0] ?? "?"}-${z.levelRange?.[1] ?? "?"})`;
+    btn.style.cssText = `
+      width: 100%;
+      text-align: left;
+      background: ${state.zone === z.zoneNumber ? "#1f2937" : "#222"};
+      border: 1px solid ${state.zone === z.zoneNumber ? "#60a5fa" : "#444"};
+      color: ${unlocked ? "#eee" : "#555"};
+    `;
+    btn.disabled = !unlocked;
+    btn.addEventListener("click", () => {
+      if (!unlocked) return;
+      if (state.zone !== z.zoneNumber) {
+        state.zone = z.zoneNumber;
+        state.activeZoneId = z.id;
+        state.killsThisZone = 0;
+        state.currentEnemies = [];
+        state.waitingToRespawn = false;
+        spawnEnemy();
+        renderAll();
+      }
+    });
+    zoneList.appendChild(btn);
+  }
+
+  if (!activeZone) return;
+  const disc = ensureZoneDiscovery(activeZone, state.zoneDiscoveries[zoneKey(activeZone)]);
+  state.zoneDiscoveries[zoneKey(activeZone)] = disc;
+  const activeSub = getActiveSubArea(activeZone, disc);
+
+  for (const sub of activeZone.subAreas || []) {
+    const discovered = disc[sub.id] ?? sub.discovered;
+    const row = document.createElement("div");
+    row.style.cssText = `
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid ${activeSub && activeSub.id === sub.id ? "#4ade80" : "#333"};
+      background: ${discovered ? "#111" : "#0d0d0d"};
+      color: ${discovered ? "#eee" : "#666"};
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    `;
+    const name = document.createElement("div");
+    name.textContent = discovered ? sub.name : "???";
+    const badge = document.createElement("div");
+    badge.style.cssText = "font-size:10px;color:#9ca3af;";
+    if (activeSub && activeSub.id === sub.id) {
+      badge.textContent = "Active";
+      badge.style.color = "#4ade80";
+    } else if (!discovered) {
+      badge.textContent = "Hidden";
+    } else {
+      badge.textContent = "Discovered";
+    }
+    row.appendChild(name);
+    row.appendChild(badge);
+    subAreaList.appendChild(row);
+  }
 }
 // Character Modal Functions
 function openCharacterModal(hero) {

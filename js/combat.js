@@ -1,6 +1,6 @@
 import { state, nextHeroId } from "./state.js";
 import { getClassDef, CLASS_DEFS } from "./classes/index.js";
-import { getZoneDef, getEnemyForZone, MAX_ZONE } from "./zones/index.js";
+import { getZoneDef, getEnemyForZone, MAX_ZONE, rollSubAreaDiscoveries, ensureZoneDiscovery, getZoneById, getActiveSubArea } from "./zones/index.js";
 import { addLog, randInt } from "./util.js";
 import { ACCOUNT_SLOT_UNLOCKS, GAME_TICK_MS } from "./defs.js";
 import {
@@ -26,6 +26,19 @@ const DEFAULT_STATS = {
   int: 8,
   cha: 8
 };
+
+function getZoneKey(zoneNumber) {
+  const zone = getZoneDef(zoneNumber);
+  return zone?.id || `zone_${zoneNumber}`;
+}
+
+function getDiscoveryState(zoneNumber) {
+  const key = getZoneKey(zoneNumber);
+  const zone = getZoneDef(zoneNumber);
+  const seeded = ensureZoneDiscovery(zone, state.zoneDiscoveries[key]);
+  state.zoneDiscoveries[key] = seeded;
+  return seeded;
+}
 
 function fillStats(stats = {}) {
   return { ...DEFAULT_STATS, ...stats };
@@ -266,7 +279,8 @@ export function spawnEnemy() {
   const level = z + randInt(3);
   
   // Get enemy definition from zone
-  const enemyDef = getEnemyForZone(z);
+  const discovery = getDiscoveryState(z);
+  const enemyDef = getEnemyForZone(z, discovery);
   if (!enemyDef) {
     addLog("No enemies in this zone!");
     return;
@@ -288,7 +302,8 @@ function spawnEnemyToList() {
   const level = z + randInt(3);
   
   // Get enemy definition from zone
-  const enemyDef = getEnemyForZone(z);
+  const discovery = getDiscoveryState(z);
+  const enemyDef = getEnemyForZone(z, discovery);
   if (!enemyDef) return;
   
   // Scale enemy stats based on level
@@ -359,6 +374,21 @@ function onEnemyKilled(enemy, totalDPS) {
   state.accountLevelXP += accountXP;
   checkAccountLevelUp();
 
+  // Passive sub-area discovery rolls
+  const zoneKey = getZoneKey(state.zone);
+  const currentDiscovery = getDiscoveryState(state.zone);
+  const { discoveredIds, updated } = rollSubAreaDiscoveries(state.zone, currentDiscovery);
+  state.zoneDiscoveries[zoneKey] = updated;
+  if (discoveredIds.length > 0) {
+    const zone = getZoneDef(state.zone);
+    for (const id of discoveredIds) {
+      const sub = zone?.subAreas?.find(s => s.id === id);
+      if (sub) {
+        addLog(`You discover ${sub.name} in ${zone.name}!`, "xp");
+      }
+    }
+  }
+
   addLog(`Your party defeats the ${enemy.name}, dealing ${totalDPS.toFixed(1)} damage. +${Math.floor(totalXP)} XP, +${gold} gold.`, "gold");
   state.currentEnemy = null;
   state.waitingToRespawn = true;
@@ -399,6 +429,7 @@ export function travelToNextZone() {
   }
   if (!canTravelForward()) return;
   state.zone += 1;
+  state.activeZoneId = getZoneDef(state.zone)?.id || state.activeZoneId;
   state.killsThisZone = 0;
   addLog(`SYSTEM: You travel deeper into the wilds to Zone ${state.zone}.`);
   // Mark zone as unlocked for free travel later
@@ -410,6 +441,7 @@ export function travelToNextZone() {
 export function travelToPreviousZone() {
   if (state.zone <= 1) return;
   state.zone -= 1;
+  state.activeZoneId = getZoneDef(state.zone)?.id || state.activeZoneId;
   state.killsThisZone = 0;
   addLog(`SYSTEM: You retreat to Zone ${state.zone}.`);
   spawnEnemy();

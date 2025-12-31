@@ -9,13 +9,81 @@ export function getZoneDef(zoneNumber) {
   return ZONES.find(z => z.zoneNumber === zoneNumber);
 }
 
-export function getEnemyForZone(zoneNumber) {
+export function getZoneById(id) {
+  return ZONES.find(z => z.id === id);
+}
+
+export function listZones() {
+  return ZONES;
+}
+
+function pickWeighted(enemies, modifiers = {}) {
+  const weighted = [];
+  let total = 0;
+  for (const enemy of enemies) {
+    const base = enemy.weight ?? 1;
+    const mod = modifiers[enemy.id] ?? 1;
+    const weight = Math.max(0.01, base * mod);
+    total += weight;
+    weighted.push({ enemy, weight });
+  }
+  if (total <= 0) return enemies[0];
+  const roll = Math.random() * total;
+  let accum = 0;
+  for (const entry of weighted) {
+    accum += entry.weight;
+    if (roll <= accum) return entry.enemy;
+  }
+  return weighted[weighted.length - 1].enemy;
+}
+
+export function getActiveSubArea(zone, discoveryState) {
+  if (!zone?.subAreas?.length) return null;
+  for (const sub of zone.subAreas) {
+    const discovered = discoveryState?.[sub.id] ?? sub.discovered;
+    if (discovered) return { ...sub, discovered: true };
+  }
+  return null;
+}
+
+export function getEnemyForZone(zoneNumber, discoveryState = null) {
   const zone = getZoneDef(zoneNumber);
   if (!zone || !zone.enemies.length) return null;
-  
-  // Pick random enemy from the zone's enemy list
-  const enemyTemplate = zone.enemies[Math.floor(Math.random() * zone.enemies.length)];
+
   const globalDefaults = zone.global || {};
-  // Apply global defaults, then enemy-specific overrides
+  const activeSub = getActiveSubArea(zone, discoveryState);
+  const modifiers = activeSub?.mobWeightModifiers || {};
+  const enemyTemplate = pickWeighted(zone.enemies, modifiers);
   return { ...globalDefaults, ...enemyTemplate };
+}
+
+export function rollSubAreaDiscoveries(zoneNumber, discoveryState) {
+  const zone = getZoneDef(zoneNumber);
+  if (!zone?.subAreas?.length) return { discoveredIds: [], updated: discoveryState };
+  const stateCopy = { ...(discoveryState || {}) };
+  const discoveredIds = [];
+  for (const sub of zone.subAreas) {
+    const already = stateCopy[sub.id] ?? sub.discovered;
+    if (already) {
+      stateCopy[sub.id] = true;
+      continue;
+    }
+    const chance = sub.discoveryChance ?? 0;
+    if (Math.random() < chance) {
+      stateCopy[sub.id] = true;
+      discoveredIds.push(sub.id);
+    }
+  }
+  return { discoveredIds, updated: stateCopy };
+}
+
+export function ensureZoneDiscovery(zone, discoveryState) {
+  if (!zone?.subAreas?.length) return discoveryState || {};
+  const next = { ...(discoveryState || {}) };
+  for (const sub of zone.subAreas) {
+    if (next[sub.id] === undefined) {
+      next[sub.id] = sub.discovered || false;
+    }
+  }
+  return next;
 }
