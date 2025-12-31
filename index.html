@@ -95,17 +95,18 @@
         <div>Slots: <span id="slotsUsedSpan">0</span> / <span id="slotsMaxSpan">1</span></div>
       </div>
 
-      <div id="zoneSelect" style="margin-bottom:8px;padding:8px;background:#111;border:1px solid #333;border-radius:6px;">
-        <div style="display:flex;gap:8px;">
-          <div style="flex:1;">
-            <div style="font-size:11px;color:#aaa;margin-bottom:4px;font-weight:bold;">Zones</div>
-            <div id="zoneList" style="display:flex;flex-direction:column;gap:6px;"></div>
+      <div id="zoneSelect" style="margin-bottom:8px;padding:8px;background:#111;border:1px solid #333;border-radius:6px;display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;gap:8px;flex:1;min-height:0;">
+          <div style="flex:1;display:flex;flex-direction:column;">
+            <div style="font-size:11px;color:#aaa;margin-bottom:4px;font-weight:bold;">Zone</div>
+            <div id="zoneList" style="display:flex;flex-direction:column;gap:6px;overflow-y:auto;flex:1;"></div>
           </div>
-          <div style="flex:1;">
-            <div style="font-size:11px;color:#aaa;margin-bottom:4px;font-weight:bold;">Sub-Areas</div>
-            <div id="subAreaList" style="display:flex;flex-direction:column;gap:6px;"></div>
+          <div style="flex:1;display:flex;flex-direction:column;">
+            <div style="font-size:11px;color:#aaa;margin-bottom:4px;font-weight:bold;" id="subAreaHeader">Sub-Areas</div>
+            <div id="subAreaList" style="display:flex;flex-direction:column;gap:6px;overflow-y:auto;flex:1;"></div>
           </div>
         </div>
+        <button id="travelToAreaBtn" style="width:100%;padding:10px;background:#4ade80;color:#000;border:1px solid #22c55e;border-radius:6px;font-weight:bold;cursor:pointer;">Travel to Area</button>
       </div>
 
       <div style="margin-top:8px;padding:8px;background:#111;border-radius:6px;border:1px solid #333;">

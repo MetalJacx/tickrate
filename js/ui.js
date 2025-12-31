@@ -80,6 +80,30 @@ export function initUI({ onRecruit, onReset, onOpenRecruitModal }) {
       }
     });
   }
+
+  // Travel to area button
+  const travelToAreaBtn = document.getElementById("travelToAreaBtn");
+  if (travelToAreaBtn) {
+    travelToAreaBtn.addEventListener("click", () => {
+      const zones = listZones() || [];
+      const selectedZone = zones.find(z => z.zoneNumber === selectedZoneForTravel);
+      if (!selectedZone) return;
+
+      // Check if zone changed
+      if (selectedZoneForTravel !== state.zone) {
+        state.zone = selectedZoneForTravel;
+        state.activeZoneId = selectedZone.id;
+        state.killsThisZone = 0;
+        state.currentEnemies = [];
+        state.waitingToRespawn = false;
+        spawnEnemy();
+      } else if (selectedSubAreaForTravel) {
+        // Just switching sub-area in same zone
+        state.activeZoneId = selectedZone.id;
+      }
+      renderAll();
+    });
+  }
 }
 
 function renderHealthThreshold() {
@@ -654,6 +678,10 @@ export function renderMeta() {
   if (travelBackBtn) travelBackBtn.disabled = state.zone <= 1;
 }
 
+// Track zone/sub-area selection for travel
+let selectedZoneForTravel = null;
+let selectedSubAreaForTravel = null;
+
 function zoneKey(zone) {
   return zone?.id || `zone_${zone?.zoneNumber ?? ""}`;
 }
@@ -697,11 +725,11 @@ function openZonePreviewModal(zone) {
 
   modal.style.display = "block";
 }
-
-function renderZones() {
   const zoneList = document.getElementById("zoneList");
   const subAreaList = document.getElementById("subAreaList");
+  const subAreaHeader = document.getElementById("subAreaHeader");
   if (!zoneList || !subAreaList) return;
+  
   zoneList.innerHTML = "";
   subAreaList.innerHTML = "";
 
@@ -714,37 +742,43 @@ function renderZones() {
     return;
   }
 
-  const activeZone = zones.find(z => z.zoneNumber === state.zone) || zones[0];
-
   const highest = state.highestUnlockedZone || 1;
+  
+  // Initialize selected zone if not set
+  if (!selectedZoneForTravel) {
+    selectedZoneForTravel = state.zone;
+  }
 
+  // Render zone list
   for (const z of zones) {
     const unlocked = z.zoneNumber <= highest;
-    
-    const container = document.createElement("div");
-    container.style.cssText = "display:flex;gap:6px;align-items:stretch;";
+    const isSelected = selectedZoneForTravel === z.zoneNumber;
     
     const btn = document.createElement("button");
     btn.textContent = `${z.name} (${z.levelRange?.[0] ?? "?"}-${z.levelRange?.[1] ?? "?"})`;
     btn.style.cssText = `
-      flex: 1;
+      width: 100%;
       text-align: left;
-      background: ${state.zone === z.zoneNumber ? "#1f2937" : "#222"};
-      border: 1px solid ${state.zone === z.zoneNumber ? "#60a5fa" : "#444"};
+      background: ${isSelected ? "#1f2937" : "#222"};
+      border: 1px solid ${isSelected ? "#60a5fa" : "#444"};
       color: ${unlocked ? "#eee" : "#555"};
+      padding: 8px;
+      border-radius: 6px;
+      cursor: ${unlocked ? "pointer" : "not-allowed"};
+      transition: all 0.2s;
     `;
     btn.disabled = !unlocked;
     btn.addEventListener("click", () => {
       if (!unlocked) return;
-      if (state.zone !== z.zoneNumber) {
-        state.zone = z.zoneNumber;
-        state.activeZoneId = z.id;
-        state.killsThisZone = 0;
-        state.currentEnemies = [];
-        state.waitingToRespawn = false;
-        spawnEnemy();
-        renderAll();
+      selectedZoneForTravel = z.zoneNumber;
+      // Reset sub-area selection when changing zones
+      const zoneDef = zones.find(zz => zz.zoneNumber === z.zoneNumber);
+      if (zoneDef) {
+        const disc = ensureZoneDiscovery(zoneDef, state.zoneDiscoveries[zoneKey(zoneDef)]);
+        const activeSub = getActiveSubArea(zoneDef, disc);
+        selectedSubAreaForTravel = activeSub?.id;
       }
+      renderZones();
     });
     
     const previewBtn = document.createElement("button");
@@ -758,6 +792,7 @@ function renderZones() {
       border-radius: 4px;
       cursor: pointer;
       font-size: 14px;
+      flex-shrink: 0;
     `;
     previewBtn.disabled = !unlocked;
     previewBtn.title = "Preview zone";
@@ -768,79 +803,80 @@ function renderZones() {
       }
     });
     
+    const container = document.createElement("div");
+    container.style.cssText = "display:flex;gap:6px;";
     container.appendChild(btn);
     container.appendChild(previewBtn);
     zoneList.appendChild(container);
   }
 
-  if (zoneList.childNodes.length === 0) {
-    const none = document.createElement("div");
-    none.style.cssText = "font-size:11px;color:#666;";
-    none.textContent = "No unlocked zones";
-    zoneList.appendChild(none);
-  }
+  // Render sub-areas for selected zone
+  const selectedZone = zones.find(z => z.zoneNumber === selectedZoneForTravel);
+  if (selectedZone) {
+    subAreaHeader.textContent = selectedZone.name;
+    const disc = ensureZoneDiscovery(selectedZone, state.zoneDiscoveries[zoneKey(selectedZone)]);
+    state.zoneDiscoveries[zoneKey(selectedZone)] = disc;
 
-  if (!activeZone) return;
-  const disc = ensureZoneDiscovery(activeZone, state.zoneDiscoveries[zoneKey(activeZone)]);
-  state.zoneDiscoveries[zoneKey(activeZone)] = disc;
-  const activeSub = getActiveSubArea(activeZone, disc);
-
-  if (!activeZone.subAreas || activeZone.subAreas.length === 0) {
-    const none = document.createElement("div");
-    none.style.cssText = "font-size:11px;color:#666;";
-    none.textContent = "No sub-areas";
-    subAreaList.appendChild(none);
-    return;
-  }
-
-  for (const sub of activeZone.subAreas) {
-    const discovered = disc[sub.id] ?? sub.discovered;
-    const row = document.createElement("div");
-    row.style.cssText = `
-      padding: 8px;
-      border-radius: 6px;
-      border: 1px solid ${activeSub && activeSub.id === sub.id ? "#4ade80" : "#333"};
-      background: ${activeSub && activeSub.id === sub.id ? "#1a3a1a" : discovered ? "#111" : "#0d0d0d"};
-      color: ${discovered ? "#eee" : "#666"};
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      ${discovered ? "cursor: pointer;" : "cursor: not-allowed;"}
-      transition: all 0.2s;
-    `;
-    
-    if (discovered) {
-      row.addEventListener("mouseenter", () => {
-        row.style.background = activeSub && activeSub.id === sub.id ? "#1a3a1a" : "#1a1a1a";
-        row.style.borderColor = "#555";
-      });
-      row.addEventListener("mouseleave", () => {
-        row.style.background = activeSub && activeSub.id === sub.id ? "#1a3a1a" : "#111";
-        row.style.borderColor = activeSub && activeSub.id === sub.id ? "#4ade80" : "#333";
-      });
-      row.addEventListener("click", () => {
-        state.activeZoneId = activeZone.id;
-        state.zone = activeZone.zoneNumber;
-        // Don't reset kills/enemies when switching sub-areas
-        renderAll();
-      });
+    if (!selectedZone.subAreas || selectedZone.subAreas.length === 0) {
+      const none = document.createElement("div");
+      none.style.cssText = "font-size:11px;color:#666;";
+      none.textContent = "No sub-areas";
+      subAreaList.appendChild(none);
+      return;
     }
-    
-    const name = document.createElement("div");
-    name.textContent = discovered ? sub.name : "???";
-    const badge = document.createElement("div");
-    badge.style.cssText = "font-size:10px;color:#9ca3af;";
-    if (activeSub && activeSub.id === sub.id) {
-      badge.textContent = "Active";
-      badge.style.color = "#4ade80";
-    } else if (!discovered) {
-      badge.textContent = "Hidden";
-    } else {
-      badge.textContent = "Discovered";
+
+    // Initialize selected sub-area if not set
+    if (!selectedSubAreaForTravel) {
+      const activeSub = getActiveSubArea(selectedZone, disc);
+      selectedSubAreaForTravel = activeSub?.id;
     }
-    row.appendChild(name);
-    row.appendChild(badge);
-    subAreaList.appendChild(row);
+
+    for (const sub of selectedZone.subAreas) {
+      const discovered = disc[sub.id] ?? sub.discovered;
+      const isSelected = selectedSubAreaForTravel === sub.id;
+      
+      const row = document.createElement("div");
+      row.style.cssText = `
+        padding: 8px;
+        border-radius: 6px;
+        border: 1px solid ${isSelected ? "#4ade80" : "#333"};
+        background: ${isSelected ? "#1a3a1a" : discovered ? "#111" : "#0d0d0d"};
+        color: ${discovered ? "#eee" : "#666"};
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        ${discovered ? "cursor: pointer;" : "cursor: not-allowed;"}
+        transition: all 0.2s;
+      `;
+      
+      if (discovered) {
+        row.addEventListener("mouseenter", () => {
+          if (!isSelected) {
+            row.style.background = "#1a1a1a";
+            row.style.borderColor = "#555";
+          }
+        });
+        row.addEventListener("mouseleave", () => {
+          row.style.background = isSelected ? "#1a3a1a" : "#111";
+          row.style.borderColor = isSelected ? "#4ade80" : "#333";
+        });
+        row.addEventListener("click", () => {
+          selectedSubAreaForTravel = sub.id;
+          renderZones();
+        });
+      }
+      
+      const name = document.createElement("div");
+      name.textContent = discovered ? sub.name : "???";
+      const badge = document.createElement("div");
+      badge.style.cssText = "font-size:10px;color:#9ca3af;";
+      badge.textContent = isSelected ? "Selected" : (discovered ? "Available" : "Hidden");
+      if (isSelected) badge.style.color = "#4ade80";
+      
+      row.appendChild(name);
+      row.appendChild(badge);
+      subAreaList.appendChild(row);
+    }
   }
 }
 // Character Modal Functions
