@@ -781,19 +781,6 @@ export function renderMeta() {
   if (currentZone && zoneNameEl) {
     zoneNameEl.textContent = currentZone.name;
   }
-  
-  document.getElementById("killsSpan").textContent = state.killsThisZone;
-  document.getElementById("killsNeedSpan").textContent = killsRequiredForZone(state.zone);
-  document.getElementById("nextZoneSpan").textContent = state.zone + 1;
-
-  let dps = 0, heal = 0;
-  for (const h of state.party) { dps += h.dps; heal += h.healing; }
-
-  document.getElementById("partyDpsSpan").textContent = dps.toFixed(1);
-  document.getElementById("partyHealSpan").textContent = heal.toFixed(1);
-
-  document.getElementById("slotsUsedSpan").textContent = state.party.length;
-  document.getElementById("slotsMaxSpan").textContent = state.partySlotsUnlocked;
 
   // Travel controls removed from UI; guard for legacy DOM
   const travelBtn = document.getElementById("travelBtn");

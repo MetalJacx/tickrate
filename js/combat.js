@@ -937,7 +937,7 @@ export function gameTick() {
           const daMitigated = applyACMitigation(daRaw, mainEnemy);
           mainEnemy.hp = Math.max(0, mainEnemy.hp - daMitigated);
           totalDamageThisTick += daMitigated;
-          addLog(`${hero.name} strikes again (Double Attack) for ${daMitigated.toFixed(1)}${daCrit ? " (CRIT)" : ""}!`, "damage_dealt");
+          addLog(`${hero.name} strikes again (Double Attack) for ${daMitigated.toFixed(1)}${daCrit ? " (CRIT)" : ""}!`, "skill");
         } else {
           addLog(`${hero.name}'s double attack misses ${mainEnemy.name}.`, "damage_dealt");
         }
