@@ -1,6 +1,15 @@
 import { SAVE_KEY } from "./defs.js";
 import { getClassDef } from "./classes/index.js";
 
+function doubleAttackCap(level) {
+  if (level < 5) return 0;
+  const rawCap = (level - 4) * (250 / 56);
+  const floored = Math.floor(rawCap / 5) * 5;
+  if (floored < 5) return 5;
+  if (floored > 250) return 250;
+  return floored;
+}
+
 let heroIdCounter = 1;
 
 export const state = {
@@ -166,6 +175,13 @@ export function loadGame() {
       // Initialize regen tick counter
       if (h.regenTickCounter === undefined) {
         h.regenTickCounter = 0;
+      }
+      if (h.classKey === "warrior") {
+        const cap = doubleAttackCap(h.level || 1);
+        if (h.doubleAttackSkill === undefined) {
+          h.doubleAttackSkill = h.level >= 5 ? 1 : 0;
+        }
+        h.doubleAttackSkill = Math.min(h.doubleAttackSkill || 0, cap);
       }
       return h;
     }) : [];

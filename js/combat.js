@@ -27,6 +27,33 @@ const DEFAULT_STATS = {
   cha: 8
 };
 
+function clamp(val, min, max) {
+  return Math.min(max, Math.max(min, val));
+}
+
+function doubleAttackCap(level) {
+  if (level < 5) return 0;
+  const growth = level - 4; // Level 5 -> 1, Level 60 -> 56
+  const rawCap = growth * (250 / 56);
+  const flooredToFive = Math.floor(rawCap / 5) * 5;
+  const capped = clamp(flooredToFive, 5, 250);
+  return capped;
+}
+
+function doubleAttackProcChance(skill) {
+  if (!skill) return 0;
+  return Math.min(0.70, skill * 0.0028);
+}
+
+function doubleAttackSkillUpChance(hero, cap) {
+  const skill = hero.doubleAttackSkill || 0;
+  const gap = Math.max(0, cap - skill);
+  if (gap <= 0) return 0;
+  const baseChance = clamp(gap * 0.004, 0.01, 0.25);
+  const dr = hero.level < 50 ? 1.0 : (hero.level <= 54 ? 0.6 : 0.4);
+  return baseChance * dr;
+}
+
 function getZoneKey(zoneNumber) {
   const zone = getZoneDef(zoneNumber);
   return zone?.id || `zone_${zoneNumber}`;
@@ -153,6 +180,9 @@ export function createHero(classKey, customName = null) {
     endurance: cls.maxEndurance || 0,
     enduranceRegenPerTick: cls.enduranceRegenPerTick || 0,
 
+    // Double Attack progression (warrior-only; unlocks at 5)
+    doubleAttackSkill: cls.key === "warrior" ? 0 : undefined,
+
     // Temporary debuffs
     tempDamageDebuffTicks: 0,
     tempDamageDebuffAmount: 0,
@@ -173,6 +203,9 @@ export function createHero(classKey, customName = null) {
   refreshHeroDerived(hero);
   hero.health = hero.maxHP;
   hero.mana = hero.maxMana;
+  if (cls.key === "warrior" && hero.level >= 5 && hero.doubleAttackSkill < 1) {
+    hero.doubleAttackSkill = 1;
+  }
   return hero;
 }
 
@@ -228,6 +261,15 @@ export function applyHeroLevelUp(hero) {
   hero.dps = hero.baseDamage;
   hero.healing = hero.healing * 1.10;
   refreshHeroDerived(hero);
+  if (hero.classKey === "warrior") {
+    const cap = doubleAttackCap(hero.level);
+    if (hero.level >= 5 && (hero.doubleAttackSkill == null || hero.doubleAttackSkill < 1)) {
+      hero.doubleAttackSkill = 1;
+    }
+    if (hero.doubleAttackSkill != null) {
+      hero.doubleAttackSkill = Math.min(hero.doubleAttackSkill, cap);
+    }
+  }
   // Reset skill cooldowns so new level feels responsive
   if (hero.skillTimers) {
     for (const key of Object.keys(hero.skillTimers)) {
@@ -867,6 +909,34 @@ export function gameTick() {
     mainEnemy.hp = Math.max(0, mainEnemy.hp - mitigated);
     totalDamageThisTick += mitigated;
     addLog(`${hero.name} hits ${mainEnemy.name} for ${mitigated.toFixed(1)}${isCrit ? " (CRIT)" : ""}!`, "damage_dealt");
+
+    // Warrior-only: Double Attack proc and skill-ups
+    if (hero.classKey === "warrior" && mainEnemy.hp > 0) {
+      const cap = doubleAttackCap(hero.level);
+      const skill = hero.doubleAttackSkill || 0;
+      const procChance = doubleAttackProcChance(skill);
+      if (cap > 0 && procChance > 0 && Math.random() < procChance) {
+        const daHitChance = computeHitChance(hero, mainEnemy);
+        if (Math.random() <= daHitChance) {
+          const daCrit = Math.random() < computeCritChance(hero);
+          const daRaw = computeRawDamage({ ...hero, baseDamage: attackBaseDamage }, daCrit);
+          const daMitigated = applyACMitigation(daRaw, mainEnemy);
+          mainEnemy.hp = Math.max(0, mainEnemy.hp - daMitigated);
+          totalDamageThisTick += daMitigated;
+          addLog(`${hero.name} strikes again (Double Attack) for ${daMitigated.toFixed(1)}${daCrit ? " (CRIT)" : ""}!`, "damage_dealt");
+        } else {
+          addLog(`${hero.name}'s double attack misses ${mainEnemy.name}.`, "damage_dealt");
+        }
+
+        // Skill-up roll only when double attack procs
+        if (skill < cap) {
+          const skillChance = doubleAttackSkillUpChance(hero, cap);
+          if (skillChance > 0 && Math.random() < skillChance) {
+            hero.doubleAttackSkill = Math.min(cap, skill + 1);
+          }
+        }
+      }
+    }
 
     if (mainEnemy.hp <= 0) {
       break;
