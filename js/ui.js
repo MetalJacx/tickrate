@@ -1253,6 +1253,12 @@ function populateStatsSection(hero) {
   const statsBox = document.getElementById("characterStatsContainer");
   if (!statsBox) return;
   statsBox.innerHTML = "";
+  
+  // Create a wrapper with flex layout for side-by-side
+  statsBox.style.display = "flex";
+  statsBox.style.gap = "20px";
+  statsBox.style.flexWrap = "wrap";
+  
   const stats = hero.stats || {};
   const derived = {
     hp: `${Math.floor(hero.health)} / ${Math.floor(hero.maxHP)}`,
@@ -1264,14 +1270,19 @@ function populateStatsSection(hero) {
 
   const primary = hero.primaryStat ? hero.primaryStat.toUpperCase() : "-";
 
-  statsBox.appendChild(statLine("Primary", primary));
-  statsBox.appendChild(statLine("HP", derived.hp));
-  statsBox.appendChild(statLine("Mana", derived.mana));
-  statsBox.appendChild(statLine("Endurance", derived.endurance));
-  statsBox.appendChild(statLine("DPS", derived.dps));
-  statsBox.appendChild(statLine("Healing", derived.healing));
+  // Left column: core stats
+  const leftColumn = document.createElement("div");
+  leftColumn.style.flex = "1";
+  leftColumn.style.minWidth = "200px";
+  
+  leftColumn.appendChild(statLine("Primary", primary));
+  leftColumn.appendChild(statLine("HP", derived.hp));
+  leftColumn.appendChild(statLine("Mana", derived.mana));
+  leftColumn.appendChild(statLine("Endurance", derived.endurance));
+  leftColumn.appendChild(statLine("DPS", derived.dps));
+  leftColumn.appendChild(statLine("Healing", derived.healing));
 
-  statsBox.appendChild(document.createElement("hr"));
+  leftColumn.appendChild(document.createElement("hr"));
   const coreStats = [
     ["STR", stats.str ?? 0],
     ["CON", stats.con ?? 0],
@@ -1283,17 +1294,21 @@ function populateStatsSection(hero) {
     ["CHA", stats.cha ?? 0]
   ];
   for (const [label, val] of coreStats) {
-    statsBox.appendChild(statLine(label, val));
+    leftColumn.appendChild(statLine(label, val));
   }
+  
+  statsBox.appendChild(leftColumn);
 
-  // Skills / Passives section (warrior Double Attack)
+  // Right column: Skills / Passives (warrior Double Attack)
   if (hero.classKey === "warrior") {
-    statsBox.appendChild(document.createElement("hr"));
+    const rightColumn = document.createElement("div");
+    rightColumn.style.flex = "1";
+    rightColumn.style.minWidth = "200px";
 
     const skillTitle = document.createElement("div");
-    skillTitle.style.cssText = "font-weight:600;font-size:12px;margin:6px 0 4px;color:#fbbf24;";
+    skillTitle.style.cssText = "font-weight:600;font-size:12px;margin:0 0 12px;color:#fbbf24;";
     skillTitle.textContent = "Skills / Passives";
-    statsBox.appendChild(skillTitle);
+    rightColumn.appendChild(skillTitle);
 
     const cap = doubleAttackCap(hero.level);
     const skillVal = Math.min(hero.doubleAttackSkill || 0, cap || 0);
@@ -1301,20 +1316,20 @@ function populateStatsSection(hero) {
     const procPct = doubleAttackProcChance(skillVal) * 100;
 
     if (locked) {
-      statsBox.appendChild(statLine("Double Attack", "Locked until level 5"));
+      rightColumn.appendChild(statLine("Double Attack", "Locked until level 5"));
     } else {
       const skillLine = document.createElement("div");
       skillLine.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:4px 0;font-size:12px;color:#ccc;";
       skillLine.innerHTML = `<span>Double Attack</span> <span style='color:#fff;'>${skillVal.toFixed(0)} / ${cap}</span>`;
-      statsBox.appendChild(skillLine);
+      rightColumn.appendChild(skillLine);
 
       const procLine = document.createElement("div");
-      procLine.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:2px 0;font-size:11px;color:#aaa;";
+      procLine.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:2px 0 8px;font-size:11px;color:#aaa;";
       procLine.innerHTML = `<span>Proc Chance</span> <span style='color:#fbbf24;'>${procPct.toFixed(1)}%</span>`;
-      statsBox.appendChild(procLine);
+      rightColumn.appendChild(procLine);
 
       const barBg = document.createElement("div");
-      barBg.style.cssText = "width:100%;height:10px;background:#252525;border-radius:5px;overflow:hidden;border:1px solid #333;margin:4px 0;position:relative;";
+      barBg.style.cssText = "width:100%;height:10px;background:#252525;border-radius:5px;overflow:hidden;border:1px solid #333;margin:0;position:relative;";
       const percent = cap > 0 ? Math.min(100, (skillVal / cap) * 100) : 0;
       const nextPercent = cap > 0 && skillVal < cap ? Math.min(100, ((skillVal + 1) / cap) * 100) : 100;
       
@@ -1329,7 +1344,9 @@ function populateStatsSection(hero) {
         barBg.appendChild(nextLine);
       }
       
-      statsBox.appendChild(barBg);
+      rightColumn.appendChild(barBg);
     }
+    
+    statsBox.appendChild(rightColumn);
   }
 }
