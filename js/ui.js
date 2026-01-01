@@ -601,43 +601,6 @@ export function renderParty() {
       div.appendChild(statsRow);
       div.appendChild(xpDiv);
 
-      // Skills / Passives box (starting with warrior Double Attack)
-      if (hero.classKey === "warrior") {
-        const skillsBox = document.createElement("div");
-        skillsBox.style.cssText = "margin-top:6px;padding:6px;background:#1a1a1a;border:1px solid #3a3a3a;border-radius:4px;font-size:11px;";
-
-        const title = document.createElement("div");
-        title.textContent = "Skills / Passives";
-        title.style.cssText = "font-weight:600;font-size:12px;margin-bottom:4px;color:#ddd;";
-        skillsBox.appendChild(title);
-
-        const cap = doubleAttackCap(hero.level);
-        const skillVal = Math.min(hero.doubleAttackSkill || 0, cap || 0);
-        const locked = hero.level < 5 || cap === 0;
-        const procPct = doubleAttackProcChance(skillVal) * 100;
-        const percent = cap > 0 ? Math.min(100, (skillVal / cap) * 100) : 0;
-
-        const row = document.createElement("div");
-        row.style.cssText = "display:flex;flex-direction:column;gap:4px;";
-
-        const label = document.createElement("div");
-        label.style.cssText = "display:flex;justify-content:space-between;align-items:center;color:#ccc;gap:6px;";
-        label.innerHTML = locked
-          ? "Double Attack: <span style='color:#f59e0b;'>Locked until level 5</span>"
-          : `Double Attack: <span style='color:#fff;'>${skillVal.toFixed(0)} / ${cap}</span><span style='color:#9ca3af;'>${procPct.toFixed(1)}% proc</span>`;
-        row.appendChild(label);
-
-        const barBg = document.createElement("div");
-        barBg.style.cssText = "width:100%;height:10px;background:#252525;border-radius:5px;overflow:hidden;border:1px solid #333;";
-        const barFill = document.createElement("div");
-        barFill.style.cssText = `height:100%;width:${percent}%;background:linear-gradient(90deg,#fbbf24,#f59e0b);transition:width 0.2s;`;
-        barBg.appendChild(barFill);
-        row.appendChild(barBg);
-
-        skillsBox.appendChild(row);
-        div.appendChild(skillsBox);
-      }
-
       div.appendChild(btnRow);
 
       // Check for unassigned ability slots
@@ -1321,5 +1284,42 @@ function populateStatsSection(hero) {
   ];
   for (const [label, val] of coreStats) {
     statsBox.appendChild(statLine(label, val));
+  }
+
+  // Skills / Passives section (warrior Double Attack)
+  if (hero.classKey === "warrior") {
+    statsBox.appendChild(document.createElement("hr"));
+
+    const skillTitle = document.createElement("div");
+    skillTitle.style.cssText = "font-weight:600;font-size:12px;margin:6px 0 4px;color:#fbbf24;";
+    skillTitle.textContent = "Skills / Passives";
+    statsBox.appendChild(skillTitle);
+
+    const cap = doubleAttackCap(hero.level);
+    const skillVal = Math.min(hero.doubleAttackSkill || 0, cap || 0);
+    const locked = hero.level < 5 || cap === 0;
+    const procPct = doubleAttackProcChance(skillVal) * 100;
+
+    if (locked) {
+      statsBox.appendChild(statLine("Double Attack", "Locked until level 5"));
+    } else {
+      const skillLine = document.createElement("div");
+      skillLine.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:4px 0;font-size:12px;color:#ccc;";
+      skillLine.innerHTML = `<span>Double Attack</span> <span style='color:#fff;'>${skillVal.toFixed(0)} / ${cap}</span>`;
+      statsBox.appendChild(skillLine);
+
+      const procLine = document.createElement("div");
+      procLine.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:2px 0;font-size:11px;color:#aaa;";
+      procLine.innerHTML = `<span>Proc Chance</span> <span style='color:#fbbf24;'>${procPct.toFixed(1)}%</span>`;
+      statsBox.appendChild(procLine);
+
+      const barBg = document.createElement("div");
+      barBg.style.cssText = "width:100%;height:10px;background:#252525;border-radius:5px;overflow:hidden;border:1px solid #333;margin:4px 0;";
+      const percent = cap > 0 ? Math.min(100, (skillVal / cap) * 100) : 0;
+      const barFill = document.createElement("div");
+      barFill.style.cssText = `height:100%;width:${percent}%;background:linear-gradient(90deg,#fbbf24,#f59e0b);transition:width 0.2s;`;
+      barBg.appendChild(barFill);
+      statsBox.appendChild(barBg);
+    }
   }
 }
