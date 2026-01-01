@@ -153,8 +153,10 @@ export function initUI({ onRecruit, onReset, onOpenRecruitModal }) {
   // Update threshold inputs when changed
   const campHealthInput = document.getElementById("campHealthInput");
   if (campHealthInput) {
-    campHealthInput.addEventListener("change", (e) => {
-      const val = Math.max(0, Math.min(100, parseInt(e.target.value) || 80));
+    campHealthInput.addEventListener("input", (e) => {
+      let val = parseInt(e.target.value);
+      if (isNaN(val)) val = 80;
+      val = Math.max(0, Math.min(100, val));
       state.campThresholds.health = val;
       e.target.value = val;
     });
@@ -162,8 +164,10 @@ export function initUI({ onRecruit, onReset, onOpenRecruitModal }) {
 
   const campManaInput = document.getElementById("campManaInput");
   if (campManaInput) {
-    campManaInput.addEventListener("change", (e) => {
-      const val = Math.max(0, Math.min(100, parseInt(e.target.value) || 50));
+    campManaInput.addEventListener("input", (e) => {
+      let val = parseInt(e.target.value);
+      if (isNaN(val)) val = 50;
+      val = Math.max(0, Math.min(100, val));
       state.campThresholds.mana = val;
       e.target.value = val;
     });
@@ -171,8 +175,10 @@ export function initUI({ onRecruit, onReset, onOpenRecruitModal }) {
 
   const campEnduranceInput = document.getElementById("campEnduranceInput");
   if (campEnduranceInput) {
-    campEnduranceInput.addEventListener("change", (e) => {
-      const val = Math.max(0, Math.min(100, parseInt(e.target.value) || 30));
+    campEnduranceInput.addEventListener("input", (e) => {
+      let val = parseInt(e.target.value);
+      if (isNaN(val)) val = 30;
+      val = Math.max(0, Math.min(100, val));
       state.campThresholds.endurance = val;
       e.target.value = val;
     });
@@ -203,6 +209,60 @@ export function renderAll() {
   renderMeta();
   renderLog();
   renderZones();
+}
+
+export function updateStatsModalSkills(hero) {
+  // If stats modal is visible, update just the skills section
+  const modal = document.getElementById("statsModal");
+  if (!modal || modal.style.display === "none") return;
+  
+  const statsBox = document.getElementById("characterStatsContainer");
+  if (!statsBox) return;
+  
+  // Find and update the right column (Skills/Passives) if it exists
+  const columns = statsBox.querySelectorAll("div[style*='flex: 1 1 auto']");
+  if (columns.length < 2) return;
+  
+  const rightColumn = columns[columns.length - 1];
+  if (!rightColumn) return;
+  
+  // Rebuild just the skills section
+  rightColumn.innerHTML = "";
+  
+  const skillTitle = document.createElement("div");
+  skillTitle.style.cssText = "font-weight:600;font-size:12px;margin:0 0 12px;color:#fbbf24;";
+  skillTitle.textContent = "Skills / Passives";
+  rightColumn.appendChild(skillTitle);
+
+  const cap = doubleAttackCap(hero.level);
+  const skillVal = Math.min(hero.doubleAttackSkill || 0, cap || 0);
+  const locked = hero.level < 5 || cap === 0;
+  const procPct = doubleAttackProcChance(skillVal) * 100;
+
+  if (locked) {
+    rightColumn.appendChild(statLine("Double Attack", "Locked until level 5"));
+  } else {
+    const skillLine = document.createElement("div");
+    skillLine.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:4px 0;font-size:12px;color:#ccc;";
+    skillLine.innerHTML = `<span>Double Attack</span> <span style='color:#fff;'>${skillVal.toFixed(0)} / ${cap}</span>`;
+    rightColumn.appendChild(skillLine);
+
+    const procLine = document.createElement("div");
+    procLine.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:2px 0 8px;font-size:11px;color:#aaa;";
+    procLine.innerHTML = `<span>Proc Chance</span> <span style='color:#fbbf24;'>${procPct.toFixed(1)}%</span>`;
+    rightColumn.appendChild(procLine);
+
+    const barBg = document.createElement("div");
+    barBg.style.cssText = "width:100%;height:10px;background:#252525;border-radius:5px;overflow:hidden;border:1px solid #333;margin:0;position:relative;";
+    const percent = cap > 0 ? Math.min(100, (skillVal / cap) * 100) : 0;
+    const nextPercent = cap > 0 && skillVal < cap ? Math.min(100, ((skillVal + 1) / cap) * 100) : 100;
+    
+    const barFill = document.createElement("div");
+    barFill.style.cssText = `height:100%;width:${percent}%;background:linear-gradient(90deg,#fbbf24,#f59e0b);transition:width 0.2s;`;
+    barBg.appendChild(barFill);
+    
+    rightColumn.appendChild(barBg);
+  }
 }
 
 function formatDuration(seconds) {
@@ -1326,13 +1386,6 @@ function populateStatsSection(hero) {
       const barFill = document.createElement("div");
       barFill.style.cssText = `height:100%;width:${percent}%;background:linear-gradient(90deg,#fbbf24,#f59e0b);transition:width 0.2s;`;
       barBg.appendChild(barFill);
-      
-      // Red line showing progress to next skill point
-      if (skillVal < cap) {
-        const nextLine = document.createElement("div");
-        nextLine.style.cssText = `position:absolute;top:0;bottom:0;width:2px;background:#ef4444;left:${nextPercent}%;transform:translateX(-50%);`;
-        barBg.appendChild(nextLine);
-      }
       
       rightColumn.appendChild(barBg);
     }

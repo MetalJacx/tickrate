@@ -3,6 +3,7 @@ import { getClassDef, CLASS_DEFS } from "./classes/index.js";
 import { getZoneDef, getEnemyForZone, MAX_ZONE, rollSubAreaDiscoveries, ensureZoneDiscovery, getZoneById, getActiveSubArea } from "./zones/index.js";
 import { addLog, randInt } from "./util.js";
 import { ACCOUNT_SLOT_UNLOCKS, GAME_TICK_MS } from "./defs.js";
+import { updateStatsModalSkills } from "./ui.js";
 import {
   applyACMitigation,
   computeCritChance,
@@ -948,6 +949,7 @@ export function gameTick() {
           if (skillChance > 0 && Math.random() < skillChance) {
             hero.doubleAttackSkill = Math.min(cap, skill + 1);
             addLog(`${hero.name}'s Double Attack skill increases to ${hero.doubleAttackSkill}!`, "skill");
+            updateStatsModalSkills(hero);
           }
         }
       }
