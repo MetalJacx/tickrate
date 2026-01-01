@@ -42,18 +42,30 @@ export function doubleAttackCap(level) {
 
 export function doubleAttackProcChance(skill) {
   if (!skill) return 0;
-  // More generous: 0.5% per skill point, max 70%
-  return Math.min(0.70, skill * 0.005);
+  // Start at 5% for skill 1, scale to 70% at skill 250
+  // (70% - 5%) / (250 - 1) = 0.261% per skill point
+  const baseChance = 0.05; // 5% at skill 1
+  const perPointChance = 0.00261; // scales to 70% at 250
+  const procChance = baseChance + (skill - 1) * perPointChance;
+  return Math.min(0.70, procChance);
 }
 
 function doubleAttackSkillUpChance(hero, cap) {
   const skill = hero.doubleAttackSkill || 0;
   const gap = Math.max(0, cap - skill);
   if (gap <= 0) return 0;
-  // More generous: 2.5% per point behind cap, min 10%, max 40%
+  
+  // Base chance: 2.5% per gap point, min 10%, max 40%
   const baseChance = clamp(gap * 0.025, 0.10, 0.40);
-  const dr = hero.level < 50 ? 1.0 : (hero.level <= 54 ? 0.6 : 0.4);
-  return baseChance * dr;
+  
+  // Skill progression penalty: gets harder as skill increases
+  // At skill 1-50: 100%, at skill 100: 67%, at skill 150: 50%, at skill 200: 40%, at skill 250: 33%
+  const progressPenalty = Math.max(0.33, 1.0 - (skill / 250) * 0.67);
+  
+  // Level-based DR for very high levels
+  const levelDR = hero.level < 50 ? 1.0 : (hero.level <= 54 ? 0.6 : 0.4);
+  
+  return baseChance * progressPenalty * levelDR;
 }
 
 function getZoneKey(zoneNumber) {
