@@ -31,7 +31,7 @@ function clamp(val, min, max) {
   return Math.min(max, Math.max(min, val));
 }
 
-function doubleAttackCap(level) {
+export function doubleAttackCap(level) {
   if (level < 5) return 0;
   const growth = level - 4; // Level 5 -> 1, Level 60 -> 56
   const rawCap = growth * (250 / 56);
@@ -40,7 +40,7 @@ function doubleAttackCap(level) {
   return capped;
 }
 
-function doubleAttackProcChance(skill) {
+export function doubleAttackProcChance(skill) {
   if (!skill) return 0;
   return Math.min(0.70, skill * 0.0028);
 }
