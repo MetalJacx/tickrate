@@ -4,6 +4,7 @@ import { spawnEnemyToList } from "./combat.js";
 import { CLASSES, getClassDef } from "./classes/index.js";
 import { getZoneDef, listZones, ensureZoneDiscovery, getActiveSubArea } from "./zones/index.js";
 import { addLog } from "./util.js";
+import { formatPGSC } from "./state.js";
 import { MAX_PARTY_SIZE, ACCOUNT_SLOT_UNLOCKS } from "./defs.js";
 
 export function initUI({ onRecruit, onReset, onOpenRecruitModal }) {
@@ -283,7 +284,7 @@ export function showOfflineModal(summary) {
   const goldSpan = document.getElementById("offlineGoldSpan");
   const xpSpan = document.getElementById("offlineXpSpan");
   if (timeSpan) timeSpan.textContent = formatDuration(summary.secondsSimulated || 0);
-  if (goldSpan) goldSpan.textContent = Math.floor(summary.goldGained || 0);
+  if (goldSpan) goldSpan.textContent = formatPGSC(Math.floor(summary.goldGained || 0));
   if (xpSpan) xpSpan.textContent = Math.floor(summary.xpGained || 0);
   modal.style.display = "flex";
 }
@@ -830,7 +831,7 @@ export function renderParty() {
 }
 
 export function renderMeta() {
-  document.getElementById("goldSpan").textContent = state.gold;
+  document.getElementById("goldSpan").textContent = formatPGSC(state.currencyCopper);
   document.getElementById("xpSpan").textContent = state.totalXP;
   document.getElementById("accountLevelSpan").textContent = state.accountLevel;
   document.getElementById("zoneSpan").textContent = state.zone;

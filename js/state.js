@@ -1,6 +1,48 @@
 import { SAVE_KEY } from "./defs.js";
 import { getClassDef } from "./classes/index.js";
 
+// ===== Currency conversion helpers =====
+export function normalizePGSC(pgsc = {}) {
+  const p = pgsc.plat || 0;
+  const g = pgsc.gold || 0;
+  const s = pgsc.silver || 0;
+  const c = pgsc.copper || 0;
+  return p * 1000 + g * 100 + s * 10 + c;
+}
+
+export function splitCopper(totalCopper = 0) {
+  totalCopper = Math.floor(Math.max(0, totalCopper)); // Clamp to 0
+  const plat = Math.floor(totalCopper / 1000);
+  const remainder1 = totalCopper % 1000;
+  const gold = Math.floor(remainder1 / 100);
+  const remainder2 = remainder1 % 100;
+  const silver = Math.floor(remainder2 / 10);
+  const copper = remainder2 % 10;
+  return { plat, gold, silver, copper };
+}
+
+export function formatPGSC(amount, useColors = false) {
+  const pgsc = typeof amount === 'number' ? splitCopper(amount) : amount;
+  const { plat, gold, silver, copper } = pgsc;
+  
+  const parts = [];
+  if (plat > 0) parts.push(`${plat}p`);
+  if (gold > 0 || (parts.length > 0 && (silver > 0 || copper > 0))) parts.push(`${gold}g`);
+  if (silver > 0 || (parts.length > 0 && copper > 0)) parts.push(`${silver}s`);
+  if (copper > 0 || parts.length === 0) parts.push(`${copper}c`);
+  
+  if (useColors) {
+    return parts
+      .map((p, i) => {
+        const colors = ['#d8b3ff', '#ffd700', '#c0c0c0', '#b87333']; // plat, gold, silver, copper
+        return `<span style="color:${colors[i]}">${p}</span>`;
+      })
+      .join(' ');
+  }
+  
+  return parts.join(' ');
+}
+
 function doubleAttackCap(level) {
   if (level < 5) return 0;
   const rawCap = (level - 4) * (250 / 56);
@@ -16,7 +58,9 @@ export const state = {
   accountName: "",
   characterName: "",
   playerClassKey: "",
-  gold: 0,
+  currencyCopper: 0,  // Internal: total copper
+  // Display breakdown (auto-computed): { plat, gold, silver, copper }
+  currencyDisplay: { plat: 0, gold: 0, silver: 0, copper: 0 },
   totalXP: 0,
   accountLevel: 1,
   accountLevelXP: 0,
@@ -39,7 +83,8 @@ export const state = {
     damage_dealt: true,
     damage_taken: true,
     normal: true,
-    gold: true
+    gold: true,
+    skill: true
   },
   offlineSummary: null,
   zoneDiscoveries: {},
@@ -60,12 +105,19 @@ export function bumpHeroIdCounterToAtLeast(n) {
   heroIdCounter = Math.max(heroIdCounter, n);
 }
 
+/**
+ * Update the display breakdown (PGSC) from the internal copper total
+ */
+export function updateCurrencyDisplay() {
+  state.currencyDisplay = splitCopper(state.currencyCopper);
+}
+
 export function serializeState() {
   return {
     accountName: state.accountName,
     characterName: state.characterName,
     playerClassKey: state.playerClassKey,
-    gold: state.gold,
+    currencyCopper: state.currencyCopper,
     totalXP: state.totalXP,
     accountLevel: state.accountLevel,
     accountLevelXP: state.accountLevelXP,
@@ -128,7 +180,8 @@ export function loadGame() {
     state.accountName = data.accountName ?? "";
     state.characterName = data.characterName ?? "";
     state.playerClassKey = data.playerClassKey ?? "";
-    state.gold = data.gold ?? 0;
+    // Handle migration from old 'gold' to new 'currencyCopper'
+    state.currencyCopper = data.currencyCopper ?? (data.gold ?? 0) * 1; // If old save has gold, treat as copper
     state.totalXP = data.totalXP ?? 0;
     state.accountLevel = data.accountLevel ?? 1;
     state.accountLevelXP = data.accountLevelXP ?? 0;

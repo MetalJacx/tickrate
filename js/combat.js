@@ -1,4 +1,4 @@
-import { state, nextHeroId } from "./state.js";
+import { state, nextHeroId, updateCurrencyDisplay } from "./state.js";
 import { getClassDef, CLASS_DEFS } from "./classes/index.js";
 import { getZoneDef, getEnemyForZone, MAX_ZONE, rollSubAreaDiscoveries, ensureZoneDiscovery, getZoneById, getActiveSubArea } from "./zones/index.js";
 import { addLog, randInt } from "./util.js";
@@ -468,7 +468,8 @@ function onEnemyKilled(enemy, totalDPS) {
   const totalXPRounded = Math.floor(totalXP);
 
   state.totalXP += totalXPRounded;
-  state.gold += gold;
+  state.currencyCopper += gold;
+  updateCurrencyDisplay();
   state.killsThisZone += 1;
 
   // Calculate level-weighted XP distribution (only for living heroes)
@@ -520,11 +521,11 @@ function onEnemyKilled(enemy, totalDPS) {
 
 function onPartyWipe() {
   addLog("Your party is overwhelmed and wiped out. You drag your corpses back to the campfire...", "damage_taken");
-  const lostGold = Math.floor(state.gold * 0.15);
-  state.gold = Math.max(0, state.gold - lostGold);
+  const lostCopper = Math.floor(state.currencyCopper * 0.15);
+  state.currencyCopper = Math.max(0, state.currencyCopper - lostCopper);
   state.killsThisZone = 0;
   state.partyHP = Math.floor(state.partyMaxHP * 0.5);
-  addLog(`You lost ${lostGold} gold and must rebuild your momentum in this zone.`, "damage_taken");
+  addLog(`You lost ${lostCopper} copper and must rebuild your momentum in this zone.`, "damage_taken");
   
   state.currentEnemies = [];
   state.waitingToRespawn = true;
