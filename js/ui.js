@@ -604,7 +604,7 @@ export function renderParty() {
 
       // Check for unassigned ability slots
       const hasUnassignedSlots = checkHasUnassignedSlots(hero);
-      
+
       // Debuff indicator (e.g., weakening debuff)
       const hasWeak = hero.tempDamageDebuffTicks && hero.tempDamageDebuffTicks > 0;
       if (hasWeak) {
@@ -653,10 +653,10 @@ export function renderParty() {
         warning.textContent = "!";
         warning.title = "Unassigned ability slots available - Open character window to assign skills";
         div.appendChild(warning);
-        
-        // Add yellow highlight to the card
-        div.style.background = "rgba(251, 191, 36, 0.1)";
-        div.style.borderColor = "#fbbf24";
+
+        // Highlight the Abilities button instead of the whole card
+        abilBtn.classList.add("abilities-attn");
+        abilBtn.title = "Assign abilities to fill empty slots";
       }
 
       container.appendChild(div);
