@@ -1314,11 +1314,21 @@ function populateStatsSection(hero) {
       statsBox.appendChild(procLine);
 
       const barBg = document.createElement("div");
-      barBg.style.cssText = "width:100%;height:10px;background:#252525;border-radius:5px;overflow:hidden;border:1px solid #333;margin:4px 0;";
+      barBg.style.cssText = "width:100%;height:10px;background:#252525;border-radius:5px;overflow:hidden;border:1px solid #333;margin:4px 0;position:relative;";
       const percent = cap > 0 ? Math.min(100, (skillVal / cap) * 100) : 0;
+      const nextPercent = cap > 0 && skillVal < cap ? Math.min(100, ((skillVal + 1) / cap) * 100) : 100;
+      
       const barFill = document.createElement("div");
       barFill.style.cssText = `height:100%;width:${percent}%;background:linear-gradient(90deg,#fbbf24,#f59e0b);transition:width 0.2s;`;
       barBg.appendChild(barFill);
+      
+      // Red line showing progress to next skill point
+      if (skillVal < cap) {
+        const nextLine = document.createElement("div");
+        nextLine.style.cssText = `position:absolute;top:0;bottom:0;width:2px;background:#ef4444;left:${nextPercent}%;transform:translateX(-50%);`;
+        barBg.appendChild(nextLine);
+      }
+      
       statsBox.appendChild(barBg);
     }
   }
