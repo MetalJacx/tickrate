@@ -42,14 +42,16 @@ export function doubleAttackCap(level) {
 
 export function doubleAttackProcChance(skill) {
   if (!skill) return 0;
-  return Math.min(0.70, skill * 0.0028);
+  // More generous: 0.5% per skill point, max 70%
+  return Math.min(0.70, skill * 0.005);
 }
 
 function doubleAttackSkillUpChance(hero, cap) {
   const skill = hero.doubleAttackSkill || 0;
   const gap = Math.max(0, cap - skill);
   if (gap <= 0) return 0;
-  const baseChance = clamp(gap * 0.004, 0.01, 0.25);
+  // More generous: 2.5% per point behind cap, min 10%, max 40%
+  const baseChance = clamp(gap * 0.025, 0.10, 0.40);
   const dr = hero.level < 50 ? 1.0 : (hero.level <= 54 ? 0.6 : 0.4);
   return baseChance * dr;
 }
@@ -933,6 +935,7 @@ export function gameTick() {
           const skillChance = doubleAttackSkillUpChance(hero, cap);
           if (skillChance > 0 && Math.random() < skillChance) {
             hero.doubleAttackSkill = Math.min(cap, skill + 1);
+            addLog(`${hero.name}'s Double Attack skill increases to ${hero.doubleAttackSkill}!`, "xp");
           }
         }
       }
