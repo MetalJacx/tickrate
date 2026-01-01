@@ -4,6 +4,7 @@ export default {
   name: "Dark Forest",
   levelRange: [2, 5],
   description: "An eerie woodland",
+  copperReward: { min: 12, max: 18 },
   aggroChance: 0.05,
   global: {
     baseHP: 45,

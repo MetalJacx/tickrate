@@ -4,6 +4,7 @@ export default {
   name: "Ruined Castle",
   levelRange: [3, 6],
   description: "An ancient stronghold in decay",
+  copperReward: { min: 16, max: 24 },
   aggroChance: 0.05, 
   global: {
     baseHP: 55,

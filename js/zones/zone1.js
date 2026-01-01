@@ -4,6 +4,7 @@ export default {
   name: "Graveyard",
   levelRange: [1, 4],
   description: "A forgotten burial ground",
+  copperReward: { min: 8, max: 12 },
   aggroChance: 0.01,
   global: {
     baseHP: 35,
