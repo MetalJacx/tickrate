@@ -935,7 +935,7 @@ export function gameTick() {
           const skillChance = doubleAttackSkillUpChance(hero, cap);
           if (skillChance > 0 && Math.random() < skillChance) {
             hero.doubleAttackSkill = Math.min(cap, skill + 1);
-            addLog(`${hero.name}'s Double Attack skill increases to ${hero.doubleAttackSkill}!`, "xp");
+            addLog(`${hero.name}'s Double Attack skill increases to ${hero.doubleAttackSkill}!`, "skill");
           }
         }
       }

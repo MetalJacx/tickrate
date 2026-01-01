@@ -261,6 +261,9 @@ export function renderLog() {
         case "regen":
           color = "#8ef5a2"; // lighter green for passive regen
           break;
+        case "skill":
+          color = "#d8b3ff"; // light purple
+          break;
         default:
           color = "#eee"; // white
       }
@@ -1257,7 +1260,7 @@ function populateStatsSection(hero) {
   // Create a wrapper with flex layout for side-by-side
   statsBox.style.display = "flex";
   statsBox.style.gap = "20px";
-  statsBox.style.flexWrap = "wrap";
+  statsBox.style.flexWrap = "nowrap";
   
   const stats = hero.stats || {};
   const derived = {
@@ -1272,8 +1275,8 @@ function populateStatsSection(hero) {
 
   // Left column: core stats
   const leftColumn = document.createElement("div");
-  leftColumn.style.flex = "1";
-  leftColumn.style.minWidth = "200px";
+  leftColumn.style.flex = "1 1 auto";
+  leftColumn.style.minWidth = "140px";
   
   leftColumn.appendChild(statLine("Primary", primary));
   leftColumn.appendChild(statLine("HP", derived.hp));
@@ -1302,8 +1305,8 @@ function populateStatsSection(hero) {
   // Right column: Skills / Passives (warrior Double Attack)
   if (hero.classKey === "warrior") {
     const rightColumn = document.createElement("div");
-    rightColumn.style.flex = "1";
-    rightColumn.style.minWidth = "200px";
+    rightColumn.style.flex = "1 1 auto";
+    rightColumn.style.minWidth = "140px";
 
     const skillTitle = document.createElement("div");
     skillTitle.style.cssText = "font-weight:600;font-size:12px;margin:0 0 12px;color:#fbbf24;";
