@@ -1,4 +1,4 @@
-import { state, nextHeroId, updateCurrencyDisplay } from "./state.js";
+import { state, nextHeroId, updateCurrencyDisplay, formatPGSC } from "./state.js";
 import { getClassDef, CLASS_DEFS } from "./classes/index.js";
 import { getZoneDef, getEnemyForZone, MAX_ZONE, rollSubAreaDiscoveries, ensureZoneDiscovery, getZoneById, getActiveSubArea } from "./zones/index.js";
 import { addLog, randInt } from "./util.js";
@@ -49,6 +49,22 @@ export function doubleAttackProcChance(skill) {
   const perPointChance = 0.00261; // scales to 70% at 250
   const procChance = baseChance + (skill - 1) * perPointChance;
   return Math.min(0.70, procChance);
+}
+
+// Resolve copper reward using enemy override, then zone override, else fallback formula
+function resolveCopperReward(enemy, zoneDef) {
+  const rewardDef = enemy.copperReward ?? zoneDef?.copperReward;
+  if (rewardDef != null) {
+    if (typeof rewardDef === "number") return rewardDef;
+    if (typeof rewardDef === "object") {
+      const min = Math.max(0, rewardDef.min ?? 0);
+      const max = Math.max(min, rewardDef.max ?? min);
+      return randInt(max - min + 1) + min; // inclusive range
+    }
+  }
+
+  // Fallback to legacy formula: 5 + zone*4 + enemy level
+  return 5 + state.zone * 4 + (enemy.level ?? 1);
 }
 
 function doubleAttackSkillUpChance(hero, cap) {
@@ -459,7 +475,8 @@ function computeKillXP(enemy) {
 
 function onEnemyKilled(enemy, totalDPS) {
   const { killXP } = computeKillXP(enemy);
-  const gold = 5 + state.zone * 4 + enemy.level;
+  const zoneDef = getZoneDef(state.zone);
+  const copper = resolveCopperReward(enemy, zoneDef);
 
   // Apply group bonus based on LIVING party size only
   const livingPartySize = state.party.filter(h => !h.isDead).length;
@@ -468,7 +485,7 @@ function onEnemyKilled(enemy, totalDPS) {
   const totalXPRounded = Math.floor(totalXP);
 
   state.totalXP += totalXPRounded;
-  state.currencyCopper += gold;
+  state.currencyCopper += copper;
   updateCurrencyDisplay();
   state.killsThisZone += 1;
 
@@ -513,7 +530,7 @@ function onEnemyKilled(enemy, totalDPS) {
     }
   }
 
-  addLog(`Your party defeats the ${enemy.name}, dealing ${totalDPS.toFixed(1)} damage. +${Math.floor(totalXP)} XP, +${gold} gold.`, "gold");
+  addLog(`Your party defeats the ${enemy.name}, dealing ${totalDPS.toFixed(1)} damage. +${Math.floor(totalXP)} XP, +${formatPGSC(copper)}.`, "gold");
   state.currentEnemy = null;
   state.waitingToRespawn = true;
   state.huntRemaining = HUNT_TIME_MS; // Start hunt timer
