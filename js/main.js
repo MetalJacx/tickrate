@@ -61,6 +61,18 @@ function showClassScreen() {
   document.getElementById("classScreen").style.display = "flex";
 }
 
+function populateRaceSelect(selectEl, selectedKey = DEFAULT_RACE_KEY) {
+  if (!selectEl) return;
+  selectEl.innerHTML = "";
+  for (const race of RACES) {
+    const opt = document.createElement("option");
+    opt.value = race.key;
+    opt.textContent = race.name;
+    selectEl.appendChild(opt);
+  }
+  selectEl.value = selectedKey || DEFAULT_RACE_KEY;
+}
+
 const STAT_KEYS = ["str", "con", "agi", "dex", "wis", "int", "cha", "ac"];
 
 function computeStartingStats(cls, race) {
