@@ -1262,6 +1262,35 @@ function populateEquipmentSection(hero) {
         }
       }
       
+      // If there was an old equipped item, return it to inventory
+      if (oldEquipped) {
+        const oldItemDef = getItemDef(oldEquipped.id);
+        if (oldItemDef) {
+          // Try to find an empty slot in the unlocked inventory
+          let placed = false;
+          for (let j = 0; j < 30; j++) {
+            if (!hero.inventory[j]) {
+              hero.inventory[j] = { id: oldEquipped.id, quantity: 1 };
+              placed = true;
+              break;
+            }
+          }
+          // If no empty slot, try stacking with existing items
+          if (!placed && oldItemDef.maxStack > 1) {
+            for (let j = 0; j < 30; j++) {
+              if (hero.inventory[j] && hero.inventory[j].id === oldEquipped.id) {
+                const room = oldItemDef.maxStack - (hero.inventory[j].quantity || 0);
+                if (room > 0) {
+                  hero.inventory[j].quantity++;
+                  placed = true;
+                  break;
+                }
+              }
+            }
+          }
+        }
+      }
+      
       // Recalculate hero stats
       refreshHeroDerived(hero);
       
@@ -1699,27 +1728,57 @@ function renderTownMerchant() {
       left.appendChild(name);
 
       const right = document.createElement("div");
-      right.style.cssText = "display:flex;gap:8px;align-items:center;";
+      right.style.cssText = "display:flex;flex-direction:column;gap:6px;align-items:flex-end;min-width:170px;";
       const valueTag = document.createElement("div");
       valueTag.style.cssText = "font-size:11px;color:#ffd700;";
-      valueTag.textContent = `${formatPGSC(total)}`;
+      valueTag.textContent = `${formatPGSC(perItem)} each`;
 
-      const btn = document.createElement("button");
-      btn.textContent = `Sell (${formatPGSC(total)})`;
-      btn.style.cssText = "padding:6px 10px;background:#4ade80;border:1px solid #22c55e;color:#000;border-radius:6px;font-weight:700;cursor:pointer;font-size:11px;";
-      btn.addEventListener("click", () => {
+      const buttonsWrap = document.createElement("div");
+      buttonsWrap.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;";
+
+      const sellOptions = [
+        { label: "Sell 1", qty: 1 },
+        { label: "Sell 5", qty: 5 },
+        { label: "Sell 10", qty: 10 },
+        { label: `Sell x${qty}`, qty }
+      ];
+
+      const handleSell = (sellQty) => {
         const heroRef = state.party[heroIdx];
         if (!heroRef?.inventory?.[i]) return;
-        heroRef.inventory[i] = null;
-        state.currencyCopper += total;
+        const actualQty = Math.min(sellQty, heroRef.inventory[i].quantity ?? 1);
+        const saleValue = perItem * actualQty;
+        if (actualQty <= 0) return;
+
+        if ((heroRef.inventory[i].quantity ?? 1) <= actualQty) {
+          heroRef.inventory[i] = null;
+        } else {
+          heroRef.inventory[i].quantity -= actualQty;
+        }
+
+        state.currencyCopper += saleValue;
         updateCurrencyDisplay();
-        addLog(`You sell ${qty > 1 ? qty + "x " : ""}${itemDef.name} for ${formatPGSC(total)}.`, "gold");
+        addLog(`You sell ${actualQty > 1 ? actualQty + "x " : ""}${itemDef.name} for ${formatPGSC(saleValue)}.`, "gold");
         renderMeta();
         renderBattleFooter();
-      });
+      };
+
+      for (const opt of sellOptions) {
+        const available = qty;
+        // Only show partial buttons when enough quantity; the final option is the full stack
+        if (opt.qty !== qty && available < opt.qty) continue;
+
+        const btnQty = Math.min(opt.qty, available);
+        const price = perItem * btnQty;
+        const btn = document.createElement("button");
+        btn.textContent = `${opt.label} (${formatPGSC(price)})`;
+        btn.style.cssText = "padding:6px 10px;background:#4ade80;border:1px solid #22c55e;color:#000;border-radius:6px;font-weight:700;cursor:pointer;font-size:11px;";
+        btn.addEventListener("click", () => handleSell(btnQty));
+        buttonsWrap.appendChild(btn);
+      }
 
       right.appendChild(valueTag);
-      right.appendChild(btn);
+      right.appendChild(buttonsWrap);
       row.appendChild(left);
       row.appendChild(right);
       list.appendChild(row);
