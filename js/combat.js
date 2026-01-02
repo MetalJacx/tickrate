@@ -900,6 +900,17 @@ export function gameTick() {
     checkForReinforcement();
   }
 
+  // Tick down forced target locks (taunts)
+  for (const enemy of state.currentEnemies) {
+    if (enemy.forcedTargetTicks && enemy.forcedTargetTicks > 0) {
+      enemy.forcedTargetTicks -= 1;
+      if (enemy.forcedTargetTicks <= 0) {
+        enemy.forcedTargetTicks = 0;
+        enemy.forcedTargetId = null;
+      }
+    }
+  }
+
   recalcPartyTotals();
   
   // Determine if in combat (affects regen rates)
@@ -1015,6 +1026,10 @@ export function gameTick() {
         if (sk.type === "damage" && state.currentEnemies.length === 0) {
           continue;
         }
+        // Debuffs (e.g., taunt) require an enemy present
+        if (sk.type === "debuff" && state.currentEnemies.length === 0) {
+          continue;
+        }
         // Check resource availability
         const costType = sk.costType || (hero.resourceType === "mana" ? "mana" : (hero.resourceType === "endurance" ? "endurance" : "mana"));
         const cost = sk.cost || 0;
@@ -1105,6 +1120,17 @@ export function gameTick() {
             hero.tempACBuffAmount = Math.max(hero.tempACBuffAmount || 0, acBonus);
             hero.tempACBuffTicks = duration;
             addLog(`${hero.name} fortifies, gaining +${acBonus} AC for ${duration} ticks.`, "skill");
+          }
+        }
+        if (sk.type === "debuff") {
+          if (sk.debuff === "taunt") {
+            const targetEnemy = state.currentEnemies[0];
+            if (targetEnemy) {
+              const duration = sk.durationTicks ?? 3;
+              targetEnemy.forcedTargetId = hero.id;
+              targetEnemy.forcedTargetTicks = duration;
+              addLog(`${hero.name} taunts ${targetEnemy.name}, forcing attacks for ${duration} ticks!`, "skill");
+            }
           }
         }
         if (sk.type === "heal") {
@@ -1242,7 +1268,17 @@ export function gameTick() {
   if (livingMembers.length > 0) {
     for (const enemy of state.currentEnemies) {
       // Single-target damage: pick one living member to take the hit
-      const target = livingMembers[randInt(livingMembers.length)];
+      let target = null;
+      if (enemy.forcedTargetId && enemy.forcedTargetTicks > 0) {
+        target = livingMembers.find(h => h.id === enemy.forcedTargetId);
+        if (!target) {
+          enemy.forcedTargetId = null;
+          enemy.forcedTargetTicks = 0;
+        }
+      }
+      if (!target) {
+        target = livingMembers[randInt(livingMembers.length)];
+      }
       const hitChance = computeHitChance(enemy, target);
       if (Math.random() > hitChance) {
         addLog(`${enemy.name} misses ${target.name}.`, "damage_taken");

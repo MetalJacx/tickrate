@@ -31,6 +31,18 @@ export default {
     { key: "kick", name: "Kick", level: 1, type: "damage", damageType: "physical", minDamage: 2, maxDamage: 7, cost: 5, cooldownSeconds: 4 },
     { key: "shield_bash", name: "Shield Bash", level: 3, type: "damage", damageType: "physical", minDamage: 10, maxDamage: 14, cost: 12, cooldownSeconds: 8 },
     {
+      key: "taunt",
+      name: "Taunt",
+      level: 3,
+      type: "debuff",
+      debuff: "taunt",
+      durationTicks: 3,
+      costType: "endurance",
+      cost: 10,
+      cooldownSeconds: 10,
+      description: "Forces the main target to attack the Warrior for 3 ticks."
+    },
+    {
       key: "fortify",
       name: "Fortify",
       level: 8,
