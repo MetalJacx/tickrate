@@ -1016,6 +1016,81 @@ function openInventoryModal(hero) {
   modal.style.display = "flex";
 }
 
+function showItemTooltip(itemDef, event) {
+  // Remove any existing tooltip
+  const existing = document.getElementById("itemTooltip");
+  if (existing) existing.remove();
+
+  if (!itemDef) return;
+
+  const tooltip = document.createElement("div");
+  tooltip.id = "itemTooltip";
+  tooltip.style.cssText = `
+    position: fixed;
+    background: #1a1a1a;
+    border: 2px solid #4ade80;
+    border-radius: 8px;
+    padding: 12px;
+    max-width: 250px;
+    z-index: 10000;
+    pointer-events: none;
+    font-size: 11px;
+    color: #ddd;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  `;
+
+  let html = `<div style="font-weight:bold;color:#4ade80;margin-bottom:8px;">${itemDef.name}</div>`;
+  html += `<div style="color:#aaa;margin-bottom:6px;">${itemDef.rarity || "common"}</div>`;
+  
+  if (itemDef.maxStack > 1) {
+    html += `<div style="color:#888;font-size:10px;margin-bottom:6px;">Stackable (Max: ${itemDef.maxStack})</div>`;
+  } else {
+    html += `<div style="color:#888;font-size:10px;margin-bottom:6px;">Unique</div>`;
+  }
+
+  if (itemDef.baseValue) {
+    html += `<div style="color:#ffd700;margin-bottom:6px;">Value: ${formatPGSC(itemDef.baseValue)}</div>`;
+  }
+
+  if (itemDef.stats && Object.keys(itemDef.stats).length > 0) {
+    html += `<div style="border-top:1px solid #333;padding-top:8px;margin-top:6px;">`;
+    for (const [stat, value] of Object.entries(itemDef.stats)) {
+      const displayStat = stat.toUpperCase();
+      const color = value > 0 ? "#4ade80" : "#ff6b6b";
+      html += `<div style="display:flex;justify-content:space-between;margin:4px 0;">`;
+      html += `<span>${displayStat}</span>`;
+      html += `<span style="color:${color};font-weight:bold;">${value > 0 ? "+" : ""}${value}</span>`;
+      html += `</div>`;
+    }
+    html += `</div>`;
+  }
+
+  tooltip.innerHTML = html;
+  document.body.appendChild(tooltip);
+
+  // Position near cursor
+  const x = event.clientX + 10;
+  const y = event.clientY + 10;
+  tooltip.style.left = x + "px";
+  tooltip.style.top = y + "px";
+
+  // Keep tooltip in viewport
+  setTimeout(() => {
+    const rect = tooltip.getBoundingClientRect();
+    if (rect.right > window.innerWidth) {
+      tooltip.style.left = (window.innerWidth - rect.width - 10) + "px";
+    }
+    if (rect.bottom > window.innerHeight) {
+      tooltip.style.top = (window.innerHeight - rect.height - 10) + "px";
+    }
+  }, 0);
+}
+
+function hideItemTooltip() {
+  const tooltip = document.getElementById("itemTooltip");
+  if (tooltip) tooltip.remove();
+}
+
 function populateInventoryGrid(hero) {
   const container = document.getElementById("inventoryGridContainer");
   container.innerHTML = "";
@@ -1076,6 +1151,14 @@ function populateInventoryGrid(hero) {
           slot.appendChild(qty);
         }
         
+        // Add tooltip on hover
+        slot.addEventListener("mouseenter", (e) => {
+          showItemTooltip(itemDef, e);
+        });
+        slot.addEventListener("mouseleave", () => {
+          hideItemTooltip();
+        });
+
         // Make it draggable if it has stat bonuses
         if (itemDef.stats) {
           slot.draggable = true;
@@ -1087,6 +1170,7 @@ function populateInventoryGrid(hero) {
               itemId: item.id
             }));
             slot.style.opacity = "0.6";
+            hideItemTooltip();
           });
           slot.addEventListener("dragend", (e) => {
             slot.style.opacity = item ? "1" : "0.4";
@@ -1197,6 +1281,13 @@ function populateEquipmentSection(hero) {
         <div style="font-size:18px;">${itemDef.icon}</div>
         <div style="font-size:10px;color:#4ade80;">${itemDef.name}</div>
       `;
+      // Add tooltip on hover
+      slotDiv.addEventListener("mouseenter", (e) => {
+        showItemTooltip(itemDef, e);
+      });
+      slotDiv.addEventListener("mouseleave", () => {
+        hideItemTooltip();
+      });
       // Make equipped items draggable so they can be removed
       slotDiv.draggable = true;
       slotDiv.style.cursor = "grab";
@@ -1208,6 +1299,7 @@ function populateEquipmentSection(hero) {
           itemId: equippedItem.id
         }));
         slotDiv.style.opacity = "0.6";
+        hideItemTooltip();
       });
       slotDiv.addEventListener("dragend", (e) => {
         slotDiv.style.opacity = "1";
