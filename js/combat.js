@@ -5,6 +5,7 @@ import { addLog, randInt } from "./util.js";
 import { ACCOUNT_SLOT_UNLOCKS, GAME_TICK_MS } from "./defs.js";
 import { updateStatsModalSkills } from "./ui.js";
 import { getItemDef } from "./items.js";
+import { getRaceDef, DEFAULT_RACE_KEY } from "./races.js";
 import {
   applyACMitigation,
   computeCritChance,
@@ -158,9 +159,17 @@ function primaryStatKey(hero, cls) {
 
 export function refreshHeroDerived(hero) {
   const cls = getClassDef(hero.classKey) || {};
-  
-  // Reset stats to class base first (don't accumulate)
-  hero.stats = fillStats({ ...cls.stats });
+  const race = getRaceDef(hero.raceKey || DEFAULT_RACE_KEY);
+  const raceMods = race?.statMods || {};
+  hero.raceKey = hero.raceKey || race?.key || DEFAULT_RACE_KEY;
+  hero.raceName = hero.raceName || race?.name;
+
+  // Reset stats to class base first (don't accumulate) then apply race modifiers
+  const baseStats = fillStats({ ...cls.stats });
+  for (const [stat, delta] of Object.entries(raceMods)) {
+    baseStats[stat] = (baseStats[stat] || 0) + (delta || 0);
+  }
+  hero.stats = baseStats;
   hero.baseHP = hero.baseHP ?? cls.baseHP ?? hero.maxHP ?? 50;
   
   // Store original class base damage if not already stored
@@ -264,15 +273,18 @@ function buildEnemyFromTemplate(enemyDef, level) {
   };
 }
 
-export function createHero(classKey, customName = null) {
+export function createHero(classKey, customName = null, raceKey = DEFAULT_RACE_KEY) {
   const cls = getClassDef(classKey);
   if (!cls) return null;
+  const race = getRaceDef(raceKey || DEFAULT_RACE_KEY);
 
   const baseDmg = cls.baseDamage ?? cls.baseDPS ?? cls.baseHealing ?? 5;
   const hero = {
     id: nextHeroId(),
     classKey: cls.key,
     name: customName || cls.name,
+    raceKey: race?.key || DEFAULT_RACE_KEY,
+    raceName: race?.name,
     role: cls.role,
     level: 1,
     baseHP: cls.baseHP,

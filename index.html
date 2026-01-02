@@ -187,6 +187,12 @@
 
         <!-- Bottom Section -->
         <div style="margin-top:20px;border-top:1px solid #333;padding-top:15px;">
+          <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;">
+            <label style="font-size:12px;min-width:50px;">Race</label>
+            <select id="raceSelect" style="flex:1;padding:8px;border-radius:6px;border:1px solid #555;background:#111;color:#eee;">
+            </select>
+          </div>
+          <div id="raceSummary" style="font-size:11px;color:#aaa;margin-bottom:12px;background:#111;padding:8px;border:1px solid #333;border-radius:6px;"></div>
           <label style="display:block;font-size:12px;margin-bottom:8px;">Character Name</label>
           <div style="display:flex;gap:10px;align-items:flex-end;">
             <input id="classCharacterNameInput" type="text" maxlength="24"
@@ -240,6 +246,11 @@
 
           <!-- Bottom Section -->
           <div style="margin-top:20px;border-top:1px solid #333;padding-top:15px;">
+            <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;">
+              <label style="font-size:12px;min-width:50px;">Race</label>
+              <select id="recruitRaceSelect" style="flex:1;padding:8px;border-radius:6px;border:1px solid #555;background:#111;color:#eee;"></select>
+            </div>
+            <div id="recruitRaceSummary" style="font-size:11px;color:#aaa;margin-bottom:10px;background:#111;padding:8px;border:1px solid #333;border-radius:6px;"></div>
             <label style="display:block;font-size:12px;margin-bottom:6px;">Hero Name</label>
             <input id="recruitHeroNameInput" type="text" maxlength="24" placeholder="Enter hero name..."
               style="width:100%;padding:8px;border-radius:6px;border:1px solid #555;background:#111;color:#eee;box-sizing:border-box;margin-bottom:10px;">

@@ -1,4 +1,5 @@
 import { SAVE_KEY } from "./defs.js";
+import { DEFAULT_RACE_KEY } from "./races.js";
 import { getClassDef } from "./classes/index.js";
 
 // ===== Currency conversion helpers =====
@@ -58,6 +59,7 @@ export const state = {
   accountName: "",
   characterName: "",
   playerClassKey: "",
+  playerRaceKey: DEFAULT_RACE_KEY,
   currencyCopper: 0,  // Internal: total copper
   // Display breakdown (auto-computed): { plat, gold, silver, copper }
   currencyDisplay: { plat: 0, gold: 0, silver: 0, copper: 0 },
@@ -120,6 +122,7 @@ export function serializeState() {
     accountName: state.accountName,
     characterName: state.characterName,
     playerClassKey: state.playerClassKey,
+    playerRaceKey: state.playerRaceKey,
     currencyCopper: state.currencyCopper,
     totalXP: state.totalXP,
     accountLevel: state.accountLevel,
@@ -184,6 +187,7 @@ export function loadGame() {
     state.accountName = data.accountName ?? "";
     state.characterName = data.characterName ?? "";
     state.playerClassKey = data.playerClassKey ?? "";
+    state.playerRaceKey = data.playerRaceKey ?? DEFAULT_RACE_KEY;
     // Handle migration from old 'gold' to new 'currencyCopper'
     state.currencyCopper = data.currencyCopper ?? (data.gold ?? 0) * 1; // If old save has gold, treat as copper
     state.totalXP = data.totalXP ?? 0;
@@ -198,6 +202,13 @@ export function loadGame() {
     state.sharedInventory = Array.isArray(data.sharedInventory) ? data.sharedInventory.map(i => i ? { ...i } : null) : Array(100).fill(null);
     state.party = Array.isArray(data.party) ? data.party.map(h => {
       // Initialize health for old saves that don't have it
+      if (!h.raceKey) {
+        h.raceKey = data.playerRaceKey || DEFAULT_RACE_KEY;
+      }
+      if (!h.raceName) {
+        // defer to runtime lookup; keep simple string for now
+        h.raceName = h.raceKey;
+      }
       if (h.health === undefined) {
         h.health = h.maxHP || 0;
       }

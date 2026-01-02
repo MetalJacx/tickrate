@@ -5,6 +5,7 @@ import { createHero, spawnEnemy, gameTick, travelToNextZone, travelToPreviousZon
 import { getZoneDef } from "./zones/index.js";
 import { initUI, renderAll, showOfflineModal } from "./ui.js";
 import { CLASSES, getClassDef } from "./classes/index.js"
+import { RACES, getRaceDef, DEFAULT_RACE_KEY } from "./races.js";
 import { initSettings } from "./settings.js";
 import { ITEMS } from "./items.js";
 
@@ -12,6 +13,8 @@ let tickTimer = null; // requestAnimationFrame id
 let saveTimer = null;
 let selectedClassKey = null;
 let selectedRecruitClassKey = null;
+let selectedRaceKey = DEFAULT_RACE_KEY;
+let selectedRecruitRaceKey = DEFAULT_RACE_KEY;
 
 function showToast(message, isError = false) {
   const toast = document.getElementById("toast");
@@ -59,6 +62,30 @@ function setClassError(msg) {
   el.style.display = msg ? "block" : "none";
 }
 
+function formatRaceMods(race) {
+  const mods = race?.statMods || {};
+  const order = ["str", "con", "agi", "dex", "wis", "int", "cha"];
+  return order
+    .map(stat => {
+      const val = mods[stat] || 0;
+      const sign = val > 0 ? "+" : "";
+      return `${stat.toUpperCase()} ${sign}${val}`;
+    })
+    .join(", ");
+}
+
+function populateRaceSelect(selectEl, selectedKey = DEFAULT_RACE_KEY) {
+  if (!selectEl) return;
+  selectEl.innerHTML = "";
+  for (const race of RACES) {
+    const opt = document.createElement("option");
+    opt.value = race.key;
+    opt.textContent = race.name;
+    selectEl.appendChild(opt);
+  }
+  selectEl.value = selectedKey || DEFAULT_RACE_KEY;
+}
+
 function simulateOfflineProgress(seconds) {
   if (!seconds || seconds <= 0) return null;
   const capped = Math.min(seconds, MAX_OFFLINE_SECONDS);
@@ -82,7 +109,7 @@ function startLoops({ lastSavedAt }) {
 
   // Ensure player has at least their main character hero
   if (state.party.length === 0) {
-    const starter = createHero(state.playerClassKey, state.characterName);
+    const starter = createHero(state.playerClassKey, state.characterName, state.playerRaceKey);
     state.party = [starter];
     state.partyHP = starter.maxHP;
     state.partyMaxHP = starter.maxHP;
@@ -182,7 +209,7 @@ function renderClassCards() {
       setClassError("");
       renderClassCards();
       renderClassDetails();
-      document.getElementById("classConfirmBtn").disabled = !selectedClassKey;
+      updateClassConfirmState();
     });
 
     buttonContainer.appendChild(btn);
@@ -206,6 +233,12 @@ function renderClassDetails() {
   promptContainer.style.display = "none";
 
   document.getElementById("selectedClassName").textContent = cls.name;
+
+  const raceSummary = document.getElementById("raceSummary");
+  if (raceSummary) {
+    const race = getRaceDef(selectedRaceKey);
+    raceSummary.textContent = `${race?.name || "Race"}: ${formatRaceMods(race)}`;
+  }
 
   const statsHtml = `
     HP: ${cls.baseHP}<br>
@@ -244,6 +277,13 @@ function updateStartButtonState() {
   const account = document.getElementById("accountNameInput").value.trim();
   const btn = document.getElementById("createCharacterBtn");
   btn.disabled = !account;
+}
+
+function updateClassConfirmState() {
+  const nameVal = document.getElementById("classCharacterNameInput")?.value.trim();
+  const btn = document.getElementById("classConfirmBtn");
+  if (!btn) return;
+  btn.disabled = !(selectedClassKey && selectedRaceKey && nameVal);
 }
 
 function wireStartScreen(onContinue) {
@@ -303,8 +343,16 @@ function wireStartScreen(onContinue) {
 function wireClassScreen(onConfirmed) {
   // Clear class selection and character name input
   selectedClassKey = null;
+  selectedRaceKey = state.playerRaceKey || DEFAULT_RACE_KEY;
   const charNameInput = document.getElementById("classCharacterNameInput");
   charNameInput.value = "";
+  const raceSelect = document.getElementById("raceSelect");
+  const raceSummary = document.getElementById("raceSummary");
+  populateRaceSelect(raceSelect, selectedRaceKey);
+  if (raceSummary) {
+    const race = getRaceDef(selectedRaceKey);
+    raceSummary.textContent = `${race?.name || "Race"}: ${formatRaceMods(race)}`;
+  }
 
   // Remove old listeners by cloning elements
   const backBtn = document.getElementById("classBackBtn");
@@ -317,20 +365,37 @@ function wireClassScreen(onConfirmed) {
 
   const backBtnFinal = document.getElementById("classBackBtn");
   const confirmBtnFinal = document.getElementById("classConfirmBtn");
+  const raceSelectFinal = document.getElementById("raceSelect");
+  const raceSummaryFinal = document.getElementById("raceSummary");
 
   backBtnFinal.addEventListener("click", () => {
     selectedClassKey = null;
     showStartScreen();
   });
 
+  if (raceSelectFinal) {
+    raceSelectFinal.addEventListener("change", (e) => {
+      selectedRaceKey = e.target.value || DEFAULT_RACE_KEY;
+      const race = getRaceDef(selectedRaceKey);
+      if (raceSummaryFinal) {
+        raceSummaryFinal.textContent = `${race?.name || "Race"}: ${formatRaceMods(race)}`;
+      }
+      updateClassConfirmState();
+    });
+  }
+
+  charNameInput.addEventListener("input", updateClassConfirmState);
+
   confirmBtnFinal.addEventListener("click", () => {
     if (!selectedClassKey) return setClassError("Please select a class to continue.");
+    if (!selectedRaceKey) return setClassError("Please select a race.");
     
     const charName = document.getElementById("classCharacterNameInput").value.trim();
     if (!charName) return setClassError("Please enter a character name.");
 
     state.playerClassKey = selectedClassKey;
     state.characterName = charName;
+    state.playerRaceKey = selectedRaceKey || DEFAULT_RACE_KEY;
     state.party = [];
     state.partyHP = 0;
     state.partyMaxHP = 0;
@@ -339,6 +404,8 @@ function wireClassScreen(onConfirmed) {
     saveGame();
     onConfirmed();
   });
+
+  updateClassConfirmState();
 }
 
 function wireRecruitModal() {
@@ -347,11 +414,19 @@ function wireRecruitModal() {
   const confirmBtn = document.getElementById("recruitConfirmBtn");
   const buttonContainer = document.getElementById("recruitClassButtonContainer");
   const nameInput = document.getElementById("recruitHeroNameInput");
+  const raceSelect = document.getElementById("recruitRaceSelect");
+  const raceSummary = document.getElementById("recruitRaceSummary");
   
   function openRecruitModal() {
     selectedRecruitClassKey = null;
+    selectedRecruitRaceKey = state.playerRaceKey || DEFAULT_RACE_KEY;
     nameInput.value = "";
     modal.style.display = "block";
+    populateRaceSelect(raceSelect, selectedRecruitRaceKey);
+    if (raceSummary) {
+      const race = getRaceDef(selectedRecruitRaceKey);
+      raceSummary.textContent = `${race?.name || "Race"}: ${formatRaceMods(race)}`;
+    }
     renderRecruitClassCards();
     renderRecruitDetails();
   }
@@ -428,6 +503,10 @@ function wireRecruitModal() {
     promptContainer.style.display = "none";
     
     document.getElementById("recruitSelectedClassName").textContent = cls.name;
+    if (raceSummary) {
+      const race = getRaceDef(selectedRecruitRaceKey);
+      raceSummary.textContent = `${race?.name || "Race"}: ${formatRaceMods(race)}`;
+    }
     
     const statsHtml = `
       HP: ${cls.baseHP}<br>
@@ -469,7 +548,7 @@ function wireRecruitModal() {
     
     // Enable button only if has space, can afford, AND has a name entered
     const hasName = nameInput.value.trim().length > 0;
-    confirmBtn.disabled = !canAfford || !hasSpace || !hasName;
+    confirmBtn.disabled = !canAfford || !hasSpace || !hasName || !selectedRecruitRaceKey;
     
     if (!hasSpace) {
       errorDiv.textContent = "No party slots available";
@@ -489,6 +568,13 @@ function wireRecruitModal() {
       renderRecruitDetails();
     }
   });
+
+  if (raceSelect) {
+    raceSelect.addEventListener("change", (e) => {
+      selectedRecruitRaceKey = e.target.value || DEFAULT_RACE_KEY;
+      renderRecruitDetails();
+    });
+  }
   
   closeBtn.addEventListener("click", closeRecruitModal);
   
@@ -503,6 +589,10 @@ function wireRecruitModal() {
     
     const cls = getClassDef(selectedRecruitClassKey);
     if (!cls) return;
+    if (!selectedRecruitRaceKey) {
+      showToast("Please select a race!", true);
+      return;
+    }
     
     const heroName = nameInput.value.trim();
     if (!heroName) {
@@ -522,7 +612,7 @@ function wireRecruitModal() {
     
     state.currencyCopper -= cls.cost;
     updateCurrencyDisplay();
-    const hero = createHero(selectedRecruitClassKey, heroName);
+    const hero = createHero(selectedRecruitClassKey, heroName, selectedRecruitRaceKey);
     
     // Add test items to shared inventory for UI testing
     if (state.party.length === 0) {
@@ -575,6 +665,7 @@ function start() {
       state.accountName = "";
       state.characterName = "";
       state.playerClassKey = "";
+      state.playerRaceKey = DEFAULT_RACE_KEY;
       state.gold = 0;
       state.totalXP = 0;
       state.accountLevel = 1;
@@ -590,6 +681,8 @@ function start() {
       state.currentEnemy = null;
       state.log = [];
       selectedClassKey = null;
+      selectedRaceKey = DEFAULT_RACE_KEY;
+      selectedRecruitRaceKey = DEFAULT_RACE_KEY;
       // Clear timers
       if (tickTimer) {
         try { cancelAnimationFrame(tickTimer); } catch {}
@@ -629,7 +722,7 @@ function start() {
     wireStartScreen(() => {
       showClassScreen();
       selectedClassKey = null;
-      document.getElementById("classConfirmBtn").disabled = true;
+      updateClassConfirmState();
       renderClassCards();
       renderClassDetails();
     });
