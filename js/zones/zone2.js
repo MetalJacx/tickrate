@@ -11,39 +11,27 @@ export default {
     { itemId: "health_potion_small", dropRate: 0.06, minQty: 1, maxQty: 2 },
     { itemId: "mana_potion_small", dropRate: 0.04, minQty: 1, maxQty: 2 }
   ],
-  global: {
-    baseHP: 45,
-    baseDPS: 5,
-    xp: 17
-  },
+  global: {},
   enemies: [
-    { id: "forest_ghoul", name: "Forest Ghoul", baseHP: 40, baseDPS: 4, xp: 16, weight: 1.0, loot: [{ itemId: "rusty_dagger", dropRate: 0.05 }] },
+    { id: "forest_ghoul", weight: 1.0, loot: [{ itemId: "rusty_dagger", dropRate: 0.05 }] },
     {
       id: "shadow_sprite",
-      name: "Shadow Sprite",
-      baseHP: 35,
-      baseDPS: 5,
-      xp: 17,
       loot: [{ itemId: "mana_potion_small", dropRate: 0.08 }],
       debuffs: [
         { type: "weaken_damage", amount: 1, durationTicks: 5, chance: 0.25 }
       ],
       weight: 1.0
     },
-    { id: "cursed_treant", name: "Cursed Treant", baseHP: 50, baseDPS: 3, xp: 18, weight: 1.0, loot: [{ itemId: "wooden_shield", dropRate: 0.08 }] },
+    { id: "cursed_treant", weight: 1.0, loot: [{ itemId: "wooden_shield", dropRate: 0.08 }] },
     {
       id: "werewolf",
-      name: "Werewolf",
-      baseHP: 45,
-      baseDPS: 6,
-      xp: 19,
       loot: [{ itemId: "iron_sword", dropRate: 0.06 }],
       debuffs: [
         { type: "weaken_damage", amount: 1, durationTicks: 5, chance: 0.25 }
       ],
       weight: 1.0
     },
-    { id: "wood_spirit", name: "Wood Spirit", baseHP: 38, baseDPS: 7, xp: 180, weight: 0, rare: true, loot: [{ itemId: "enchanted_branch", dropRate: 0.2 }] }
+    { id: "wood_spirit", weight: 0, rare: true, loot: [{ itemId: "enchanted_branch", dropRate: 0.2 }] }
   ],
   subAreas: [
     {

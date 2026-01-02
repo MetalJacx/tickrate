@@ -94,7 +94,10 @@ export const state = {
     endurance: 30
   },
   lastCampLogTick: 0, // Counter for periodic camping messages
-  lastCampLogTime: 0 // Timestamp of last camping log (ms)
+  lastCampLogTime: 0, // Timestamp of last camping log (ms)
+
+  // Shared inventory (all characters use this)
+  sharedInventory: Array(100).fill(null)
 };
 
 export function nextHeroId() {
@@ -131,6 +134,7 @@ export function serializeState() {
     partyMaxHP: state.partyMaxHP,
     currentEnemies: state.currentEnemies.map(e => ({ ...e })),
     party: state.party.map(h => ({ ...h })),
+    sharedInventory: state.sharedInventory?.map(i => i ? { ...i } : null) || [],
     huntRemaining: state.huntRemaining,
     highestUnlockedZone: state.highestUnlockedZone,
     zoneDiscoveries: state.zoneDiscoveries,
@@ -191,6 +195,7 @@ export function loadGame() {
     state.killsThisZone = data.killsThisZone ?? 0;
     state.killsForNextZone = data.killsForNextZone ?? 10;
     state.partySlotsUnlocked = data.partySlotsUnlocked ?? 1;
+    state.sharedInventory = Array.isArray(data.sharedInventory) ? data.sharedInventory.map(i => i ? { ...i } : null) : Array(100).fill(null);
     state.party = Array.isArray(data.party) ? data.party.map(h => {
       // Initialize health for old saves that don't have it
       if (h.health === undefined) {
@@ -255,15 +260,6 @@ export function loadGame() {
           h.doubleAttackSkill = h.level >= 5 ? 1 : 0;
         }
         h.doubleAttackSkill = Math.min(h.doubleAttackSkill || 0, cap);
-        
-        // Give warrior a stick if they don't have one
-        if (!h.inventory.some(item => item && item.id === "stick")) {
-          // Find first empty slot
-          const emptySlot = h.inventory.findIndex(item => item === null);
-          if (emptySlot !== -1) {
-            h.inventory[emptySlot] = { id: "stick", quantity: 1 };
-          }
-        }
       }
       return h;
     }) : [];

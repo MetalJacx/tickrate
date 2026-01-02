@@ -11,17 +11,13 @@ export default {
     { itemId: "health_potion_small", dropRate: 0.07, minQty: 1, maxQty: 2 },
     { itemId: "mana_potion_small", dropRate: 0.08, minQty: 1, maxQty: 2 }
   ],
-  global: {
-    baseHP: 55,
-    baseDPS: 7,
-    xp: 22
-  },
+  global: {},
   enemies: [
-    { id: "skeletal_knight", name: "Skeletal Knight", baseHP: 55, baseDPS: 6, xp: 75, weight: 1.0, loot: [{ itemId: "iron_sword", dropRate: 0.08 }] },
-    { id: "orc_centurion", name: "Orc Centurion", baseHP: 60, baseDPS: 7, xp: 75, weight: 1.0, loot: [{ itemId: "steel_mace", dropRate: 0.05 }] },
-    { id: "dark_wolf", name: "Dark Wolf", baseHP: 50, baseDPS: 7, xp: 75, weight: 1.0, loot: [{ itemId: "health_potion_small", dropRate: 0.06 }] },
-    { id: "bloodsaber_acolyte", name: "Bloodsaber Acolyte", baseHP: 45, baseDPS: 8, xp: 75, weight: 1.0, loot: [{ itemId: "mana_potion_small", dropRate: 0.1 }] },
-    { id: "castle_specter", name: "Castle Specter", baseHP: 48, baseDPS: 9, xp: 200, weight: 0, rare: true, loot: [{ itemId: "enchanted_branch", dropRate: 0.22 }] }
+    { id: "skeletal_knight", weight: 1.0, loot: [{ itemId: "iron_sword", dropRate: 0.08 }] },
+    { id: "orc_centurion", weight: 1.0, loot: [{ itemId: "steel_mace", dropRate: 0.05 }] },
+    { id: "dark_wolf", weight: 1.0, loot: [{ itemId: "health_potion_small", dropRate: 0.06 }] },
+    { id: "bloodsaber_acolyte", weight: 1.0, loot: [{ itemId: "mana_potion_small", dropRate: 0.1 }] },
+    { id: "castle_specter", weight: 0, rare: true, loot: [{ itemId: "enchanted_branch", dropRate: 0.22 }] }
   ],
   subAreas: [
     {

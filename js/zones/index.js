@@ -2,6 +2,7 @@ import Town from "./zoneTown.js";
 import Zone1 from "./zone1.js";
 import Zone2 from "./zone2.js";
 import Zone3 from "./zone3.js";
+import { getMobDef } from "../mobs.js";
 
 export const ZONES = [Town, Zone1, Zone2, Zone3];
 export const MAX_ZONE = ZONES.length;
@@ -55,7 +56,8 @@ export function getEnemyForZone(zoneNumber, discoveryState = null) {
   const activeSub = getActiveSubArea(zone, discoveryState);
   const modifiers = activeSub?.mobWeightModifiers || {};
   const enemyTemplate = pickWeighted(zone.enemies, modifiers);
-  return { ...globalDefaults, ...enemyTemplate };
+  const mobDef = getMobDef(enemyTemplate.id) || {};
+  return { ...mobDef, ...globalDefaults, ...enemyTemplate };
 }
 
 export function rollSubAreaDiscoveries(zoneNumber, discoveryState) {

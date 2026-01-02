@@ -524,18 +524,18 @@ function wireRecruitModal() {
     updateCurrencyDisplay();
     const hero = createHero(selectedRecruitClassKey, heroName);
     
-    // Add test items to first hero for UI testing
+    // Add test items to shared inventory for UI testing
     if (state.party.length === 0) {
-      hero.inventory[0] = { id: "health_potion", quantity: 5 };
-      hero.inventory[1] = { id: "mana_potion", quantity: 3 };
-      hero.inventory[2] = { id: "copper_ore", quantity: 12 };
-      hero.inventory[3] = { id: "iron_sword", quantity: 1 };
-      hero.inventory[10] = { id: "wooden_shield", quantity: 1 };
+      state.sharedInventory[0] = { id: "health_potion", quantity: 5 };
+      state.sharedInventory[1] = { id: "mana_potion", quantity: 3 };
+      state.sharedInventory[2] = { id: "copper_ore", quantity: 12 };
+      state.sharedInventory[3] = { id: "iron_sword", quantity: 1 };
+      state.sharedInventory[10] = { id: "wooden_shield", quantity: 1 };
     }
     
-    // Give warriors a starting stick
+    // Give warriors a starting stick in shared inventory
     if (hero.classKey === "warrior") {
-      hero.inventory[20] = { id: "stick", quantity: 1 };
+      state.sharedInventory[20] = { id: "stick", quantity: 1 };
     }
     
     state.party.push(hero);

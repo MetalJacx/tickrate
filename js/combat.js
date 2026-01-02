@@ -313,10 +313,7 @@ export function createHero(classKey, customName = null) {
     // Ability bar (12 slots, skill keys mapped by slot index)
     abilityBar: {},
 
-    // Inventory (100 slots: 30 unlocked, 70 locked)
-    inventory: Array(100).fill(null),
-
-    // Equipment slots
+    // Equipment slots (shared globally, but heroes have individual assignments)
     equipment: {
       head: null,      // { id, quantity }
       chest: null,
@@ -604,48 +601,43 @@ function awardLoot(enemy) {
   const drops = enemy?.drops || [];
   if (drops.length === 0) return results;
 
-  const heroes = state.party || [];
   const unlockedSlots = 30;
+  let remaining = 0;
+  
+  // Sum up all drop quantities
+  for (const drop of drops) {
+    remaining += drop.quantity || 1;
+  }
+
+  let totalPlaced = 0;
 
   for (const drop of drops) {
     const itemDef = getItemDef(drop.id);
     if (!itemDef) continue;
-    let remaining = drop.quantity || 1;
-    let placed = false;
+    let qty = drop.quantity || 1;
+    let placed = 0;
 
-    for (const hero of heroes) {
-      if (remaining <= 0) break;
-      if (!hero.inventory) hero.inventory = Array(100).fill(null);
+    // First try stacking in shared inventory
+    for (let i = 0; i < unlockedSlots && qty > 0; i++) {
+      const slot = state.sharedInventory[i];
+      const { stacked } = tryStackItem(slot, itemDef, qty);
+      qty -= stacked;
+      placed += stacked;
+    }
 
-      // First try stacking
-      for (let i = 0; i < unlockedSlots && remaining > 0; i++) {
-        const slot = hero.inventory[i];
-        const { stacked } = tryStackItem(slot, itemDef, remaining);
-        remaining -= stacked;
-      }
-
-      // Then place into empty slots
-      for (let i = 0; i < unlockedSlots && remaining > 0; i++) {
-        if (hero.inventory[i] == null) {
-          const qty = Math.min(remaining, itemDef.maxStack || remaining);
-          hero.inventory[i] = { id: itemDef.id, quantity: qty };
-          remaining -= qty;
-          placed = true;
-        }
-      }
-
-      if (remaining <= 0) {
-        placed = true;
-        results.push(`${hero.name} loots ${drop.quantity > 1 ? drop.quantity + 'x ' : ''}${itemDef.name}.`);
-        break;
+    // Then place into empty slots
+    for (let i = 0; i < unlockedSlots && qty > 0; i++) {
+      if (state.sharedInventory[i] == null) {
+        const toAdd = Math.min(qty, itemDef.maxStack || qty);
+        state.sharedInventory[i] = { id: itemDef.id, quantity: toAdd };
+        qty -= toAdd;
+        placed += toAdd;
       }
     }
 
-    if (!placed && remaining === drop.quantity) {
-      results.push(`No space for ${drop.quantity > 1 ? drop.quantity + 'x ' : ''}${itemDef.name}; it is lost.`);
-    } else if (remaining > 0 && remaining < drop.quantity) {
-      const gained = drop.quantity - remaining;
-      results.push(`Party picks up ${gained}x ${itemDef.name}; ${remaining} could not fit.`);
+    if (placed > 0) {
+      results.push(`Loots ${placed > 1 ? placed + 'x ' : ''}${itemDef.name}.`);
+      totalPlaced += placed;
     }
   }
 

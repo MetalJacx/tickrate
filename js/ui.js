@@ -1016,6 +1016,68 @@ function openInventoryModal(hero) {
   modal.style.display = "flex";
 }
 
+function addItemToInventory(hero, itemId, quantity) {
+  const itemDef = getItemDef(itemId);
+  if (!itemDef || quantity <= 0) return 0;
+  const maxStack = itemDef.maxStack || 1;
+  let remaining = quantity;
+
+  // Stack first in unlocked slots (0-29)
+  if (maxStack > 1) {
+    for (let i = 0; i < 30 && remaining > 0; i++) {
+      const slot = state.sharedInventory[i];
+      if (slot && slot.id === itemId) {
+        const room = maxStack - (slot.quantity || 0);
+        const add = Math.min(room, remaining);
+        slot.quantity = (slot.quantity || 0) + add;
+        remaining -= add;
+      }
+    }
+  }
+
+  // Fill empty slots
+  for (let i = 0; i < 30 && remaining > 0; i++) {
+    if (!state.sharedInventory[i]) {
+      const add = Math.min(maxStack, remaining);
+      state.sharedInventory[i] = { id: itemId, quantity: add };
+      remaining -= add;
+    }
+  }
+
+  return quantity - remaining;
+}
+
+function addItemToStash(itemId, quantity) {
+  const itemDef = getItemDef(itemId);
+  if (!itemDef || quantity <= 0) return 0;
+  const maxStack = itemDef.maxStack || 1;
+  let remaining = quantity;
+
+  // Stack first
+  if (maxStack > 1) {
+    for (let i = 0; i < state.sharedInventory.length && remaining > 0; i++) {
+      const slot = state.sharedInventory[i];
+      if (slot && slot.id === itemId) {
+        const room = maxStack - (slot.quantity || 0);
+        const add = Math.min(room, remaining);
+        slot.quantity = (slot.quantity || 0) + add;
+        remaining -= add;
+      }
+    }
+  }
+
+  // Empty slots
+  for (let i = 0; i < state.sharedInventory.length && remaining > 0; i++) {
+    if (!state.sharedInventory[i]) {
+      const add = Math.min(maxStack, remaining);
+      state.sharedInventory[i] = { id: itemId, quantity: add };
+      remaining -= add;
+    }
+  }
+
+  return quantity - remaining;
+}
+
 function showItemTooltip(itemDef, event) {
   // Remove any existing tooltip
   const existing = document.getElementById("itemTooltip");
@@ -1095,7 +1157,7 @@ function populateInventoryGrid(hero) {
   const container = document.getElementById("inventoryGridContainer");
   container.innerHTML = "";
   
-  if (!hero.inventory || hero.inventory.length === 0) {
+  if (!state.sharedInventory || state.sharedInventory.length === 0) {
     const empty = document.createElement("div");
     empty.style.cssText = "color:#777;grid-column:1/-1;text-align:center;padding:20px;";
     empty.textContent = "No items";
@@ -1126,7 +1188,7 @@ function populateInventoryGrid(hero) {
       flex-shrink: 0;
     `;
     
-    const item = hero.inventory[i];
+    const item = state.sharedInventory[i];
     
     if (item && !isLocked) {
       const itemDef = getItemDef(item.id);
@@ -1159,23 +1221,22 @@ function populateInventoryGrid(hero) {
           hideItemTooltip();
         });
 
-        // Make it draggable if it has stat bonuses
-        if (itemDef.stats) {
-          slot.draggable = true;
-          slot.style.cursor = "grab";
-          slot.addEventListener("dragstart", (e) => {
-            e.dataTransfer.effectAllowed = "move";
-            e.dataTransfer.setData("application/json", JSON.stringify({
-              slotIndex: i,
-              itemId: item.id
-            }));
-            slot.style.opacity = "0.6";
-            hideItemTooltip();
-          });
-          slot.addEventListener("dragend", (e) => {
-            slot.style.opacity = item ? "1" : "0.4";
-          });
-        }
+        // Make it draggable
+        slot.draggable = true;
+        slot.style.cursor = "grab";
+        slot.addEventListener("dragstart", (e) => {
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData("application/json", JSON.stringify({
+            fromInventory: true,
+            slotIndex: i,
+            itemId: item.id
+          }));
+          slot.style.opacity = "0.6";
+          hideItemTooltip();
+        });
+        slot.addEventListener("dragend", () => {
+          slot.style.opacity = item ? "1" : "0.4";
+        });
       }
     } else if (!isLocked) {
       // Empty slot - accept drops from equipment
@@ -1185,7 +1246,7 @@ function populateInventoryGrid(hero) {
         const data = e.dataTransfer.getData("application/json");
         if (data) {
           const parsed = JSON.parse(data);
-          if (parsed.fromEquipment) {
+          if (parsed.fromEquipment || parsed.fromInventory) {
             slot.style.borderColor = "#f57f17";
             slot.style.backgroundColor = "#2a2a2a";
           }
@@ -1209,13 +1270,34 @@ function populateInventoryGrid(hero) {
         if (!data) return;
         
         const parsed = JSON.parse(data);
-        if (!parsed.fromEquipment) return;
-        
-        const { slotKey, itemId } = parsed;
-        
-        // Move item from equipment to inventory
-        hero.equipment[slotKey] = null;
-        hero.inventory[i] = { id: itemId, quantity: 1 };
+        const { slotKey, itemId, fromEquipment, fromInventory, slotIndex } = parsed;
+        const itemDef = getItemDef(itemId);
+        if (!itemDef) return;
+
+        let quantityToPlace = 0;
+
+        if (fromEquipment) {
+          hero.equipment[slotKey] = null;
+          quantityToPlace = 1;
+        } else if (fromInventory) {
+          const source = state.sharedInventory[slotIndex];
+          if (source && source.id === itemId) {
+            state.sharedInventory[slotIndex] = null;
+            quantityToPlace = source.quantity || 1;
+          }
+        } else {
+          return;
+        }
+
+        if (quantityToPlace <= 0) return;
+
+        const maxStack = itemDef.maxStack || 1;
+        const placedHere = Math.min(maxStack, quantityToPlace);
+        state.sharedInventory[i] = { id: itemId, quantity: placedHere };
+        const remaining = quantityToPlace - placedHere;
+        if (remaining > 0) {
+          addItemToInventory(hero, itemId, remaining);
+        }
         
         // Recalculate hero stats
         refreshHeroDerived(hero);
@@ -1336,50 +1418,31 @@ function populateEquipmentSection(hero) {
       
       // If dragging from equipment, don't allow re-equipping to same slot
       if (parsed.fromEquipment) return;
-      
-      const { slotIndex, itemId } = parsed;
+      const { slotIndex, itemId, fromInventory } = parsed;
+      if (!fromInventory) return;
       const itemDef = getItemDef(itemId);
       
-      if (!itemDef) return;
+      if (!itemDef?.stats) return; // Only gear can be equipped
+      
+      // Consume one from shared inventory
+      const source = state.sharedInventory[slotIndex];
+      if (!source || source.id !== itemId) return;
+      source.quantity = (source.quantity || 1) - 1;
+      if (source.quantity <= 0) {
+        state.sharedInventory[slotIndex] = null;
+      }
       
       // Equip the item
       const oldEquipped = hero.equipment[slotKey];
       hero.equipment[slotKey] = { id: itemId, quantity: 1 };
       
-      // Remove from inventory
-      if (hero.inventory[slotIndex]) {
-        hero.inventory[slotIndex].quantity--;
-        if (hero.inventory[slotIndex].quantity <= 0) {
-          hero.inventory[slotIndex] = null;
-        }
-      }
-      
       // If there was an old equipped item, return it to inventory
       if (oldEquipped) {
-        const oldItemDef = getItemDef(oldEquipped.id);
-        if (oldItemDef) {
-          // Try to find an empty slot in the unlocked inventory
-          let placed = false;
-          for (let j = 0; j < 30; j++) {
-            if (!hero.inventory[j]) {
-              hero.inventory[j] = { id: oldEquipped.id, quantity: 1 };
-              placed = true;
-              break;
-            }
-          }
-          // If no empty slot, try stacking with existing items
-          if (!placed && oldItemDef.maxStack > 1) {
-            for (let j = 0; j < 30; j++) {
-              if (hero.inventory[j] && hero.inventory[j].id === oldEquipped.id) {
-                const room = oldItemDef.maxStack - (hero.inventory[j].quantity || 0);
-                if (room > 0) {
-                  hero.inventory[j].quantity++;
-                  placed = true;
-                  break;
-                }
-              }
-            }
-          }
+        const qty = oldEquipped.quantity || 1;
+        const added = addItemToInventory(hero, oldEquipped.id, qty);
+        const leftover = qty - added;
+        if (leftover > 0) {
+          addItemToStash(oldEquipped.id, leftover);
         }
       }
       
@@ -1756,6 +1819,36 @@ function bestPartyCharisma() {
   return best;
 }
 
+function buildMerchantInventory() {
+  const buckets = new Map();
+  const cha = bestPartyCharisma();
+
+  // Use shared inventory instead of per-hero inventory
+  if (!state.sharedInventory) return [];
+  
+  for (let i = 0; i < 30; i++) {
+    const item = state.sharedInventory[i];
+    if (!item) continue;
+    const itemDef = getItemDef(item.id);
+    if (!itemDef) continue;
+    const key = item.id;
+    if (!buckets.has(key)) {
+      buckets.set(key, {
+        itemDef,
+        totalQty: 0,
+        holders: [],
+        perItem: Math.max(1, Math.floor(computeSellValue(itemDef.baseValue ?? 1, cha)))
+      });
+    }
+    const bucket = buckets.get(key);
+    const qty = item.quantity ?? 1;
+    bucket.totalQty += qty;
+    bucket.holders.push({ slotIdx: i, qty });
+  }
+
+  return Array.from(buckets.values());
+}
+
 function renderTownMerchant() {
   const container = document.getElementById("merchantContainer");
   if (!container) return;
@@ -1782,102 +1875,91 @@ function renderTownMerchant() {
   list.style.cssText = "display:flex;flex-direction:column;gap:6px;";
   container.appendChild(list);
 
-  const cha = bestPartyCharisma();
-  let hasItems = false;
+  const inventoryBuckets = buildMerchantInventory();
+  let hasItems = inventoryBuckets.length > 0;
 
-  state.party.forEach((hero, heroIdx) => {
-    if (!hero?.inventory) return;
-    for (let i = 0; i < 30; i++) {
-      const item = hero.inventory[i];
-      if (!item) continue;
-      const itemDef = getItemDef(item.id);
-      if (!itemDef) continue;
-      hasItems = true;
-      const qty = item.quantity ?? 1;
-      const baseValue = itemDef.baseValue ?? 1;
-      const perItem = Math.max(1, Math.floor(computeSellValue(baseValue, cha)));
-      const total = perItem * qty;
+  for (const bucket of inventoryBuckets) {
+    const { itemDef, totalQty, perItem, holders } = bucket;
+    const row = document.createElement("div");
+    row.style.cssText = "display:flex;align-items:center;gap:8px;justify-content:space-between;padding:8px;border:1px solid #333;border-radius:6px;background:#111;";
 
-      const row = document.createElement("div");
-      row.style.cssText = "display:flex;align-items:center;gap:8px;justify-content:space-between;padding:8px;border:1px solid #333;border-radius:6px;background:#111;";
+    const left = document.createElement("div");
+    left.style.cssText = "display:flex;align-items:center;gap:10px;";
+    const icon = document.createElement("div");
+    icon.style.cssText = "font-size:18px;";
+    icon.textContent = itemDef.icon || "?";
+    const name = document.createElement("div");
+    name.style.cssText = "display:flex;flex-direction:column;gap:2px;";
+    const line1 = document.createElement("div");
+    line1.style.cssText = "color:#eee;font-size:12px;font-weight:600;";
+    line1.textContent = `${itemDef.name}${totalQty > 1 ? ` x${totalQty}` : ""}`;
+    const line2 = document.createElement("div");
+    line2.style.cssText = "color:#888;font-size:11px;";
+    line2.textContent = "In shared inventory";
+    name.appendChild(line1);
+    name.appendChild(line2);
+    left.appendChild(icon);
+    left.appendChild(name);
 
-      const left = document.createElement("div");
-      left.style.cssText = "display:flex;align-items:center;gap:10px;";
-      const icon = document.createElement("div");
-      icon.style.cssText = "font-size:18px;";
-      icon.textContent = itemDef.icon || "?";
-      const name = document.createElement("div");
-      name.style.cssText = "display:flex;flex-direction:column;gap:2px;";
-      const line1 = document.createElement("div");
-      line1.style.cssText = "color:#eee;font-size:12px;font-weight:600;";
-      line1.textContent = `${itemDef.name}${qty > 1 ? ` x${qty}` : ""}`;
-      const line2 = document.createElement("div");
-      line2.style.cssText = "color:#888;font-size:11px;";
-      line2.textContent = `Held by ${hero.name}`;
-      name.appendChild(line1);
-      name.appendChild(line2);
-      left.appendChild(icon);
-      left.appendChild(name);
+    const right = document.createElement("div");
+    right.style.cssText = "display:flex;flex-direction:column;gap:6px;align-items:flex-end;min-width:170px;";
+    const valueTag = document.createElement("div");
+    valueTag.style.cssText = "font-size:11px;color:#ffd700;";
+    valueTag.textContent = `${formatPGSC(perItem)} each`;
 
-      const right = document.createElement("div");
-      right.style.cssText = "display:flex;flex-direction:column;gap:6px;align-items:flex-end;min-width:170px;";
-      const valueTag = document.createElement("div");
-      valueTag.style.cssText = "font-size:11px;color:#ffd700;";
-      valueTag.textContent = `${formatPGSC(perItem)} each`;
+    const buttonsWrap = document.createElement("div");
+    buttonsWrap.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;";
 
-      const buttonsWrap = document.createElement("div");
-      buttonsWrap.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;";
+    const sellOptions = totalQty > 1
+      ? [
+          { label: "Sell 1", qty: 1 },
+          { label: "Sell 5", qty: 5 },
+          { label: "Sell 10", qty: 10 },
+          { label: `Sell x${totalQty}`, qty: totalQty }
+        ]
+      : [{ label: "Sell 1", qty: 1 }];
 
-      const sellOptions = qty > 1
-        ? [
-            { label: "Sell 1", qty: 1 },
-            { label: "Sell 5", qty: 5 },
-            { label: "Sell 10", qty: 10 },
-            { label: `Sell x${qty}`, qty }
-          ]
-        : [{ label: "Sell 1", qty: 1 }];
-
-      const handleSell = (sellQty) => {
-        const heroRef = state.party[heroIdx];
-        if (!heroRef?.inventory?.[i]) return;
-        const actualQty = Math.min(sellQty, heroRef.inventory[i].quantity ?? 1);
-        const saleValue = perItem * actualQty;
-        if (actualQty <= 0) return;
-
-        if ((heroRef.inventory[i].quantity ?? 1) <= actualQty) {
-          heroRef.inventory[i] = null;
-        } else {
-          heroRef.inventory[i].quantity -= actualQty;
-        }
-
-        state.currencyCopper += saleValue;
-        updateCurrencyDisplay();
-        addLog(`You sell ${actualQty > 1 ? actualQty + "x " : ""}${itemDef.name} for ${formatPGSC(saleValue)}.`, "gold");
-        renderMeta();
-        renderBattleFooter();
-      };
-
-      for (const opt of sellOptions) {
-        const available = qty;
-        // Only show partial buttons when enough quantity; the final option is the full stack
-        if (opt.qty !== qty && available < opt.qty) continue;
-
-        const btnQty = Math.min(opt.qty, available);
-        const price = perItem * btnQty;
-        const btn = document.createElement("button");
-        btn.textContent = `${opt.label} (${formatPGSC(price)})`;
-        btn.style.cssText = "padding:6px 10px;background:#4ade80;border:1px solid #22c55e;color:#000;border-radius:6px;font-weight:700;cursor:pointer;font-size:11px;";
-        btn.addEventListener("click", () => handleSell(btnQty));
-        buttonsWrap.appendChild(btn);
+    const handleSell = (sellQty) => {
+      let remaining = Math.min(sellQty, totalQty);
+      let sold = 0;
+      for (const holder of holders) {
+        if (remaining <= 0) break;
+        const slotItem = state.sharedInventory[holder.slotIdx];
+        if (!slotItem) continue;
+        const take = Math.min(remaining, slotItem.quantity ?? 1);
+        slotItem.quantity = (slotItem.quantity ?? 1) - take;
+        if (slotItem.quantity <= 0) state.sharedInventory[holder.slotIdx] = null;
+        remaining -= take;
+        sold += take;
       }
 
-      right.appendChild(valueTag);
-      right.appendChild(buttonsWrap);
-      row.appendChild(left);
-      row.appendChild(right);
-      list.appendChild(row);
+      if (sold > 0) {
+        const saleValue = perItem * sold;
+        state.currencyCopper += saleValue;
+        updateCurrencyDisplay();
+        addLog(`You sell ${sold > 1 ? sold + "x " : ""}${itemDef.name} for ${formatPGSC(saleValue)}.`, "gold");
+        renderMeta();
+        renderBattleFooter();
+      }
+    };
+
+    for (const opt of sellOptions) {
+      if (opt.qty !== totalQty && totalQty < opt.qty) continue;
+      const btnQty = Math.min(opt.qty, totalQty);
+      const price = perItem * btnQty;
+      const btn = document.createElement("button");
+      btn.textContent = `${opt.label} (${formatPGSC(price)})`;
+      btn.style.cssText = "padding:6px 10px;background:#4ade80;border:1px solid #22c55e;color:#000;border-radius:6px;font-weight:700;cursor:pointer;font-size:11px;";
+      btn.addEventListener("click", () => handleSell(btnQty));
+      buttonsWrap.appendChild(btn);
     }
-  });
+
+    right.appendChild(valueTag);
+    right.appendChild(buttonsWrap);
+    row.appendChild(left);
+    row.appendChild(right);
+    list.appendChild(row);
+  }
 
   if (!hasItems) {
     const empty = document.createElement("div");
@@ -1912,3 +1994,4 @@ function renderBattleFooter() {
   }
   renderLog();
 }
+
