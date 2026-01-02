@@ -4,9 +4,10 @@ import { spawnEnemyToList } from "./combat.js";
 import { CLASSES, getClassDef } from "./classes/index.js";
 import { getZoneDef, listZones, ensureZoneDiscovery, getActiveSubArea } from "./zones/index.js";
 import { addLog } from "./util.js";
-import { formatPGSC, saveGame } from "./state.js";
+import { formatPGSC, saveGame, updateCurrencyDisplay } from "./state.js";
 import { MAX_PARTY_SIZE, ACCOUNT_SLOT_UNLOCKS } from "./defs.js";
 import { getItemDef } from "./items.js";
+import { computeSellValue } from "./combatMath.js";
 
 export function initUI({ onRecruit, onReset, onOpenRecruitModal }) {
   const travelBtn = document.getElementById("travelBtn");
@@ -209,7 +210,7 @@ export function renderAll() {
   renderEnemy();
   renderParty();
   renderMeta();
-  renderLog();
+  renderBattleFooter();
   renderZones();
 }
 
@@ -292,6 +293,8 @@ export function showOfflineModal(summary) {
 
 export function renderLog() {
   const logEl = document.getElementById("log");
+  if (!logEl) return;
+  logEl.style.display = "block";
   logEl.innerHTML = "";
   for (const entry of state.log) {
     const div = document.createElement("div");
@@ -1617,4 +1620,142 @@ function populateStatsSection(hero) {
     
     statsBox.appendChild(rightColumn);
   }
+}
+
+function isTownZone() {
+  const zone = getZoneDef(state.zone);
+  return zone?.isTown;
+}
+
+function bestPartyCharisma() {
+  let best = 0;
+  for (const hero of state.party) {
+    best = Math.max(best, hero?.stats?.cha || 0);
+  }
+  return best;
+}
+
+function renderTownMerchant() {
+  const container = document.getElementById("merchantContainer");
+  if (!container) return;
+  container.innerHTML = "";
+
+  if (!isTownZone()) {
+    container.style.display = "none";
+    return;
+  }
+
+  container.style.display = "block";
+
+  const heading = document.createElement("div");
+  heading.style.cssText = "font-weight:bold;color:#fbbf24;margin-bottom:8px;font-size:13px;";
+  heading.textContent = "Town Merchant";
+  container.appendChild(heading);
+
+  const sub = document.createElement("div");
+  sub.style.cssText = "color:#aaa;font-size:11px;margin-bottom:10px;";
+  sub.textContent = "Sell items from unlocked inventory slots.";
+  container.appendChild(sub);
+
+  const list = document.createElement("div");
+  list.style.cssText = "display:flex;flex-direction:column;gap:6px;";
+  container.appendChild(list);
+
+  const cha = bestPartyCharisma();
+  let hasItems = false;
+
+  state.party.forEach((hero, heroIdx) => {
+    if (!hero?.inventory) return;
+    for (let i = 0; i < 30; i++) {
+      const item = hero.inventory[i];
+      if (!item) continue;
+      const itemDef = getItemDef(item.id);
+      if (!itemDef) continue;
+      hasItems = true;
+      const qty = item.quantity ?? 1;
+      const baseValue = itemDef.baseValue ?? 1;
+      const perItem = Math.max(1, Math.floor(computeSellValue(baseValue, cha)));
+      const total = perItem * qty;
+
+      const row = document.createElement("div");
+      row.style.cssText = "display:flex;align-items:center;gap:8px;justify-content:space-between;padding:8px;border:1px solid #333;border-radius:6px;background:#111;";
+
+      const left = document.createElement("div");
+      left.style.cssText = "display:flex;align-items:center;gap:10px;";
+      const icon = document.createElement("div");
+      icon.style.cssText = "font-size:18px;";
+      icon.textContent = itemDef.icon || "?";
+      const name = document.createElement("div");
+      name.style.cssText = "display:flex;flex-direction:column;gap:2px;";
+      const line1 = document.createElement("div");
+      line1.style.cssText = "color:#eee;font-size:12px;font-weight:600;";
+      line1.textContent = `${itemDef.name}${qty > 1 ? ` x${qty}` : ""}`;
+      const line2 = document.createElement("div");
+      line2.style.cssText = "color:#888;font-size:11px;";
+      line2.textContent = `Held by ${hero.name}`;
+      name.appendChild(line1);
+      name.appendChild(line2);
+      left.appendChild(icon);
+      left.appendChild(name);
+
+      const right = document.createElement("div");
+      right.style.cssText = "display:flex;gap:8px;align-items:center;";
+      const valueTag = document.createElement("div");
+      valueTag.style.cssText = "font-size:11px;color:#ffd700;";
+      valueTag.textContent = `${formatPGSC(total)}`;
+
+      const btn = document.createElement("button");
+      btn.textContent = `Sell (${formatPGSC(total)})`;
+      btn.style.cssText = "padding:6px 10px;background:#4ade80;border:1px solid #22c55e;color:#000;border-radius:6px;font-weight:700;cursor:pointer;font-size:11px;";
+      btn.addEventListener("click", () => {
+        const heroRef = state.party[heroIdx];
+        if (!heroRef?.inventory?.[i]) return;
+        heroRef.inventory[i] = null;
+        state.currencyCopper += total;
+        updateCurrencyDisplay();
+        addLog(`You sell ${qty > 1 ? qty + "x " : ""}${itemDef.name} for ${formatPGSC(total)}.`, "gold");
+        renderMeta();
+        renderBattleFooter();
+      });
+
+      right.appendChild(valueTag);
+      right.appendChild(btn);
+      row.appendChild(left);
+      row.appendChild(right);
+      list.appendChild(row);
+    }
+  });
+
+  if (!hasItems) {
+    const empty = document.createElement("div");
+    empty.style.cssText = "color:#777;font-size:12px;padding:12px;border:1px dashed #333;border-radius:6px;";
+    empty.textContent = "No items available in unlocked slots.";
+    list.appendChild(empty);
+  }
+}
+
+function renderBattleFooter() {
+  const label = document.getElementById("battleFooterLabel");
+  const logEl = document.getElementById("log");
+  const merchantEl = document.getElementById("merchantContainer");
+
+  if (isTownZone()) {
+    if (label) label.textContent = "Town merchant";
+    if (logEl) {
+      logEl.innerHTML = "";
+      logEl.style.display = "none";
+    }
+    if (merchantEl) {
+      merchantEl.style.display = "block";
+      renderTownMerchant();
+    }
+    return;
+  }
+
+  if (label) label.textContent = "Combat log";
+  if (merchantEl) {
+    merchantEl.style.display = "none";
+    merchantEl.innerHTML = "";
+  }
+  renderLog();
 }

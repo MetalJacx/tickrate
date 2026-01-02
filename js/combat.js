@@ -475,6 +475,14 @@ function checkAccountLevelUp() {
 
 export function spawnEnemy() {
   const z = state.zone;
+  const zoneDef = getZoneDef(z);
+
+  // Town zones have no combat
+  if (zoneDef?.isTown) {
+    state.currentEnemies = [];
+    state.waitingToRespawn = false;
+    return;
+  }
   // Enemy level is zone-based by default; allow explicit level or ranges on the template
 
   // Get enemy definition from zone
@@ -502,6 +510,8 @@ export function spawnEnemy() {
 
 function spawnEnemyToList() {
   const z = state.zone;
+  const zoneDef = getZoneDef(z);
+  if (zoneDef?.isTown) return;
   
   // Get enemy definition from zone
   const discovery = getDiscoveryState(z);

@@ -1,8 +1,9 @@
+import Town from "./zoneTown.js";
 import Zone1 from "./zone1.js";
 import Zone2 from "./zone2.js";
 import Zone3 from "./zone3.js";
 
-export const ZONES = [Zone1, Zone2, Zone3];
+export const ZONES = [Town, Zone1, Zone2, Zone3];
 export const MAX_ZONE = ZONES.length;
 
 export function getZoneDef(zoneNumber) {
