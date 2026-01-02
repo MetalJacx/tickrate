@@ -15,6 +15,55 @@ import {
   computeRawDamage
 } from "./combatMath.js";
 
+// Simple loot entry shape: { itemId, dropRate (0-1), minQty?, maxQty? }
+function rollLoot(enemyDef, zoneDef) {
+  const rolls = [];
+
+  // Use enemy-specific loot first
+  const enemyLoot = Array.isArray(enemyDef?.loot) ? enemyDef.loot : [];
+
+  // Global loot applies unless enemy is marked rare
+  const globalLoot = enemyDef?.rare ? [] : (zoneDef?.globalLoot || []);
+
+  for (const entry of [...enemyLoot, ...globalLoot]) {
+    const dropRate = entry.dropRate ?? 0;
+    if (Math.random() <= dropRate) {
+      const minQty = Math.max(1, entry.minQty ?? 1);
+      const maxQty = Math.max(minQty, entry.maxQty ?? minQty);
+      const qty = minQty === maxQty ? minQty : (minQty + randInt(maxQty - minQty + 1));
+      rolls.push({ id: entry.itemId, quantity: qty });
+    }
+  }
+
+  return rolls;
+}
+
+function applyEnemyEquipmentBonuses(enemy, drops) {
+  if (!drops || drops.length === 0) return;
+  enemy.equipment = [];
+  for (const drop of drops) {
+    const itemDef = getItemDef(drop.id);
+    if (!itemDef || !itemDef.stats) continue;
+
+    // Apply offensive bonuses
+    if (itemDef.stats.dps) {
+      enemy.baseDamage = (enemy.baseDamage || enemy.dps || 0) + itemDef.stats.dps;
+      enemy.dps = enemy.baseDamage;
+    }
+    // Defensive/secondary stats (minimal use, but keep for future)
+    if (itemDef.stats.ac) enemy.ac = (enemy.ac || enemy.stats?.ac || 0) + itemDef.stats.ac;
+    if (itemDef.stats.con) enemy.stats.con = (enemy.stats.con || 0) + itemDef.stats.con;
+    if (itemDef.stats.str) enemy.stats.str = (enemy.stats.str || 0) + itemDef.stats.str;
+    if (itemDef.stats.dex) enemy.stats.dex = (enemy.stats.dex || 0) + itemDef.stats.dex;
+    if (itemDef.stats.agi) enemy.stats.agi = (enemy.stats.agi || 0) + itemDef.stats.agi;
+    if (itemDef.stats.wis) enemy.stats.wis = (enemy.stats.wis || 0) + itemDef.stats.wis;
+    if (itemDef.stats.int) enemy.stats.int = (enemy.stats.int || 0) + itemDef.stats.int;
+    if (itemDef.stats.cha) enemy.stats.cha = (enemy.stats.cha || 0) + itemDef.stats.cha;
+
+    enemy.equipment.push(drop.id);
+  }
+}
+
 // Hunt timer configuration (milliseconds)
 const HUNT_TIME_MS = 4000; // 4 seconds between kills
 
@@ -439,7 +488,10 @@ export function spawnEnemy() {
   
   // Scale enemy stats based on level
   const enemy = buildEnemyFromTemplate(enemyDef, level);
-  
+  enemy.drops = rollLoot(enemyDef, getZoneDef(z));
+  applyEnemyEquipmentBonuses(enemy, enemy.drops);
+  enemy.hp = enemy.maxHP;
+
   state.currentEnemies = [enemy];
   state.waitingToRespawn = false;
   addLog(`A level ${level} ${enemyDef.name} appears in Zone ${z}.`);
@@ -459,7 +511,10 @@ function spawnEnemyToList() {
   
   // Scale enemy stats based on level
   const enemy = buildEnemyFromTemplate(enemyDef, level);
-  
+  enemy.drops = rollLoot(enemyDef, getZoneDef(z));
+  applyEnemyEquipmentBonuses(enemy, enemy.drops);
+  enemy.hp = enemy.maxHP;
+
   state.currentEnemies.push(enemy);
   addLog(`Oh no! Your luck is not on your side—another ${enemyDef.name} takes notice of your presence!`, "damage_taken");
 }
@@ -518,10 +573,75 @@ function computeKillXP(enemy) {
   return { killXP, baseXP, levelMult, delta, playerLevel, mobLevel };
 }
 
+function tryStackItem(slot, itemDef, quantity) {
+  if (!slot || slot.id !== itemDef.id) return { stacked: 0 };
+  const maxStack = itemDef.maxStack || 1;
+  if (maxStack <= 1) return { stacked: 0 };
+  const room = maxStack - (slot.quantity || 0);
+  if (room <= 0) return { stacked: 0 };
+  const stacked = Math.min(room, quantity);
+  slot.quantity = (slot.quantity || 0) + stacked;
+  return { stacked };
+}
+
+function awardLoot(enemy) {
+  const results = [];
+  const drops = enemy?.drops || [];
+  if (drops.length === 0) return results;
+
+  const heroes = state.party || [];
+  const unlockedSlots = 30;
+
+  for (const drop of drops) {
+    const itemDef = getItemDef(drop.id);
+    if (!itemDef) continue;
+    let remaining = drop.quantity || 1;
+    let placed = false;
+
+    for (const hero of heroes) {
+      if (remaining <= 0) break;
+      if (!hero.inventory) hero.inventory = Array(100).fill(null);
+
+      // First try stacking
+      for (let i = 0; i < unlockedSlots && remaining > 0; i++) {
+        const slot = hero.inventory[i];
+        const { stacked } = tryStackItem(slot, itemDef, remaining);
+        remaining -= stacked;
+      }
+
+      // Then place into empty slots
+      for (let i = 0; i < unlockedSlots && remaining > 0; i++) {
+        if (hero.inventory[i] == null) {
+          const qty = Math.min(remaining, itemDef.maxStack || remaining);
+          hero.inventory[i] = { id: itemDef.id, quantity: qty };
+          remaining -= qty;
+          placed = true;
+        }
+      }
+
+      if (remaining <= 0) {
+        placed = true;
+        results.push(`${hero.name} loots ${drop.quantity > 1 ? drop.quantity + 'x ' : ''}${itemDef.name}.`);
+        break;
+      }
+    }
+
+    if (!placed && remaining === drop.quantity) {
+      results.push(`No space for ${drop.quantity > 1 ? drop.quantity + 'x ' : ''}${itemDef.name}; it is lost.`);
+    } else if (remaining > 0 && remaining < drop.quantity) {
+      const gained = drop.quantity - remaining;
+      results.push(`Party picks up ${gained}x ${itemDef.name}; ${remaining} could not fit.`);
+    }
+  }
+
+  return results;
+}
+
 function onEnemyKilled(enemy, totalDPS) {
   const { killXP } = computeKillXP(enemy);
   const zoneDef = getZoneDef(state.zone);
   const copper = resolveCopperReward(enemy, zoneDef);
+  const lootAwarded = awardLoot(enemy);
 
   // Apply group bonus based on LIVING party size only
   const livingPartySize = state.party.filter(h => !h.isDead).length;
@@ -576,6 +696,9 @@ function onEnemyKilled(enemy, totalDPS) {
   }
 
   addLog(`Your party defeats the ${enemy.name}, dealing ${totalDPS.toFixed(1)} damage. +${Math.floor(totalXP)} XP, +${formatPGSC(copper)}.`, "gold");
+  if (lootAwarded.length > 0) {
+    for (const msg of lootAwarded) addLog(msg, "gold");
+  }
   state.currentEnemy = null;
   state.waitingToRespawn = true;
   state.huntRemaining = HUNT_TIME_MS; // Start hunt timer
