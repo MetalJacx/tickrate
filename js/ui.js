@@ -1407,14 +1407,14 @@ function populateInventoryStats(hero) {
     { label: "Endurance", value: hero.maxEndurance },
     { label: "DPS", value: hero.dps.toFixed(1) },
     { label: "Healing", value: hero.healing.toFixed(1) },
-    { label: "STR", value: hero.str || 0 },
-    { label: "CON", value: hero.con || 0 },
-    { label: "DEX", value: hero.dex || 0 },
-    { label: "AGI", value: hero.agi || 0 },
-    { label: "AC", value: hero.ac || 0 },
-    { label: "WIS", value: hero.wis || 0 },
-    { label: "INT", value: hero.int || 0 },
-    { label: "CHA", value: hero.cha || 0 }
+    { label: "STR", value: hero.stats?.str || 0 },
+    { label: "CON", value: hero.stats?.con || 0 },
+    { label: "DEX", value: hero.stats?.dex || 0 },
+    { label: "AGI", value: hero.stats?.agi || 0 },
+    { label: "AC", value: hero.stats?.ac || 0 },
+    { label: "WIS", value: hero.stats?.wis || 0 },
+    { label: "INT", value: hero.stats?.int || 0 },
+    { label: "CHA", value: hero.stats?.cha || 0 }
   ];
   
   for (const stat of stats) {

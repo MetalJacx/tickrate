@@ -158,7 +158,9 @@ function primaryStatKey(hero, cls) {
 
 export function refreshHeroDerived(hero) {
   const cls = getClassDef(hero.classKey) || {};
-  hero.stats = fillStats(hero.stats || cls.stats);
+  
+  // Reset stats to class base first (don't accumulate)
+  hero.stats = fillStats({ ...cls.stats });
   hero.baseHP = hero.baseHP ?? cls.baseHP ?? hero.maxHP ?? 50;
   
   // Store original class base damage if not already stored
@@ -168,6 +170,9 @@ export function refreshHeroDerived(hero) {
   
   // Always reset baseDamage to class base before applying equipment
   hero.baseDamage = hero.classBaseDamage;
+  
+  // Reset AC too
+  hero.ac = 0;
   
   hero.baseMana = hero.baseMana ?? cls.baseMana ?? 0;
   hero.primaryStat = primaryStatKey(hero, cls);
