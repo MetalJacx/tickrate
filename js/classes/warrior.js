@@ -38,7 +38,7 @@ export default {
       debuff: "taunt",
       durationTicks: 3,
       costType: "endurance",
-      cost: 10,
+      cost: 1,
       cooldownSeconds: 10,
       description: "Forces the main target to attack the Warrior for 3 ticks."
     },
