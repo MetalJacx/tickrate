@@ -391,14 +391,9 @@ export function heroLevelUpCost(hero) {
   return p99XpToNext(hero.level);
 }
 
-export function applyHeroLevelUp(hero) {
-  const cost = heroLevelUpCost(hero);
-  if (!hero.xp) hero.xp = 0;
-  if (hero.xp < cost) return; // Not enough XP
-
-  hero.xp -= cost;
-  hero.level += 1;
+function applyLevelScaling(hero) {
   // Simple scaling: +12% base HP, +10% base damage/DPS, +10% Healing per level
+  hero.level += 1;
   hero.baseHP = Math.floor(hero.baseHP * 1.12);
   hero.baseDamage = hero.baseDamage * 1.10;
   hero.dps = hero.baseDamage;
@@ -418,6 +413,22 @@ export function applyHeroLevelUp(hero) {
     for (const key of Object.keys(hero.skillTimers)) {
       hero.skillTimers[key] = 0;
     }
+  }
+}
+
+export function applyHeroLevelUp(hero) {
+  const cost = heroLevelUpCost(hero);
+  if (!hero.xp) hero.xp = 0;
+  if (hero.xp < cost) return; // Not enough XP
+
+  hero.xp -= cost;
+  applyLevelScaling(hero);
+}
+
+export function levelHeroTo(hero, targetLevel) {
+  const desired = Math.max(1, Math.floor(targetLevel || 1));
+  while ((hero.level || 1) < desired) {
+    applyLevelScaling(hero);
   }
 }
 
@@ -570,36 +581,32 @@ function checkSlotUnlocks() {
 }
 
 function partyReferenceLevel() {
-  let lvl = 1;
-  for (const hero of state.party) {
-    lvl = Math.max(lvl, hero.level || 1);
-  }
-  return lvl;
+  const living = state.party.filter(h => !h.isDead);
+  if (living.length === 0) return 1;
+  const avg = living.reduce((sum, h) => sum + (h.level || 1), 0) / living.length;
+  return Math.max(1, Math.floor(avg));
 }
 
 function computeKillXP(enemy) {
   const mobLevel = enemy.level || state.zone || 1;
-  const playerLevel = partyReferenceLevel();
-  const delta = mobLevel - playerLevel;
+  const referenceLevel = partyReferenceLevel();
+  const delta = mobLevel - referenceLevel;
 
-  // P99-style base XP
+  // Base XP from mob level only
   const baseXP = 75 * mobLevel * mobLevel;
 
-  // P99-style level multiplier: no bonus for higher level, only penalty for lower
+  // Lower-level penalty only; no bonus for higher-level mobs
   let levelMult;
   if (delta >= 0) {
-    // Mob same level or higher: full XP (no bonus)
     levelMult = 1.0;
   } else if (delta <= -10) {
-    // Mob 10+ levels below: no XP
     levelMult = 0;
   } else {
-    // Mob lower level: reduced XP
-    levelMult = 1 - (Math.abs(delta) / 10);
+    levelMult = 1.0 - (Math.abs(delta) / 10.0);
   }
 
   const killXP = Math.floor(baseXP * levelMult);
-  return { killXP, baseXP, levelMult, delta, playerLevel, mobLevel };
+  return { killXP, baseXP, levelMult, delta, referenceLevel, mobLevel };
 }
 
 function tryStackItem(slot, itemDef, quantity) {
@@ -689,13 +696,21 @@ function onEnemyKilled(enemy, totalDPS) {
 
   // Distribute XP proportionally by level weight (only to living heroes)
   if (totalWeight > 0 && totalXPRounded > 0) {
+    const breakdown = [];
     for (const hero of state.party) {
       if (!hero.isDead) {
         if (!hero.xp) hero.xp = 0;
         const heroWeight = hero.level * hero.level;
         const heroShare = totalXPRounded * (heroWeight / totalWeight);
         hero.xp += heroShare;
+        if (state.showXPBreakdown) {
+          breakdown.push({ name: hero.name, share: heroShare });
+        }
       }
+    }
+    if (state.showXPBreakdown && breakdown.length > 0) {
+      const parts = breakdown.map(h => `${h.name} +${h.share.toFixed(1)} XP`);
+      addLog(`XP breakdown: ${parts.join(', ')}`, "gold");
     }
   }
 
@@ -719,7 +734,7 @@ function onEnemyKilled(enemy, totalDPS) {
     }
   }
 
-  addLog(`Your party defeats the ${enemy.name}, dealing ${totalDPS.toFixed(1)} damage. +${Math.floor(totalXP)} XP, +${formatPGSC(copper)}.`, "gold");
+  addLog(`Your party defeats the level ${enemy.level} ${enemy.name}, dealing ${totalDPS.toFixed(1)} damage. +${Math.floor(totalXP)} XP, +${formatPGSC(copper)}.`, "gold");
   if (lootAwarded.length > 0) {
     for (const msg of lootAwarded) addLog(msg, "gold");
   }

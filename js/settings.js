@@ -230,11 +230,39 @@ export function initSettings({ onShowSettings, onHideSettings }) {
     divider2.style.cssText = "border-top: 1px solid #333; margin: 10px 0;";
     settingsContent.appendChild(divider2);
 
-    // Additional settings can go here
-    const placeholderDiv = document.createElement("div");
-    placeholderDiv.style.cssText = "color: #aaa; font-size: 12px; text-align: center;";
-    placeholderDiv.textContent = "More settings coming soon...";
-    settingsContent.appendChild(placeholderDiv);
+    // Reward message settings
+    const rewardDiv = document.createElement("div");
+    rewardDiv.style.cssText = "border: 1px solid #333; border-radius: 6px; padding: 10px; background: #202020;";
+
+    const rewardLabel = document.createElement("div");
+    rewardLabel.textContent = "Rewards";
+    rewardLabel.style.cssText = "font-size: 12px; font-weight: bold; margin-bottom: 8px; color: #aaa;";
+    rewardDiv.appendChild(rewardLabel);
+
+    const breakdownRow = document.createElement("div");
+    breakdownRow.style.cssText = "display: flex; align-items: center; gap: 8px;";
+
+    const breakdownCheckbox = document.createElement("input");
+    breakdownCheckbox.type = "checkbox";
+    breakdownCheckbox.id = "rewardBreakdownToggle";
+    breakdownCheckbox.checked = !!state.showXPBreakdown;
+    breakdownCheckbox.style.cssText = "cursor: pointer;";
+
+    breakdownCheckbox.addEventListener("change", () => {
+      state.showXPBreakdown = breakdownCheckbox.checked;
+      showToast(`XP breakdown ${state.showXPBreakdown ? "enabled" : "disabled"}`);
+    });
+
+    const breakdownLabel = document.createElement("label");
+    breakdownLabel.htmlFor = "rewardBreakdownToggle";
+    breakdownLabel.textContent = "Show per-hero XP breakdown in reward messages";
+    breakdownLabel.style.cssText = "color: #ddd; font-size: 12px; cursor: pointer;";
+
+    breakdownRow.appendChild(breakdownCheckbox);
+    breakdownRow.appendChild(breakdownLabel);
+    rewardDiv.appendChild(breakdownRow);
+
+    settingsContent.appendChild(rewardDiv);
   }
 
   // Wire up button events

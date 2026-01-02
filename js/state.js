@@ -88,6 +88,7 @@ export const state = {
     gold: true,
     skill: true
   },
+  showXPBreakdown: false,
   offlineSummary: null,
   zoneDiscoveries: {},
   campThresholds: {
@@ -148,6 +149,7 @@ export function serializeState() {
       normal: true,
       gold: true
     },
+    showXPBreakdown: state.showXPBreakdown ?? false,
     automationRules: state.automationRules || [],
     campThresholds: state.campThresholds || { health: 80, mana: 50, endurance: 30 },
     lastCampLogTick: state.lastCampLogTick ?? 0,
@@ -279,6 +281,7 @@ export function loadGame() {
     state.huntRemaining = data.huntRemaining ?? 0;
     state.highestUnlockedZone = data.highestUnlockedZone ?? 1;
     state.zoneDiscoveries = data.zoneDiscoveries ?? {};
+    state.showXPBreakdown = data.showXPBreakdown ?? false;
     state.automationRules = data.automationRules ?? [];
     state.campThresholds = data.campThresholds ?? { health: 80, mana: 50, endurance: 30 };
     state.lastCampLogTick = data.lastCampLogTick ?? 0;

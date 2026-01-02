@@ -1,7 +1,7 @@
 import { GAME_TICK_MS, AUTO_SAVE_EVERY_MS, MAX_OFFLINE_SECONDS} from "./defs.js";
 import { state, loadGame, saveGame, clearSave, serializeState, updateCurrencyDisplay } from "./state.js";
 import { addLog } from "./util.js";
-import { createHero, spawnEnemy, gameTick, travelToNextZone, travelToPreviousZone, p99XpToNext } from "./combat.js";
+import { createHero, levelHeroTo, spawnEnemy, gameTick, travelToNextZone, travelToPreviousZone, p99XpToNext } from "./combat.js";
 import { getZoneDef } from "./zones/index.js";
 import { initUI, renderAll, showOfflineModal } from "./ui.js";
 import { CLASSES, getClassDef } from "./classes/index.js"
@@ -626,6 +626,8 @@ function wireRecruitModal() {
     state.currencyCopper -= cls.cost;
     updateCurrencyDisplay();
     const hero = createHero(selectedRecruitClassKey, heroName, selectedRecruitRaceKey);
+    const recruitLevel = Math.max(1, Math.floor((state.accountLevel || 1) * 0.8));
+    levelHeroTo(hero, recruitLevel);
     
     // Add test items to shared inventory for UI testing
     if (state.party.length === 0) {
