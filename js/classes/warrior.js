@@ -28,8 +28,25 @@ export default {
   },
 
   skills: [
-    { key: "slash", name: "Slash", level: 1, type: "damage", damageType: "physical", minDamage: 4, maxDamage: 6, cost: 5, cooldownSeconds: 4 },
+    { key: "kick", name: "Kick", level: 1, type: "damage", damageType: "physical", minDamage: 2, maxDamage: 7, cost: 5, cooldownSeconds: 4 },
     { key: "shield_bash", name: "Shield Bash", level: 3, type: "damage", damageType: "physical", minDamage: 10, maxDamage: 14, cost: 12, cooldownSeconds: 8 },
-    { key: "fortify", name: "Fortify", level: 5, type: "heal", amount: 10, cost: 12, cooldownSeconds: 10 }
+    {
+      key: "fortify",
+      name: "Fortify",
+      level: 8,
+      type: "buff",
+      buff: "ac",
+      acBase: 10,
+      acPerInterval: 1,
+      acIntervalLevels: 2,
+      acMinLevel: 8,
+      acMax: 15,
+      durationTicks: 8,
+      costType: "endurance",
+      cost: 15,
+      cooldownSeconds: 12,
+      description: "Increases AC by 10 at level 8. Bonus scales by +1 AC every 2 levels, reaching a maximum of +15 AC at level 18."
+    },
+    { key: "cleave", name: "Cleave", level: 10, type: "damage", damageType: "physical", usesBaseDamage: true, cleaveTargets: 3, cost: 25, cooldownSeconds: 5 }
   ]
 };

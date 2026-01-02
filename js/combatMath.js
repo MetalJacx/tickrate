@@ -42,7 +42,10 @@ export function rand01() {
 }
 
 function getStats(entity) {
-  return entity?.stats || {};
+  const stats = entity?.stats || {};
+  const acBonus = entity?.tempACBuffAmount || 0;
+  if (!acBonus) return stats;
+  return { ...stats, ac: (stats.ac || 0) + acBonus };
 }
 
 export function effectiveAccuracy(entity) {

@@ -1538,6 +1538,13 @@ function populateSkillsSection(hero) {
     
     skillDiv.appendChild(skillTitle);
     skillDiv.appendChild(skillInfo);
+
+    if (skill.description) {
+      const skillDesc = document.createElement("div");
+      skillDesc.style.cssText = "font-size:9px;color:#ccc;margin-top:4px;line-height:1.3;";
+      skillDesc.textContent = skill.description;
+      skillDiv.appendChild(skillDesc);
+    }
     
     // Drag events
     skillDiv.addEventListener("dragstart", (e) => {

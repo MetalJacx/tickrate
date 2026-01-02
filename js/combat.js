@@ -316,6 +316,10 @@ export function createHero(classKey, customName = null, raceKey = DEFAULT_RACE_K
     tempDamageDebuffTicks: 0,
     tempDamageDebuffAmount: 0,
 
+    // Temporary buffs
+    tempACBuffTicks: 0,
+    tempACBuffAmount: 0,
+
     // Revival countdown tracking
     revivalNotifications: {},
 
@@ -821,6 +825,10 @@ export function gameTick() {
   // Handle auto-revival for dead members (60 second timer)
   const now = Date.now();
   for (const hero of state.party) {
+    // Ensure temp AC buff fields exist for older saves
+    if (hero.tempACBuffTicks == null) hero.tempACBuffTicks = 0;
+    if (hero.tempACBuffAmount == null) hero.tempACBuffAmount = 0;
+
     if (hero.isDead && hero.deathTime) {
       const timeSinceDeath = (now - hero.deathTime) / 1000; // seconds
       const timeRemaining = 60 - timeSinceDeath;
@@ -874,6 +882,15 @@ export function gameTick() {
       if (hero.tempDamageDebuffTicks === 0) {
         hero.tempDamageDebuffAmount = 0;
         addLog(`${hero.name} shrugs off the weakening hex.`, "normal");
+      }
+    }
+
+    // Tick down temporary AC buffs
+    if (hero.tempACBuffTicks && hero.tempACBuffTicks > 0) {
+      hero.tempACBuffTicks -= 1;
+      if (hero.tempACBuffTicks === 0) {
+        hero.tempACBuffAmount = 0;
+        addLog(`${hero.name}'s fortification fades.`, "normal");
       }
     }
   }
@@ -1021,6 +1038,12 @@ export function gameTick() {
         if (!hasResources) {
           continue; // Skip this skill if not enough resources or no one needs healing
         }
+
+        // Skip recasting AC buff if it's still running; recheck in 1 tick
+        if (sk.type === "buff" && sk.buff === "ac" && hero.tempACBuffTicks > 1) {
+          hero.skillTimers[sk.key] = 1;
+          continue;
+        }
         
         // Deduct resources
         if (costType === "mana") {
@@ -1037,19 +1060,51 @@ export function gameTick() {
         checkAccountLevelUp();
 
         if (sk.type === "damage") {
-          // Calculate damage with min/max variance
-          const minDmg = sk.minDamage || sk.amount || 0;
-          const maxDmg = sk.maxDamage || sk.amount || 0;
-          const damage = minDmg + Math.random() * (maxDmg - minDmg);
           const damageTypeLabel = sk.damageType ? ` (${sk.damageType})` : "";
-          if (state.currentEnemies.length > 0) {
-            const target = state.currentEnemies[0];
-            const mitigated = applyACMitigation(damage, target);
-            target.hp = Math.max(0, target.hp - mitigated);
-            totalDamageThisTick += mitigated;
-            addLog(`${hero.name} uses ${sk.name}${damageTypeLabel} for ${mitigated.toFixed(1)} damage!`, "damage_dealt");
+
+          // Determine base damage for this skill
+          let calcDamage = 0;
+          if (sk.usesBaseDamage) {
+            // Use hero's current base damage (after gear/bonuses)
+            calcDamage = hero.baseDamage || hero.dps || 0;
           } else {
+            const minDmg = sk.minDamage || sk.amount || 0;
+            const maxDmg = sk.maxDamage || sk.amount || 0;
+            calcDamage = minDmg + Math.random() * (maxDmg - minDmg);
+          }
+
+          // Cleave: hit multiple targets from the front of the list
+          const targets = sk.cleaveTargets ? state.currentEnemies.slice(0, sk.cleaveTargets) : (state.currentEnemies[0] ? [state.currentEnemies[0]] : []);
+
+          if (targets.length === 0) {
             addLog(`${hero.name} uses ${sk.name}${damageTypeLabel}, but there is nothing to hit.`, "normal");
+          } else {
+            for (const target of targets) {
+              const mitigated = applyACMitigation(calcDamage, target);
+              target.hp = Math.max(0, target.hp - mitigated);
+              totalDamageThisTick += mitigated;
+              addLog(`${hero.name} uses ${sk.name}${damageTypeLabel} for ${mitigated.toFixed(1)} damage!`, "damage_dealt");
+            }
+          }
+        }
+        if (sk.type === "buff") {
+          if (sk.buff === "ac") {
+            const duration = sk.durationTicks ?? 6;
+            const intervalLevels = sk.acIntervalLevels || 1;
+            const perInterval = sk.acPerInterval ?? sk.acPerLevel ?? 0;
+            const minLevelForScale = sk.acMinLevel ?? sk.level ?? 1;
+            let acBonus = sk.acBase ?? 0;
+            if (intervalLevels > 0 && perInterval !== 0) {
+              const steps = Math.floor(Math.max(0, hero.level - minLevelForScale) / intervalLevels);
+              acBonus += steps * perInterval;
+            }
+            if (sk.acMax != null) {
+              acBonus = Math.min(acBonus, sk.acMax);
+            }
+            acBonus = Math.max(0, Math.floor(acBonus));
+            hero.tempACBuffAmount = Math.max(hero.tempACBuffAmount || 0, acBonus);
+            hero.tempACBuffTicks = duration;
+            addLog(`${hero.name} fortifies, gaining +${acBonus} AC for ${duration} ticks.`, "skill");
           }
         }
         if (sk.type === "heal") {
