@@ -1,11 +1,12 @@
 import { GAME_TICK_MS, AUTO_SAVE_EVERY_MS, MAX_OFFLINE_SECONDS} from "./defs.js";
-import { state, loadGame, saveGame, clearSave, serializeState } from "./state.js";
+import { state, loadGame, saveGame, clearSave, serializeState, updateCurrencyDisplay } from "./state.js";
 import { addLog } from "./util.js";
 import { createHero, spawnEnemy, gameTick, travelToNextZone, travelToPreviousZone, p99XpToNext } from "./combat.js";
 import { getZoneDef } from "./zones/index.js";
 import { initUI, renderAll, showOfflineModal } from "./ui.js";
 import { CLASSES, getClassDef } from "./classes/index.js"
 import { initSettings } from "./settings.js";
+import { ITEMS } from "./items.js";
 
 let tickTimer = null; // requestAnimationFrame id
 let saveTimer = null;
@@ -461,7 +462,7 @@ function wireRecruitModal() {
     }
     
     // Update confirm button
-    const canAfford = state.gold >= cls.cost;
+    const canAfford = state.currencyCopper >= cls.cost;
     const hasSpace = state.party.length < state.partySlotsUnlocked;
     
     confirmBtn.textContent = `Recruit for ${cls.cost} gold`;
@@ -474,7 +475,7 @@ function wireRecruitModal() {
       errorDiv.textContent = "No party slots available";
       errorDiv.style.display = "block";
     } else if (!canAfford) {
-      errorDiv.textContent = `Need ${cls.cost - state.gold} more gold`;
+      errorDiv.textContent = `Need ${cls.cost - state.currencyCopper} more copper`;
       errorDiv.style.display = "block";
     } else if (!hasName) {
       errorDiv.textContent = "Enter a hero name";
@@ -514,18 +515,35 @@ function wireRecruitModal() {
       return;
     }
     
-    if (state.gold < cls.cost) {
-      showToast("Not enough gold!", true);
+    if (state.currencyCopper < cls.cost) {
+      showToast("Not enough currency!", true);
       return;
     }
     
-    state.gold -= cls.cost;
+    state.currencyCopper -= cls.cost;
+    updateCurrencyDisplay();
     const hero = createHero(selectedRecruitClassKey, heroName);
+    
+    // Add test items to first hero for UI testing
+    if (state.party.length === 0) {
+      hero.inventory[0] = { id: "health_potion", quantity: 5 };
+      hero.inventory[1] = { id: "mana_potion", quantity: 3 };
+      hero.inventory[2] = { id: "copper_ore", quantity: 12 };
+      hero.inventory[3] = { id: "iron_sword", quantity: 1 };
+      hero.inventory[10] = { id: "wooden_shield", quantity: 1 };
+    }
+    
+    // Give warriors a starting stick
+    if (hero.classKey === "warrior") {
+      hero.inventory[20] = { id: "stick", quantity: 1 };
+    }
+    
     state.party.push(hero);
     state.partyHP += hero.maxHP;
     state.partyMaxHP += hero.maxHP;
     addLog(`${heroName} the ${cls.name} joins your party at the campfire.`);
     showToast(`${heroName} recruited!`);
+    saveGame();
     renderAll();
     closeRecruitModal();
   });

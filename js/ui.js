@@ -1,11 +1,12 @@
 import { state } from "./state.js";
-import { heroLevelUpCost, applyHeroLevelUp, canTravelForward, travelToNextZone, travelToPreviousZone, recalcPartyTotals, killsRequiredForZone, spawnEnemy, doubleAttackCap, doubleAttackProcChance } from "./combat.js";
+import { heroLevelUpCost, applyHeroLevelUp, canTravelForward, travelToNextZone, travelToPreviousZone, recalcPartyTotals, killsRequiredForZone, spawnEnemy, doubleAttackCap, doubleAttackProcChance, refreshHeroDerived } from "./combat.js";
 import { spawnEnemyToList } from "./combat.js";
 import { CLASSES, getClassDef } from "./classes/index.js";
 import { getZoneDef, listZones, ensureZoneDiscovery, getActiveSubArea } from "./zones/index.js";
 import { addLog } from "./util.js";
-import { formatPGSC } from "./state.js";
+import { formatPGSC, saveGame } from "./state.js";
 import { MAX_PARTY_SIZE, ACCOUNT_SLOT_UNLOCKS } from "./defs.js";
+import { getItemDef } from "./items.js";
 
 export function initUI({ onRecruit, onReset, onOpenRecruitModal }) {
   const travelBtn = document.getElementById("travelBtn");
@@ -1005,10 +1006,143 @@ function openInventoryModal(hero) {
   const cls = getClassDef(hero.classKey);
   
   title.textContent = `${hero.name} (${cls?.name || 'Unknown'}) - Lv ${hero.level}`;
+  populateInventoryGrid(hero);
   populateEquipmentSection(hero);
   populateInventoryStats(hero);
   
   modal.style.display = "flex";
+}
+
+function populateInventoryGrid(hero) {
+  const container = document.getElementById("inventoryGridContainer");
+  container.innerHTML = "";
+  
+  if (!hero.inventory || hero.inventory.length === 0) {
+    const empty = document.createElement("div");
+    empty.style.cssText = "color:#777;grid-column:1/-1;text-align:center;padding:20px;";
+    empty.textContent = "No items";
+    container.appendChild(empty);
+    return;
+  }
+  
+  for (let i = 0; i < 100; i++) {
+    const slot = document.createElement("div");
+    const isLocked = i >= 30;
+    
+    slot.style.cssText = `
+      width: 77px;
+      height: 77px;
+      background: #1a1a1a;
+      border: 1px solid #444;
+      border-radius: 4px;
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      font-size: 10px;
+      color: #ddd;
+      opacity: ${isLocked ? 0.4 : 1};
+      cursor: ${isLocked ? "default" : "pointer"};
+      flex-shrink: 0;
+    `;
+    
+    const item = hero.inventory[i];
+    
+    if (item && !isLocked) {
+      const itemDef = getItemDef(item.id);
+      if (itemDef) {
+        // Icon
+        const icon = document.createElement("div");
+        icon.style.cssText = "font-size: 20px;";
+        icon.textContent = itemDef.icon || "?";
+        slot.appendChild(icon);
+        
+        // Name
+        const name = document.createElement("div");
+        name.style.cssText = "font-size: 9px; text-align: center; word-break: break-word;";
+        name.textContent = itemDef.name;
+        slot.appendChild(name);
+        
+        // Quantity (only if maxStack > 1)
+        if (itemDef.maxStack > 1 && item.quantity) {
+          const qty = document.createElement("div");
+          qty.style.cssText = "font-size: 10px; color: #4ade80; font-weight: bold;";
+          qty.textContent = `x${item.quantity}`;
+          slot.appendChild(qty);
+        }
+        
+        // Make it draggable if it has stat bonuses
+        if (itemDef.stats) {
+          slot.draggable = true;
+          slot.style.cursor = "grab";
+          slot.addEventListener("dragstart", (e) => {
+            e.dataTransfer.effectAllowed = "move";
+            e.dataTransfer.setData("application/json", JSON.stringify({
+              slotIndex: i,
+              itemId: item.id
+            }));
+            slot.style.opacity = "0.6";
+          });
+          slot.addEventListener("dragend", (e) => {
+            slot.style.opacity = item ? "1" : "0.4";
+          });
+        }
+      }
+    } else if (!isLocked) {
+      // Empty slot - accept drops from equipment
+      slot.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const data = e.dataTransfer.getData("application/json");
+        if (data) {
+          const parsed = JSON.parse(data);
+          if (parsed.fromEquipment) {
+            slot.style.borderColor = "#f57f17";
+            slot.style.backgroundColor = "#2a2a2a";
+          }
+        }
+      });
+      
+      slot.addEventListener("dragleave", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        slot.style.borderColor = "#444";
+        slot.style.backgroundColor = "#1a1a1a";
+      });
+      
+      slot.addEventListener("drop", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        slot.style.borderColor = "#444";
+        slot.style.backgroundColor = "#1a1a1a";
+        
+        const data = e.dataTransfer.getData("application/json");
+        if (!data) return;
+        
+        const parsed = JSON.parse(data);
+        if (!parsed.fromEquipment) return;
+        
+        const { slotKey, itemId } = parsed;
+        
+        // Move item from equipment to inventory
+        hero.equipment[slotKey] = null;
+        hero.inventory[i] = { id: itemId, quantity: 1 };
+        
+        // Recalculate hero stats
+        refreshHeroDerived(hero);
+        
+        // Update display
+        populateEquipmentSection(hero);
+        populateInventoryGrid(hero);
+        populateInventoryStats(hero);
+        saveGame();
+      });
+    }
+    
+    container.appendChild(slot);
+  }
 }
 
 function openAbilitiesModal(hero) {
@@ -1027,9 +1161,12 @@ function populateEquipmentSection(hero) {
   const equipmentGrid = document.getElementById("characterEquipmentGrid");
   equipmentGrid.innerHTML = "";
   
-  const slots = ["Head", "Chest", "Legs", "Feet", "Main", "Off"];
+  const slotKeys = ["head", "chest", "legs", "feet", "main", "off"];
+  const slotLabels = ["Head", "Chest", "Legs", "Feet", "Main", "Off"];
   
-  for (const slot of slots) {
+  for (let i = 0; i < slotKeys.length; i++) {
+    const slotKey = slotKeys[i];
+    const slotLabel = slotLabels[i];
     const slotDiv = document.createElement("div");
     slotDiv.style.cssText = `
       padding: 8px;
@@ -1039,12 +1176,99 @@ function populateEquipmentSection(hero) {
       font-size: 11px;
       color: #aaa;
       text-align: center;
-      min-height: 40px;
+      min-height: 60px;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
+      gap: 4px;
+      cursor: pointer;
+      transition: border-color 0.2s;
     `;
-    slotDiv.textContent = `${slot}\n(Empty)`;
+    
+    const equippedItem = hero.equipment[slotKey];
+    const itemDef = equippedItem ? getItemDef(equippedItem.id) : null;
+    
+    if (itemDef) {
+      slotDiv.innerHTML = `
+        <div style="font-size:18px;">${itemDef.icon}</div>
+        <div style="font-size:10px;color:#4ade80;">${itemDef.name}</div>
+      `;
+      // Make equipped items draggable so they can be removed
+      slotDiv.draggable = true;
+      slotDiv.style.cursor = "grab";
+      slotDiv.addEventListener("dragstart", (e) => {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("application/json", JSON.stringify({
+          fromEquipment: true,
+          slotKey: slotKey,
+          itemId: equippedItem.id
+        }));
+        slotDiv.style.opacity = "0.6";
+      });
+      slotDiv.addEventListener("dragend", (e) => {
+        slotDiv.style.opacity = "1";
+      });
+    } else {
+      slotDiv.textContent = `${slotLabel}\n(Empty)`;
+    }
+    
+    // Drag over effect
+    slotDiv.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      slotDiv.style.borderColor = "#f57f17";
+      slotDiv.style.backgroundColor = "#2a2a2a";
+    });
+    
+    slotDiv.addEventListener("dragleave", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      slotDiv.style.borderColor = "#444";
+      slotDiv.style.backgroundColor = "#1a1a1a";
+    });
+    
+    slotDiv.addEventListener("drop", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      slotDiv.style.borderColor = "#444";
+      slotDiv.style.backgroundColor = "#1a1a1a";
+      
+      const data = e.dataTransfer.getData("application/json");
+      if (!data) return;
+      
+      const parsed = JSON.parse(data);
+      
+      // If dragging from equipment, don't allow re-equipping to same slot
+      if (parsed.fromEquipment) return;
+      
+      const { slotIndex, itemId } = parsed;
+      const itemDef = getItemDef(itemId);
+      
+      if (!itemDef) return;
+      
+      // Equip the item
+      const oldEquipped = hero.equipment[slotKey];
+      hero.equipment[slotKey] = { id: itemId, quantity: 1 };
+      
+      // Remove from inventory
+      if (hero.inventory[slotIndex]) {
+        hero.inventory[slotIndex].quantity--;
+        if (hero.inventory[slotIndex].quantity <= 0) {
+          hero.inventory[slotIndex] = null;
+        }
+      }
+      
+      // Recalculate hero stats
+      refreshHeroDerived(hero);
+      
+      // Update display
+      populateEquipmentSection(hero);
+      populateInventoryGrid(hero);
+      populateInventoryStats(hero);
+      saveGame();
+    });
+    
     equipmentGrid.appendChild(slotDiv);
   }
 }

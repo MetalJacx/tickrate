@@ -4,6 +4,7 @@ import { getZoneDef, getEnemyForZone, MAX_ZONE, rollSubAreaDiscoveries, ensureZo
 import { addLog, randInt } from "./util.js";
 import { ACCOUNT_SLOT_UNLOCKS, GAME_TICK_MS } from "./defs.js";
 import { updateStatsModalSkills } from "./ui.js";
+import { getItemDef } from "./items.js";
 import {
   applyACMitigation,
   computeCritChance,
@@ -106,13 +107,42 @@ function primaryStatKey(hero, cls) {
   return hero.primaryStat || cls?.primaryStat || null;
 }
 
-function refreshHeroDerived(hero) {
+export function refreshHeroDerived(hero) {
   const cls = getClassDef(hero.classKey) || {};
   hero.stats = fillStats(hero.stats || cls.stats);
   hero.baseHP = hero.baseHP ?? cls.baseHP ?? hero.maxHP ?? 50;
-  hero.baseDamage = hero.baseDamage ?? cls.baseDamage ?? cls.baseDPS ?? hero.dps ?? 5;
+  
+  // Store original class base damage if not already stored
+  if (hero.classBaseDamage === undefined) {
+    hero.classBaseDamage = cls.baseDamage ?? cls.baseDPS ?? hero.dps ?? 5;
+  }
+  
+  // Always reset baseDamage to class base before applying equipment
+  hero.baseDamage = hero.classBaseDamage;
+  
   hero.baseMana = hero.baseMana ?? cls.baseMana ?? 0;
   hero.primaryStat = primaryStatKey(hero, cls);
+
+  // Apply equipment bonuses to stats
+  if (hero.equipment) {
+    for (const [slotKey, equippedItem] of Object.entries(hero.equipment)) {
+      if (equippedItem) {
+        const itemDef = getItemDef(equippedItem.id);
+        if (itemDef && itemDef.stats) {
+          // Add stat bonuses from equipped item
+          if (itemDef.stats.dps) hero.baseDamage += itemDef.stats.dps;
+          if (itemDef.stats.str) hero.stats.str = (hero.stats.str || 0) + itemDef.stats.str;
+          if (itemDef.stats.con) hero.stats.con = (hero.stats.con || 0) + itemDef.stats.con;
+          if (itemDef.stats.dex) hero.stats.dex = (hero.stats.dex || 0) + itemDef.stats.dex;
+          if (itemDef.stats.agi) hero.stats.agi = (hero.stats.agi || 0) + itemDef.stats.agi;
+          if (itemDef.stats.ac) hero.ac = (hero.ac || 0) + itemDef.stats.ac;
+          if (itemDef.stats.wis) hero.stats.wis = (hero.stats.wis || 0) + itemDef.stats.wis;
+          if (itemDef.stats.int) hero.stats.int = (hero.stats.int || 0) + itemDef.stats.int;
+          if (itemDef.stats.cha) hero.stats.cha = (hero.stats.cha || 0) + itemDef.stats.cha;
+        }
+      }
+    }
+  }
 
   const con = hero.stats.con || 0;
   hero.maxHP = computeMaxHP(hero.baseHP, con);
@@ -184,6 +214,7 @@ export function createHero(classKey, customName = null) {
   const cls = getClassDef(classKey);
   if (!cls) return null;
 
+  const baseDmg = cls.baseDamage ?? cls.baseDPS ?? cls.baseHealing ?? 5;
   const hero = {
     id: nextHeroId(),
     classKey: cls.key,
@@ -191,12 +222,13 @@ export function createHero(classKey, customName = null) {
     role: cls.role,
     level: 1,
     baseHP: cls.baseHP,
-    baseDamage: cls.baseDamage ?? cls.baseDPS ?? cls.baseHealing ?? 5,
+    baseDamage: baseDmg,
+    classBaseDamage: baseDmg,  // Store the original class base damage
     baseMana: cls.baseMana ?? 0,
     stats: fillStats(cls.stats),
     maxHP: cls.baseHP,
     health: cls.baseHP,
-    dps: cls.baseDamage ?? cls.baseDPS ?? 0,
+    dps: baseDmg,
     healing: cls.baseHealing,
     isDead: false,
     deathTime: null,
@@ -226,6 +258,19 @@ export function createHero(classKey, customName = null) {
 
     // Ability bar (12 slots, skill keys mapped by slot index)
     abilityBar: {},
+
+    // Inventory (100 slots: 30 unlocked, 70 locked)
+    inventory: Array(100).fill(null),
+
+    // Equipment slots
+    equipment: {
+      head: null,      // { id, quantity }
+      chest: null,
+      legs: null,
+      feet: null,
+      main: null,      // Main hand weapon
+      off: null        // Off hand
+    },
 
     // cooldown tracking per hero:
     skillTimers: {}

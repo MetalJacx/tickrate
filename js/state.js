@@ -225,9 +225,29 @@ export function loadGame() {
       if (h.abilityBar === undefined) {
         h.abilityBar = {};
       }
+      // Initialize inventory
+      if (h.inventory === undefined) {
+        h.inventory = Array(100).fill(null);
+      }
+      // Initialize equipment
+      if (h.equipment === undefined) {
+        h.equipment = {
+          head: null,
+          chest: null,
+          legs: null,
+          feet: null,
+          main: null,
+          off: null
+        };
+      }
       // Initialize regen tick counter
       if (h.regenTickCounter === undefined) {
         h.regenTickCounter = 0;
+      }
+      // Initialize classBaseDamage (store original class damage for equipment bonuses)
+      if (h.classBaseDamage === undefined) {
+        const cls = getClassDef(h.classKey);
+        h.classBaseDamage = cls?.baseDamage ?? cls?.baseDPS ?? h.baseDamage ?? 5;
       }
       if (h.classKey === "warrior") {
         const cap = doubleAttackCap(h.level || 1);
@@ -235,6 +255,15 @@ export function loadGame() {
           h.doubleAttackSkill = h.level >= 5 ? 1 : 0;
         }
         h.doubleAttackSkill = Math.min(h.doubleAttackSkill || 0, cap);
+        
+        // Give warrior a stick if they don't have one
+        if (!h.inventory.some(item => item && item.id === "stick")) {
+          // Find first empty slot
+          const emptySlot = h.inventory.findIndex(item => item === null);
+          if (emptySlot !== -1) {
+            h.inventory[emptySlot] = { id: "stick", quantity: 1 };
+          }
+        }
       }
       return h;
     }) : [];
