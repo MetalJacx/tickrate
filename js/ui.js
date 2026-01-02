@@ -883,7 +883,7 @@ function renderZones() {
   const highest = state.highestUnlockedZone || 1;
   
   // Initialize selected zone if not set
-  if (!selectedZoneForTravel) {
+  if (selectedZoneForTravel === null || selectedZoneForTravel === undefined) {
     selectedZoneForTravel = state.zone;
   }
 
