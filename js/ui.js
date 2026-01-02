@@ -1828,12 +1828,14 @@ function renderTownMerchant() {
       const buttonsWrap = document.createElement("div");
       buttonsWrap.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;";
 
-      const sellOptions = [
-        { label: "Sell 1", qty: 1 },
-        { label: "Sell 5", qty: 5 },
-        { label: "Sell 10", qty: 10 },
-        { label: `Sell x${qty}`, qty }
-      ];
+      const sellOptions = qty > 1
+        ? [
+            { label: "Sell 1", qty: 1 },
+            { label: "Sell 5", qty: 5 },
+            { label: "Sell 10", qty: 10 },
+            { label: `Sell x${qty}`, qty }
+          ]
+        : [{ label: "Sell 1", qty: 1 }];
 
       const handleSell = (sellQty) => {
         const heroRef = state.party[heroIdx];
