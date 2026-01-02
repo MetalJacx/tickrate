@@ -158,53 +158,53 @@
 
 <!-- CLASS SELECTION SCREEN -->
 <div id="classScreen" style="min-height:100vh;display:none;background:#0d0d0d;padding:20px;">
-  <div style="display:flex;gap:20px;height:calc(100vh - 40px);">
-    <!-- Left Sidebar -->
-    <div style="width:200px;display:flex;flex-direction:column;gap:10px;">
-      <div style="font-size:18px;font-weight:bold;margin-bottom:10px;">Classes</div>
-      <button id="classBackBtn" style="padding:10px;border-radius:6px;border:1px solid #666;background:#444;color:#eee;cursor:pointer;margin-bottom:10px;">Back</button>
-      <div id="classButtonContainer" style="display:flex;flex-direction:column;gap:8px;overflow-y:auto;flex:1;"></div>
+  <div class="class-screen-grid">
+    <!-- Race Rail -->
+    <div class="class-rail">
+      <div class="class-rail-header">Races</div>
+      <div id="raceButtonContainer" class="rail-list"></div>
+      <button id="classBackBtn" class="class-back-btn">Back</button>
     </div>
 
-    <!-- Right Detail View -->
-    <div style="flex:1;background:#181818;border:1px solid #333;border-radius:10px;padding:20px;display:flex;flex-direction:column;">
-      <div id="classDetailContainer" style="display:none;flex:1;display:flex;flex-direction:column;">
-        <div style="font-size:20px;font-weight:bold;margin-bottom:12px;" id="selectedClassName"></div>
-        
-        <div style="display:flex;gap:20px;flex:1;min-height:0;">
-          <!-- Stats Column -->
-          <div style="flex:1;">
-            <div style="font-size:11px;color:#aaa;margin-bottom:6px;font-weight:bold;">STATS</div>
-            <div id="classStats" style="background:#111;padding:10px;border-radius:6px;border:1px solid #333;font-size:12px;line-height:1.6;"></div>
-          </div>
+    <!-- Class Rail -->
+    <div class="class-rail">
+      <div class="class-rail-header">Classes</div>
+      <div id="classButtonContainer" class="rail-list"></div>
+    </div>
 
-          <!-- Skills Column -->
-          <div style="flex:1;overflow-y:auto;">
-            <div style="font-size:11px;color:#aaa;margin-bottom:6px;font-weight:bold;">SKILLS</div>
-            <div id="classSkills" style="display:flex;flex-direction:column;gap:6px;"></div>
+    <!-- Detail Panel -->
+    <div class="class-detail">
+      <div id="classDetailContainer" class="detail-card" style="display:none;">
+        <div class="detail-header">
+          <div>
+            <div id="selectedClassName" class="detail-title"></div>
+            <div id="classTopLine" class="detail-topline"></div>
+            <div id="raceSummary" class="detail-race"></div>
           </div>
         </div>
 
-        <!-- Bottom Section -->
-        <div style="margin-top:20px;border-top:1px solid #333;padding-top:15px;">
-          <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;">
-            <label style="font-size:12px;min-width:50px;">Race</label>
-            <select id="raceSelect" style="flex:1;padding:8px;border-radius:6px;border:1px solid #555;background:#111;color:#eee;">
-            </select>
+        <div class="detail-section">
+          <div class="section-title">Starting Stats</div>
+          <div id="startingStatsGrid" class="stat-grid"></div>
+        </div>
+
+        <div class="detail-section" style="flex:1;">
+          <div class="section-title">Skills</div>
+          <div id="classSkills" class="skills-scroll"></div>
+        </div>
+
+        <div class="detail-footer">
+          <div class="name-row">
+            <label for="classCharacterNameInput">Character Name</label>
+            <input id="classCharacterNameInput" type="text" maxlength="24">
           </div>
-          <div id="raceSummary" style="font-size:11px;color:#aaa;margin-bottom:12px;background:#111;padding:8px;border:1px solid #333;border-radius:6px;"></div>
-          <label style="display:block;font-size:12px;margin-bottom:8px;">Character Name</label>
-          <div style="display:flex;gap:10px;align-items:flex-end;">
-            <input id="classCharacterNameInput" type="text" maxlength="24"
-              style="flex:1;padding:8px;border-radius:6px;border:1px solid #555;background:#111;color:#eee;box-sizing:border-box;">
-            <button id="classConfirmBtn" style="padding:8px 16px;border-radius:6px;border:1px solid #666;background:#444;color:#eee;cursor:pointer;white-space:nowrap;" disabled>Confirm</button>
-          </div>
-          <div id="classError" style="color:#ff6b6b;font-size:11px;margin-top:8px;display:none;"></div>
+          <button id="classConfirmBtn" class="confirm-btn" disabled>Confirm</button>
+          <div id="classError" class="detail-error" style="display:none;"></div>
         </div>
       </div>
 
-      <div id="classSelectPrompt" style="display:flex;align-items:center;justify-content:center;height:100%;color:#777;font-size:14px;">
-        Select a class to view details
+      <div id="classSelectPrompt" class="detail-prompt">
+        Select a race and class to view details
       </div>
     </div>
   </div>
@@ -235,6 +235,8 @@
             <div style="flex:1;">
               <div style="font-size:11px;color:#aaa;margin-bottom:6px;font-weight:bold;">STATS</div>
               <div id="recruitClassStats" style="background:#111;padding:10px;border-radius:6px;border:1px solid #333;font-size:12px;line-height:1.6;"></div>
+              <div style="margin-top:10px;font-size:11px;color:#aaa;font-weight:bold;">Starting Stats</div>
+              <div id="recruitStartingStatsGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;font-size:12px;"></div>
             </div>
 
             <!-- Skills Column -->

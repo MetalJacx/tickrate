@@ -581,16 +581,17 @@ function computeKillXP(enemy) {
   // P99-style base XP
   const baseXP = 75 * mobLevel * mobLevel;
 
-  let levelMult = 1;
+  // P99-style level multiplier: no bonus for higher level, only penalty for lower
+  let levelMult;
   if (delta >= 0) {
-    const bonusDelta = Math.min(Math.max(delta, 0), 6); // clamp 0..6
-    levelMult = 1 + 0.10 * bonusDelta;
+    // Mob same level or higher: full XP (no bonus)
+    levelMult = 1.0;
+  } else if (delta <= -10) {
+    // Mob 10+ levels below: no XP
+    levelMult = 0;
   } else {
-    if (delta <= -10) {
-      levelMult = 0;
-    } else {
-      levelMult = 1 - (Math.abs(delta) / 10);
-    }
+    // Mob lower level: reduced XP
+    levelMult = 1 - (Math.abs(delta) / 10);
   }
 
   const killXP = Math.floor(baseXP * levelMult);

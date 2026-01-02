@@ -35,19 +35,6 @@ function showStartScreen() {
   document.getElementById("startScreen").style.display = "flex";
   document.getElementById("gameScreen").style.display = "none";
   document.getElementById("classScreen").style.display = "none";
-  setStartError("");
-}
-
-function showGameScreen() {
-  document.getElementById("startScreen").style.display = "none";
-  document.getElementById("gameScreen").style.display = "block";
-  document.getElementById("classScreen").style.display = "none";
-}
-
-function showClassScreen() {
-  document.getElementById("startScreen").style.display = "none";
-  document.getElementById("gameScreen").style.display = "none";
-  document.getElementById("classScreen").style.display = "flex";
 }
 
 function setStartError(msg) {
@@ -62,28 +49,64 @@ function setClassError(msg) {
   el.style.display = msg ? "block" : "none";
 }
 
-function formatRaceMods(race) {
-  const mods = race?.statMods || {};
-  const order = ["str", "con", "agi", "dex", "wis", "int", "cha"];
-  return order
-    .map(stat => {
-      const val = mods[stat] || 0;
-      const sign = val > 0 ? "+" : "";
-      return `${stat.toUpperCase()} ${sign}${val}`;
-    })
-    .join(", ");
+function showGameScreen() {
+  document.getElementById("startScreen").style.display = "none";
+  document.getElementById("gameScreen").style.display = "block";
+  document.getElementById("classScreen").style.display = "none";
 }
 
-function populateRaceSelect(selectEl, selectedKey = DEFAULT_RACE_KEY) {
-  if (!selectEl) return;
-  selectEl.innerHTML = "";
-  for (const race of RACES) {
-    const opt = document.createElement("option");
-    opt.value = race.key;
-    opt.textContent = race.name;
-    selectEl.appendChild(opt);
+function showClassScreen() {
+  document.getElementById("startScreen").style.display = "none";
+  document.getElementById("gameScreen").style.display = "none";
+  document.getElementById("classScreen").style.display = "flex";
+}
+
+const STAT_KEYS = ["str", "con", "agi", "dex", "wis", "int", "cha", "ac"];
+
+function computeStartingStats(cls, race) {
+  const base = cls?.stats || {};
+  const mods = race?.statMods || {};
+  const combined = {};
+  for (const key of STAT_KEYS) {
+    const baseVal = base[key] || 0;
+    const modVal = mods[key] || 0;
+    combined[key] = baseVal + modVal;
   }
-  selectEl.value = selectedKey || DEFAULT_RACE_KEY;
+  return combined;
+}
+
+function renderStartingStatsGrid(container, stats) {
+  if (!container) return;
+  if (!stats) {
+    container.innerHTML = "";
+    return;
+  }
+  const order = ["str", "con", "agi", "dex", "wis", "int", "cha", "ac"];
+  container.innerHTML = order
+    .map(key => {
+      const label = key.toUpperCase();
+      const val = stats[key] ?? 0;
+      return `<div class="stat-chip">${label} ${val}</div>`;
+    })
+    .join("");
+}
+
+function renderRaceButtons() {
+  const container = document.getElementById("raceButtonContainer");
+  if (!container) return;
+  container.innerHTML = "";
+  for (const race of RACES) {
+    const btn = document.createElement("button");
+    btn.className = "rail-item" + (selectedRaceKey === race.key ? " selected" : "");
+    btn.textContent = race.name;
+    btn.addEventListener("click", () => {
+      selectedRaceKey = race.key;
+      renderRaceButtons();
+      renderClassDetails();
+      updateClassConfirmState();
+    });
+    container.appendChild(btn);
+  }
 }
 
 function simulateOfflineProgress(seconds) {
@@ -180,34 +203,13 @@ function renderClassCards() {
 
   for (const cls of CLASSES) {
     const btn = document.createElement("button");
+    btn.className = "rail-item" + (selectedClassKey === cls.key ? " selected" : "");
     btn.textContent = cls.name;
-    btn.style.cssText = `
-      padding: 12px;
-      border-radius: 6px;
-      border: 2px solid ${selectedClassKey === cls.key ? "#4a9eff" : "#555"};
-      background: ${selectedClassKey === cls.key ? "#1a1a2e" : "#222"};
-      color: ${selectedClassKey === cls.key ? "#4a9eff" : "#eee"};
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: ${selectedClassKey === cls.key ? "bold" : "normal"};
-      transition: all 0.2s;
-    `;
-    btn.addEventListener("mouseover", function () {
-      if (selectedClassKey !== cls.key) {
-        this.style.background = "#333";
-        this.style.borderColor = "#666";
-      }
-    });
-    btn.addEventListener("mouseout", function () {
-      if (selectedClassKey !== cls.key) {
-        this.style.background = "#222";
-        this.style.borderColor = "#555";
-      }
-    });
     btn.addEventListener("click", () => {
       selectedClassKey = cls.key;
       setClassError("");
       renderClassCards();
+      renderRaceButtons();
       renderClassDetails();
       updateClassConfirmState();
     });
@@ -219,58 +221,65 @@ function renderClassCards() {
 function renderClassDetails() {
   const detailContainer = document.getElementById("classDetailContainer");
   const promptContainer = document.getElementById("classSelectPrompt");
+  const classNameEl = document.getElementById("selectedClassName");
+  const topLineEl = document.getElementById("classTopLine");
+  const raceSummaryEl = document.getElementById("raceSummary");
+  const skillsContainer = document.getElementById("classSkills");
+  const startingGrid = document.getElementById("startingStatsGrid");
 
-  if (!selectedClassKey) {
-    detailContainer.style.display = "none";
-    promptContainer.style.display = "flex";
+  if (!selectedClassKey || !selectedRaceKey) {
+    if (detailContainer) detailContainer.style.display = "none";
+    if (promptContainer) promptContainer.style.display = "flex";
+    if (skillsContainer) skillsContainer.innerHTML = "";
+    if (startingGrid) startingGrid.innerHTML = "";
     return;
   }
 
   const cls = getClassDef(selectedClassKey);
-  if (!cls) return;
+  const race = getRaceDef(selectedRaceKey);
+  if (!cls || !race) return;
 
-  detailContainer.style.display = "flex";
-  promptContainer.style.display = "none";
+  if (detailContainer) detailContainer.style.display = "flex";
+  if (promptContainer) promptContainer.style.display = "none";
 
-  document.getElementById("selectedClassName").textContent = cls.name;
-
-  const raceSummary = document.getElementById("raceSummary");
-  if (raceSummary) {
-    const race = getRaceDef(selectedRaceKey);
-    raceSummary.textContent = `${race?.name || "Race"}: ${formatRaceMods(race)}`;
+  if (classNameEl) classNameEl.textContent = cls.name;
+  if (topLineEl) {
+    topLineEl.textContent = `HP ${cls.baseHP}   DMG ${cls.baseDPS}   Heal ${cls.baseHealing}   Role ${cls.role}   Cost ${cls.cost}g`;
+  }
+  if (raceSummaryEl) {
+    raceSummaryEl.textContent = `Race: ${race.name} (${formatRaceMods(race)})`;
   }
 
-  const statsHtml = `
-    HP: ${cls.baseHP}<br>
-    Damage: ${cls.baseDPS}<br>
-    Healing: ${cls.baseHealing}<br>
-    Cost: ${cls.cost}g<br>
-    Role: ${cls.role}
-  `;
-  document.getElementById("classStats").innerHTML = statsHtml;
+  const combinedStats = computeStartingStats(cls, race);
+  renderStartingStatsGrid(startingGrid, combinedStats);
 
-  const skillsContainer = document.getElementById("classSkills");
-  skillsContainer.innerHTML = "";
-  for (const sk of cls.skills) {
-    const skillDiv = document.createElement("div");
-    let typeLabel = sk.type === "damage" ? "DMG" : "HEAL";
-    if (sk.damageType) {
-      typeLabel += ` (${sk.damageType})`;
+  if (skillsContainer) {
+    skillsContainer.innerHTML = "";
+    for (const sk of cls.skills) {
+      const card = document.createElement("div");
+      card.className = "skill-card";
+      const typeLabel = sk.type === "damage" ? "DMG" : "HEAL";
+      const dmgType = sk.damageType ? ` (${sk.damageType})` : "";
+      const amountLabel = sk.amount != null ? `+${sk.amount}` : (sk.minDamage != null ? `${sk.minDamage}-${sk.maxDamage}` : "");
+      card.innerHTML = `
+        <div class="skill-name">${sk.name} (Lv${sk.level})</div>
+        <div class="skill-meta">${typeLabel}${dmgType} ${amountLabel} | CD ${sk.cooldownSeconds}s</div>
+      `;
+      skillsContainer.appendChild(card);
     }
-    skillDiv.style.cssText = `
-      background: #111;
-      padding: 8px;
-      border-radius: 4px;
-      border: 1px solid #333;
-      font-size: 11px;
-      line-height: 1.4;
-    `;
-    skillDiv.innerHTML = `
-      <div style="font-weight:bold;margin-bottom:2px;">${sk.name} (Lv${sk.level})</div>
-      <div style="color:#aaa;">${typeLabel} +${sk.amount} | CD ${sk.cooldownSeconds}s</div>
-    `;
-    skillsContainer.appendChild(skillDiv);
   }
+}
+
+function formatRaceMods(race) {
+  const mods = race?.statMods || {};
+  const order = ["str", "con", "dex", "agi", "wis", "int", "cha"];
+  return order
+    .map(stat => {
+      const val = mods[stat] || 0;
+      const sign = val > 0 ? "+" : "";
+      return `${stat.toUpperCase()} ${sign}${val}`;
+    })
+    .join(", ");
 }
 
 function updateStartButtonState() {
@@ -346,13 +355,6 @@ function wireClassScreen(onConfirmed) {
   selectedRaceKey = state.playerRaceKey || DEFAULT_RACE_KEY;
   const charNameInput = document.getElementById("classCharacterNameInput");
   charNameInput.value = "";
-  const raceSelect = document.getElementById("raceSelect");
-  const raceSummary = document.getElementById("raceSummary");
-  populateRaceSelect(raceSelect, selectedRaceKey);
-  if (raceSummary) {
-    const race = getRaceDef(selectedRaceKey);
-    raceSummary.textContent = `${race?.name || "Race"}: ${formatRaceMods(race)}`;
-  }
 
   // Remove old listeners by cloning elements
   const backBtn = document.getElementById("classBackBtn");
@@ -365,24 +367,11 @@ function wireClassScreen(onConfirmed) {
 
   const backBtnFinal = document.getElementById("classBackBtn");
   const confirmBtnFinal = document.getElementById("classConfirmBtn");
-  const raceSelectFinal = document.getElementById("raceSelect");
-  const raceSummaryFinal = document.getElementById("raceSummary");
 
   backBtnFinal.addEventListener("click", () => {
     selectedClassKey = null;
     showStartScreen();
   });
-
-  if (raceSelectFinal) {
-    raceSelectFinal.addEventListener("change", (e) => {
-      selectedRaceKey = e.target.value || DEFAULT_RACE_KEY;
-      const race = getRaceDef(selectedRaceKey);
-      if (raceSummaryFinal) {
-        raceSummaryFinal.textContent = `${race?.name || "Race"}: ${formatRaceMods(race)}`;
-      }
-      updateClassConfirmState();
-    });
-  }
 
   charNameInput.addEventListener("input", updateClassConfirmState);
 
@@ -406,6 +395,9 @@ function wireClassScreen(onConfirmed) {
   });
 
   updateClassConfirmState();
+  renderRaceButtons();
+  renderClassCards();
+  renderClassDetails();
 }
 
 function wireRecruitModal() {
@@ -486,12 +478,14 @@ function wireRecruitModal() {
     const detailContainer = document.getElementById("recruitDetailContainer");
     const promptContainer = document.getElementById("recruitSelectPrompt");
     const errorDiv = document.getElementById("recruitError");
+    const recruitStatsGrid = document.getElementById("recruitStartingStatsGrid");
     
     errorDiv.style.display = "none";
     
     if (!selectedRecruitClassKey) {
       detailContainer.style.display = "none";
       promptContainer.style.display = "flex";
+      if (recruitStatsGrid) recruitStatsGrid.innerHTML = "";
       confirmBtn.disabled = true;
       return;
     }
@@ -538,6 +532,13 @@ function wireRecruitModal() {
         <div style="color:#aaa;">${typeLabel} +${sk.amount} | CD ${sk.cooldownSeconds}s</div>
       `;
       skillsContainer.appendChild(skillDiv);
+    }
+
+    // Starting stats preview
+    if (recruitStatsGrid) {
+      const race = getRaceDef(selectedRecruitRaceKey);
+      const combined = computeStartingStats(cls, race);
+      renderStartingStatsGrid(recruitStatsGrid, combined);
     }
     
     // Update confirm button
@@ -723,6 +724,7 @@ function start() {
       showClassScreen();
       selectedClassKey = null;
       updateClassConfirmState();
+      renderRaceButtons();
       renderClassCards();
       renderClassDetails();
     });
