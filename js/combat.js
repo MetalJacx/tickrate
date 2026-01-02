@@ -781,8 +781,9 @@ export function gameTick() {
     }
   }
 
-  // Check if any party member is damaged (for heal checks)
+  // Check party health/death status for heal/resurrect gating
   const anyDamaged = state.party.some(h => !h.isDead && h.health < h.maxHP);
+  const anyDead = state.party.some(h => h.isDead);
 
   // 3) Process skills and calculate bonuses
   let totalDamageThisTick = 0;
@@ -822,6 +823,10 @@ export function gameTick() {
         
         // For heals, only cast if someone is damaged
         if (sk.type === "heal" && !anyDamaged) {
+          hasResources = false;
+        }
+        // For resurrect, only cast if someone is dead
+        if (sk.type === "resurrect" && !anyDead) {
           hasResources = false;
         }
         
@@ -892,9 +897,7 @@ export function gameTick() {
               break;
             }
           }
-          if (!revived) {
-            addLog(`${hero.name} casts ${sk.name} but no one needs revival.`);
-          }
+          // If no one was dead, skill is skipped earlier; no log needed here
         }
         hero.skillTimers[sk.key] = sk.cooldownSeconds;
       }
