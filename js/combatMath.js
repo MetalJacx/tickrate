@@ -43,7 +43,15 @@ export function rand01() {
 
 function getStats(entity) {
   const stats = entity?.stats || {};
-  const acBonus = entity?.tempACBuffAmount || 0;
+  // Include both old tempACBuffAmount (for backwards compatibility) and new Fortify buff
+  let acBonus = entity?.tempACBuffAmount || 0;
+  if (entity?.activeBuffs?.fortify) {
+    const fortifyBuff = entity.activeBuffs.fortify;
+    const now = Date.now();
+    if (now <= fortifyBuff.expiresAt && fortifyBuff.data?.acBonus) {
+      acBonus += fortifyBuff.data.acBonus;
+    }
+  }
   if (!acBonus) return stats;
   return { ...stats, ac: (stats.ac || 0) + acBonus };
 }

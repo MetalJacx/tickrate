@@ -1,5 +1,5 @@
 import { state } from "./state.js";
-import { heroLevelUpCost, applyHeroLevelUp, canTravelForward, travelToNextZone, travelToPreviousZone, recalcPartyTotals, killsRequiredForZone, spawnEnemy, doubleAttackCap, doubleAttackProcChance, refreshHeroDerived } from "./combat.js";
+import { heroLevelUpCost, applyHeroLevelUp, canTravelForward, travelToNextZone, travelToPreviousZone, recalcPartyTotals, killsRequiredForZone, spawnEnemy, doubleAttackCap, doubleAttackProcChance, refreshHeroDerived, getMeditateCap, hasBuff, toggleTargetDummy } from "./combat.js";
 import { spawnEnemyToList } from "./combat.js";
 import { CLASSES, getClassDef } from "./classes/index.js";
 import { getZoneDef, listZones, ensureZoneDiscovery, getActiveSubArea } from "./zones/index.js";
@@ -39,6 +39,15 @@ export function initUI({ onRecruit, onReset, onOpenRecruitModal }) {
   if (spawnAddBtn) {
     spawnAddBtn.addEventListener("click", () => {
       spawnEnemyToList();
+      renderAll();
+    });
+  }
+
+  // Test button to toggle target dummy
+  const targetDummyBtn = document.getElementById("targetDummyBtn");
+  if (targetDummyBtn) {
+    targetDummyBtn.addEventListener("click", () => {
+      toggleTargetDummy();
       renderAll();
     });
   }
@@ -232,41 +241,84 @@ export function updateStatsModalSkills(hero) {
   if (!rightColumn) return;
   
   // Rebuild just the skills section
-  rightColumn.innerHTML = "";
-  
-  const skillTitle = document.createElement("div");
-  skillTitle.style.cssText = "font-weight:600;font-size:12px;margin:0 0 12px;color:#fbbf24;";
-  skillTitle.textContent = "Skills / Passives";
-  rightColumn.appendChild(skillTitle);
+  // Right column: Skills / Passives (warrior Double Attack or caster Meditate)
+  if (hero.classKey === "warrior") {
+    // Double Attack for Warriors
+    const rightColumn = document.createElement("div");
+    rightColumn.style.flex = "1 1 auto";
+    rightColumn.style.minWidth = "140px";
 
-  const cap = doubleAttackCap(hero.level);
-  const skillVal = Math.min(hero.doubleAttackSkill || 0, cap || 0);
-  const locked = hero.level < 5 || cap === 0;
-  const procPct = doubleAttackProcChance(skillVal) * 100;
+    const skillTitle = document.createElement("div");
+    skillTitle.style.cssText = "font-weight:600;font-size:12px;margin:0 0 12px;color:#fbbf24;";
+    skillTitle.textContent = "Skills / Passives";
+    rightColumn.appendChild(skillTitle);
 
-  if (locked) {
-    rightColumn.appendChild(statLine("Double Attack", "Locked until level 5"));
-  } else {
-    const skillLine = document.createElement("div");
-    skillLine.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:4px 0;font-size:12px;color:#ccc;";
-    skillLine.innerHTML = `<span>Double Attack</span> <span style='color:#fff;'>${skillVal.toFixed(0)} / ${cap}</span>`;
-    rightColumn.appendChild(skillLine);
+    const cap = doubleAttackCap(hero.level);
+    const skillVal = Math.min(hero.doubleAttackSkill || 0, cap || 0);
+    const locked = hero.level < 5 || cap === 0;
+    const procPct = doubleAttackProcChance(skillVal) * 100;
 
-    const procLine = document.createElement("div");
-    procLine.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:2px 0 8px;font-size:11px;color:#aaa;";
-    procLine.innerHTML = `<span>Proc Chance</span> <span style='color:#fbbf24;'>${procPct.toFixed(1)}%</span>`;
-    rightColumn.appendChild(procLine);
+    if (locked) {
+      rightColumn.appendChild(statLine("Double Attack", "Locked until level 5"));
+    } else {
+      const skillLine = document.createElement("div");
+      skillLine.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:4px 0;font-size:12px;color:#ccc;";
+      skillLine.innerHTML = `<span>Double Attack</span> <span style='color:#fff;'>${skillVal.toFixed(0)} / ${cap}</span>`;
+      rightColumn.appendChild(skillLine);
 
-    const barBg = document.createElement("div");
-    barBg.style.cssText = "width:100%;height:10px;background:#252525;border-radius:5px;overflow:hidden;border:1px solid #333;margin:0;position:relative;";
-    const percent = cap > 0 ? Math.min(100, (skillVal / cap) * 100) : 0;
-    const nextPercent = cap > 0 && skillVal < cap ? Math.min(100, ((skillVal + 1) / cap) * 100) : 100;
+      const procLine = document.createElement("div");
+      procLine.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:2px 0 8px;font-size:11px;color:#aaa;";
+      procLine.innerHTML = `<span>Proc Chance</span> <span style='color:#fbbf24;'>${procPct.toFixed(1)}%</span>`;
+      rightColumn.appendChild(procLine);
+
+      const barBg = document.createElement("div");
+      barBg.style.cssText = "width:100%;height:10px;background:#252525;border-radius:5px;overflow:hidden;border:1px solid #333;margin:0;position:relative;";
+      const percent = cap > 0 ? Math.min(100, (skillVal / cap) * 100) : 0;
+      const nextPercent = cap > 0 && skillVal < cap ? Math.min(100, ((skillVal + 1) / cap) * 100) : 100;
+      
+      const barFill = document.createElement("div");
+      barFill.style.cssText = `height:100%;width:${percent}%;background:linear-gradient(90deg,#fbbf24,#f59e0b);transition:width 0.2s;`;
+      barBg.appendChild(barFill);
+      
+      rightColumn.appendChild(barBg);
+    }
     
-    const barFill = document.createElement("div");
-    barFill.style.cssText = `height:100%;width:${percent}%;background:linear-gradient(90deg,#fbbf24,#f59e0b);transition:width 0.2s;`;
-    barBg.appendChild(barFill);
+    statsBox.appendChild(rightColumn);
+  } else if (["cleric", "wizard", "enchanter"].includes(hero.classKey)) {
+    // Meditate for Casters
+    const rightColumn = document.createElement("div");
+    rightColumn.style.flex = "1 1 auto";
+    rightColumn.style.minWidth = "140px";
+
+    const skillTitle = document.createElement("div");
+    skillTitle.style.cssText = "font-weight:600;font-size:12px;margin:0 0 12px;color:#fbbf24;";
+    skillTitle.textContent = "Skills / Passives";
+    rightColumn.appendChild(skillTitle);
+
+    const cap = getMeditateCap(hero.level);
+    const skillVal = Math.min(hero.meditateSkill || 0, cap || 0);
+    const locked = hero.level < 5 || cap === 0;
+
+    if (locked) {
+      rightColumn.appendChild(statLine("Meditate", "Locked until level 5"));
+    } else {
+      const skillLine = document.createElement("div");
+      skillLine.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:4px 0;font-size:12px;color:#ccc;";
+      skillLine.innerHTML = `<span>Meditate</span> <span style='color:#fff;'>${skillVal.toFixed(0)} / ${cap}</span>`;
+      rightColumn.appendChild(skillLine);
+
+      const barBg = document.createElement("div");
+      barBg.style.cssText = "width:100%;height:10px;background:#252525;border-radius:5px;overflow:hidden;border:1px solid #333;margin:4px 0;position:relative;";
+      const percent = cap > 0 ? Math.min(100, (skillVal / cap) * 100) : 0;
+      
+      const barFill = document.createElement("div");
+      barFill.style.cssText = `height:100%;width:${percent}%;background:linear-gradient(90deg,#60a5fa,#3b82f6);transition:width 0.2s;`;
+      barBg.appendChild(barFill);
+      
+      rightColumn.appendChild(barBg);
+    }
     
-    rightColumn.appendChild(barBg);
+    statsBox.appendChild(rightColumn);
   }
 }
 
@@ -427,10 +479,38 @@ export function renderEnemy() {
     hpLabel.style.cssText = "font-size:9px;color:#aaa;text-align:center;";
     hpLabel.textContent = `${Math.max(0, e.hp.toFixed(0))}/${e.maxHP}`;
     
+    // Debuff indicators
+    const debuffRow = document.createElement("div");
+    debuffRow.style.cssText = "display:flex;gap:3px;flex-wrap:wrap;margin-top:3px;";
+    if (e.activeBuffs) {
+      const now = Date.now();
+      for (const [buffKey, buffData] of Object.entries(e.activeBuffs)) {
+        if (now <= buffData.expiresAt) {
+          const debuffPill = document.createElement("div");
+          const timeLeft = ((buffData.expiresAt - now) / 1000).toFixed(0);
+          debuffPill.style.cssText = `
+            padding:2px 4px;
+            border-radius:2px;
+            background:#d32f2f;
+            color:#fff;
+            font-size:8px;
+            white-space:nowrap;
+            border:1px solid #c62828;
+          `;
+          const debuffName = buffKey === "fear" ? "Fear" : buffKey;
+          debuffPill.textContent = `${debuffName} (${timeLeft}s)`;
+          debuffRow.appendChild(debuffPill);
+        }
+      }
+    }
+    
     card.appendChild(label);
     card.appendChild(levelDiv);
     card.appendChild(barBg);
     card.appendChild(hpLabel);
+    if (debuffRow.childNodes.length > 0) {
+      card.appendChild(debuffRow);
+    }
     lineupContainer.appendChild(card);
   }
 
@@ -1844,7 +1924,7 @@ function populateStatsSection(hero) {
   
   statsBox.appendChild(leftColumn);
 
-  // Right column: Skills / Passives (warrior Double Attack)
+  // Right column: Skills / Passives (warrior Double Attack or caster Meditate)
   if (hero.classKey === "warrior") {
     const rightColumn = document.createElement("div");
     rightColumn.style.flex = "1 1 auto";
@@ -1880,6 +1960,40 @@ function populateStatsSection(hero) {
       
       const barFill = document.createElement("div");
       barFill.style.cssText = `height:100%;width:${percent}%;background:linear-gradient(90deg,#fbbf24,#f59e0b);transition:width 0.2s;`;
+      barBg.appendChild(barFill);
+      
+      rightColumn.appendChild(barBg);
+    }
+    
+    statsBox.appendChild(rightColumn);
+  } else if (["cleric", "wizard", "enchanter"].includes(hero.classKey)) {
+    const rightColumn = document.createElement("div");
+    rightColumn.style.flex = "1 1 auto";
+    rightColumn.style.minWidth = "140px";
+
+    const skillTitle = document.createElement("div");
+    skillTitle.style.cssText = "font-weight:600;font-size:12px;margin:0 0 12px;color:#fbbf24;";
+    skillTitle.textContent = "Skills / Passives";
+    rightColumn.appendChild(skillTitle);
+
+    const cap = getMeditateCap(hero.level);
+    const skillVal = Math.min(hero.meditateSkill || 0, cap || 0);
+    const locked = hero.level < 5 || cap === 0;
+
+    if (locked) {
+      rightColumn.appendChild(statLine("Meditate", "Locked until level 5"));
+    } else {
+      const skillLine = document.createElement("div");
+      skillLine.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:4px 0;font-size:12px;color:#ccc;";
+      skillLine.innerHTML = `<span>Meditate</span> <span style='color:#fff;'>${skillVal.toFixed(0)} / ${cap}</span>`;
+      rightColumn.appendChild(skillLine);
+
+      const barBg = document.createElement("div");
+      barBg.style.cssText = "width:100%;height:10px;background:#252525;border-radius:5px;overflow:hidden;border:1px solid #333;margin:4px 0;position:relative;";
+      const percent = cap > 0 ? Math.min(100, (skillVal / cap) * 100) : 0;
+      
+      const barFill = document.createElement("div");
+      barFill.style.cssText = `height:100%;width:${percent}%;background:linear-gradient(90deg,#60a5fa,#3b82f6);transition:width 0.2s;`;
       barBg.appendChild(barFill);
       
       rightColumn.appendChild(barBg);

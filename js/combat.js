@@ -613,9 +613,47 @@ function spawnEnemyToList() {
 
 export { spawnEnemyToList };
 
+// Toggle target dummy for testing
+export function toggleTargetDummy() {
+  // Check if dummy already exists
+  const dummyIndex = state.currentEnemies.findIndex(e => e.name === "Target Dummy");
+  
+  if (dummyIndex >= 0) {
+    // Despawn dummy
+    state.currentEnemies.splice(dummyIndex, 1);
+    addLog("Target Dummy despawned.", "normal");
+  } else {
+    // Spawn dummy
+    const dummy = {
+      name: "Target Dummy",
+      level: 1,
+      baseHP: 10000,
+      baseDamage: 0,
+      baseMana: 0,
+      stats: { str: 0, con: 0, dex: 0, agi: 0, ac: 0, wis: 0, int: 0, cha: 0 },
+      maxHP: 10000,
+      hp: 10000,
+      dps: 0,
+      xp: 0,
+      debuffs: [],
+      resourceType: null,
+      primaryStat: null,
+      maxMana: 0,
+      mana: 0,
+      activeBuffs: {}
+    };
+    state.currentEnemies.push(dummy);
+    addLog("Target Dummy spawned.", "normal");
+  }
+}
+
 function checkForReinforcement() {
   // Each enemy has 5% chance per tick to call reinforcements (when in combat)
+  // Don't spawn reinforcements if only a target dummy is present
   if (state.currentEnemies.length > 0) {
+    const hasRealEnemy = state.currentEnemies.some(e => e.name !== "Target Dummy");
+    if (!hasRealEnemy) return; // Skip reinforcements if only target dummy
+    
     const zone = getZoneDef(state.zone);
     const reinforcementChance = zone?.aggroChance ?? 0.05;
     if (Math.random() < reinforcementChance) {
@@ -1007,6 +1045,27 @@ export function applyCourageBuff(hero, clericLevel) {
   }
 }
 
+// Fortify buff handler - applies AC bonus
+export function applyFortifyBuff(hero, warriorLevel) {
+  const intervalLevels = 2;
+  const perInterval = 1;
+  const minLevelForScale = 8;
+  let acBonus = 10;
+  
+  if (intervalLevels > 0 && perInterval !== 0) {
+    const steps = Math.floor(Math.max(0, warriorLevel - minLevelForScale) / intervalLevels);
+    acBonus += steps * perInterval;
+  }
+  
+  acBonus = Math.min(acBonus, 15); // acMax
+  acBonus = Math.max(0, Math.floor(acBonus));
+  
+  const durationTicks = 8;
+  const durationMs = durationTicks * 3000; // GAME_TICK_MS
+  
+  applyBuff(hero, "fortify", durationMs, { acBonus });
+}
+
 export function gameTick() {
   // Handle auto-revival for dead members (60 second timer)
   const now = Date.now();
@@ -1247,6 +1306,12 @@ export function gameTick() {
             hasResources = false; // Everyone has the buff, don't cast
           }
         }
+        // Fortify is self-only
+        if (sk.type === "buff" && sk.buffType === "fortify") {
+          if (hasBuff(hero, "fortify")) {
+            hasResources = false; // Hero already has Fortify, don't cast
+          }
+        }
         
         if (!hasResources) {
           continue; // Skip this skill if not enough resources or no one needs healing
@@ -1301,23 +1366,24 @@ export function gameTick() {
           }
         }
         if (sk.type === "buff") {
-          if (sk.buff === "ac") {
-            const duration = sk.durationTicks ?? 6;
-            const intervalLevels = sk.acIntervalLevels || 1;
-            const perInterval = sk.acPerInterval ?? sk.acPerLevel ?? 0;
-            const minLevelForScale = sk.acMinLevel ?? sk.level ?? 1;
-            let acBonus = sk.acBase ?? 0;
-            if (intervalLevels > 0 && perInterval !== 0) {
-              const steps = Math.floor(Math.max(0, hero.level - minLevelForScale) / intervalLevels);
-              acBonus += steps * perInterval;
+          // Handle buff skills (e.g., Courage, Fortify)
+          if (sk.buffType === "courage") {
+            // Find first party member without Courage buff
+            const needsBuff = state.party.find(h => !h.isDead && !hasBuff(h, "courage"));
+            if (needsBuff) {
+              applyCourageBuff(needsBuff, hero.level);
+              addLog(`${hero.name} casts ${sk.name} on ${needsBuff.name}!`, "normal");
+            } else {
+              // Everyone has the buff; refund mana
+              hero.mana += cost;
             }
-            if (sk.acMax != null) {
-              acBonus = Math.min(acBonus, sk.acMax);
+          } else if (sk.buffType === "fortify") {
+            // Fortify is self-only
+            applyFortifyBuff(hero, hero.level);
+            const buffData = getBuff(hero, "fortify");
+            if (buffData) {
+              addLog(`${hero.name} fortifies, gaining +${buffData.acBonus} AC for 8 ticks.`, "skill");
             }
-            acBonus = Math.max(0, Math.floor(acBonus));
-            hero.tempACBuffAmount = Math.max(hero.tempACBuffAmount || 0, acBonus);
-            hero.tempACBuffTicks = duration;
-            addLog(`${hero.name} fortifies, gaining +${acBonus} AC for ${duration} ticks.`, "skill");
           }
         }
         if (sk.type === "debuff") {
@@ -1328,6 +1394,16 @@ export function gameTick() {
               targetEnemy.forcedTargetId = hero.id;
               targetEnemy.forcedTargetTicks = duration;
               addLog(`${hero.name} taunts ${targetEnemy.name}, forcing attacks for ${duration} ticks!`, "skill");
+            }
+          } else if (sk.debuffType === "fear") {
+            // Fear debuff on first enemy
+            const targetEnemy = state.currentEnemies[0];
+            if (targetEnemy) {
+              // Fear duration: 2 ticks at level 8, 3+ at level 9+
+              const durationTicks = hero.level >= 9 ? 3 : 2;
+              const durationMs = durationTicks * 3000; // GAME_TICK_MS
+              applyBuff(targetEnemy, "fear", durationMs, { durationTicks });
+              addLog(`${hero.name} casts ${sk.name} on ${targetEnemy.name}! ${targetEnemy.name} runs in fear for ${durationTicks} ticks!`, "skill");
             }
           }
         }
@@ -1484,6 +1560,12 @@ export function gameTick() {
   let livingMembers = state.party.filter(h => !h.isDead);
   if (livingMembers.length > 0) {
     for (const enemy of state.currentEnemies) {
+      // Check if enemy is feared and skip attack
+      if (hasBuff(enemy, "fear")) {
+        addLog(`${enemy.name} is running for its life and cannot attack!`, "normal");
+        continue;
+      }
+      
       // Single-target damage: pick one living member to take the hit
       let target = null;
       if (enemy.forcedTargetId && enemy.forcedTargetTicks > 0) {
