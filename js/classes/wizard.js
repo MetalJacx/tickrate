@@ -46,7 +46,7 @@ export default {
       minDamage: 12,
       maxDamage: 20,
       cost: 10,
-      cooldownTicks: 6,
+      cooldownTicks: 3,
       description: "Starter nuke. Damage scales +1 max per 2 levels, capping at level 10 (12–25)."
     },
     {
@@ -55,7 +55,7 @@ export default {
       level: 3,
       type: "utility",
       cost: 0,
-      cooldownTicks: 24,
+      cooldownTicks: 12,
       manaRestoration: null, // Calculated as floor(level * 1.5) in handler
       description: "Restore mana out of combat. Restores floor(Level × 1.5) mana, capping at level 12 (18 max)."
     },
@@ -68,7 +68,7 @@ export default {
       minDamage: 18,
       maxDamage: 30,
       cost: 18,
-      cooldownTicks: 8,
+      cooldownTicks: 4,
       description: "Higher burst nuke. Damage scales +1 max per 2 levels, capping at level 18 (18–39)."
     },
     {
@@ -80,7 +80,7 @@ export default {
       minDamage: 10,
       maxDamage: 16,
       cost: 30,
-      cooldownTicks: 16,
+      cooldownTicks: 8,
       cleaveTargets: 99, // Affects all targets
       aoeDiminishing: true, // Flag for AOE diminishing logic
       description: "AOE nuke. Full damage to first 3 targets, then -20% per additional target (min 40%)."
@@ -92,7 +92,7 @@ export default {
       type: "buff",
       buffType: "arcane_shield",
       cost: 25,
-      cooldownTicks: 30,
+      cooldownTicks: 15,
       tempHP: 50,
       castLockoutTicks: 1,
       description: "Grant self 50 Temp HP. Cannot cast offensive spells for 1 tick after."
