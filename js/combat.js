@@ -971,13 +971,31 @@ function meditateTick(hero) {
   
   // Apply combat multiplier
   const stateMult = hero.inCombat ? COMBAT_REGEN_MULT : OOC_REGEN_MULT;
-  const manaRegenThisTick = Math.floor(totalRegenRaw * stateMult);
+  let regenAfterState = totalRegenRaw * stateMult;
+  
+  // Apply missing-mana bonus ONLY if out-of-combat
+  if (!hero.inCombat) {
+    const manaPct = Math.max(0, Math.min(1, hero.mana / hero.maxMana));
+    if (manaPct < 0.5) {
+      // Missing-mana multiplier: scales from 1.00x at 50% to 1.50x at 0%
+      const missingManaMult = 1.0 + (0.5 - manaPct) * 1.0;
+      regenAfterState = regenAfterState * missingManaMult;
+    }
+  }
+  
+  const manaRegenThisTick = Math.floor(regenAfterState);
   
   // Apply regen and detect if mana actually increased
   const manaBefore = hero.mana;
   const manaAfter = Math.min(hero.maxMana, manaBefore + manaRegenThisTick);
   const didRegenMana = manaAfter > manaBefore;
   hero.mana = manaAfter;
+  
+  // Log mana regen if it occurred
+  const actualManaRegen = manaAfter - manaBefore;
+  if (didRegenMana && actualManaRegen > 0.1) {
+    addLog(`${hero.name} regenerates ${actualManaRegen.toFixed(1)} mana!`, "mana_regen");
+  }
   
   // Meditate skill-up: only OOC, only if mana increased, only if skill < cap
   if (!hero.inCombat && didRegenMana && hero.level >= MEDITATE_UNLOCK_LEVEL && hero.meditateSkill < cap) {

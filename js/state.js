@@ -82,6 +82,7 @@ export const state = {
   highestUnlockedZone: 1,
   logFilters: {
     healing: true,
+    mana_regen: true,
     damage_dealt: true,
     damage_taken: true,
     normal: true,
@@ -144,6 +145,7 @@ export function serializeState() {
     zoneDiscoveries: state.zoneDiscoveries,
     logFilters: state.logFilters || {
       healing: true,
+      mana_regen: true,
       damage_dealt: true,
       damage_taken: true,
       normal: true,

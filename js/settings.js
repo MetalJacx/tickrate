@@ -183,6 +183,7 @@ export function initSettings({ onShowSettings, onHideSettings }) {
 
     const filterOptions = [
       { key: "healing", label: "Healing Messages", color: "#4ade80" },
+      { key: "mana_regen", label: "Mana Regen", color: "#60a5fa" },
       { key: "damage_dealt", label: "Damage Dealt", color: "#fb923c" },
       { key: "damage_taken", label: "Damage Taken", color: "#ef4444" },
       { key: "normal", label: "General Messages", color: "#ddd" },
