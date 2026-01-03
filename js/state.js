@@ -267,6 +267,34 @@ export function loadGame() {
         const cls = getClassDef(h.classKey);
         h.classBaseDamage = cls?.baseDamage ?? cls?.baseDPS ?? h.baseDamage ?? 5;
       }
+      // Initialize levelBonus for additive scaling (new system)
+      // Migrate old saves that don't have proper levelBonus yet
+      const hasProperLevelBonus = h.levelBonus && (h.levelBonus.hp > 0 || h.level === 1);
+      if (!hasProperLevelBonus) {
+        // Restore original class base values
+        const cls = getClassDef(h.classKey);
+        h.baseHP = cls?.baseHP ?? 50;
+        h.baseMana = cls?.baseMana ?? 0;
+        h.baseDamage = h.classBaseDamage; // Use the stored original class damage
+        h.maxEndurance = cls?.maxEndurance ?? 0; // Restore original endurance cap
+        
+        // Recalculate bonuses from scratch based on hero level
+        const GROWTH = {
+          warrior:   { hp: 40,  dmg: 1.2, mana: 0,  end: 3 },
+          ranger:    { hp: 30,  dmg: 1.6, mana: 10, end: 2 },
+          cleric:    { hp: 28,  dmg: 1.0, mana: 18, end: 0 },
+          wizard:    { hp: 18,  dmg: 2.0, mana: 20, end: 0 },
+          enchanter: { hp: 22,  dmg: 1.2, mana: 20, end: 0 },
+        };
+        const g = GROWTH[h.classKey] || { hp: 20, dmg: 1.0, mana: 10, end: 0 };
+        const numLevelUps = Math.max(0, (h.level || 1) - 1);
+        h.levelBonus = {
+          hp: numLevelUps * g.hp,
+          dmg: numLevelUps * g.dmg,
+          mana: numLevelUps * g.mana,
+          end: numLevelUps * g.end
+        };
+      }
       if (h.classKey === "warrior") {
         const cap = doubleAttackCap(h.level || 1);
         if (h.doubleAttackSkill === undefined) {

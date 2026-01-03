@@ -1,7 +1,7 @@
 import { GAME_TICK_MS, AUTO_SAVE_EVERY_MS, MAX_OFFLINE_SECONDS} from "./defs.js";
 import { state, loadGame, saveGame, clearSave, serializeState, updateCurrencyDisplay } from "./state.js";
 import { addLog } from "./util.js";
-import { createHero, levelHeroTo, spawnEnemy, gameTick, travelToNextZone, travelToPreviousZone, p99XpToNext } from "./combat.js";
+import { createHero, levelHeroTo, spawnEnemy, gameTick, travelToNextZone, travelToPreviousZone, p99XpToNext, recalcPartyTotals } from "./combat.js";
 import { getZoneDef } from "./zones/index.js";
 import { initUI, renderAll, showOfflineModal } from "./ui.js";
 import { CLASSES, getClassDef } from "./classes/index.js"
@@ -152,6 +152,9 @@ function startLoops({ lastSavedAt }) {
     const symbol = cls?.symbol || "";
     addLog(`SYSTEM: ${state.characterName} ${symbol} ${cls?.name} begins the grind.`);
   }
+
+  // Recalculate party totals and apply level bonuses to loaded heroes
+  recalcPartyTotals();
 
   // Sync activeZoneId with current numeric zone if missing
   const zoneDef = getZoneDef(state.zone);

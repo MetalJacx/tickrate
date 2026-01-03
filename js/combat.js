@@ -170,7 +170,10 @@ export function refreshHeroDerived(hero) {
     baseStats[stat] = (baseStats[stat] || 0) + (delta || 0);
   }
   hero.stats = baseStats;
-  hero.baseHP = hero.baseHP ?? cls.baseHP ?? hero.maxHP ?? 50;
+  
+  // ALWAYS reset base values from class, then apply level bonuses
+  hero.baseHP = (cls.baseHP ?? 50);
+  hero.baseMana = (cls.baseMana ?? 0);
   
   // Store original class base damage if not already stored
   if (hero.classBaseDamage === undefined) {
@@ -183,7 +186,16 @@ export function refreshHeroDerived(hero) {
   // Reset AC too
   hero.ac = 0;
   
-  hero.baseMana = hero.baseMana ?? cls.baseMana ?? 0;
+  // APPLY ADDITIVE LEVEL BONUSES to base values
+  // Initialize levelBonus if it doesn't exist (for loaded old saves)
+  hero.levelBonus = hero.levelBonus || { hp: 0, dmg: 0, mana: 0, end: 0 };
+  const bonus = hero.levelBonus;
+  
+  // Add level bonuses to base stats
+  hero.baseHP = hero.baseHP + bonus.hp;
+  hero.baseDamage = hero.baseDamage + bonus.dmg;
+  hero.baseMana = hero.baseMana + bonus.mana;
+  
   hero.primaryStat = primaryStatKey(hero, cls);
 
   // Apply equipment bonuses to stats
@@ -227,8 +239,8 @@ export function refreshHeroDerived(hero) {
   // Keep legacy DPS field in sync with base damage
   hero.dps = hero.baseDamage;
 
-  // Ensure endurance pools exist
-  hero.maxEndurance = hero.maxEndurance ?? cls.maxEndurance ?? 0;
+  // Ensure endurance pools exist and apply level bonuses
+  hero.maxEndurance = (cls.maxEndurance ?? 0) + bonus.end;
   if (hero.endurance == null) {
     hero.endurance = hero.maxEndurance;
   } else {
@@ -299,6 +311,9 @@ export function createHero(classKey, customName = null, raceKey = DEFAULT_RACE_K
     isDead: false,
     deathTime: null,
     primaryStat: cls.primaryStat || null,
+    
+    // Additive level bonuses (NEW)
+    levelBonus: { hp: 0, dmg: 0, mana: 0, end: 0 },
     
     // Resource pools based on class type
     resourceType: cls.resourceType, // "mana", "endurance", or ["mana", "endurance"] for Ranger
@@ -392,13 +407,37 @@ export function heroLevelUpCost(hero) {
 }
 
 function applyLevelScaling(hero) {
-  // Simple scaling: +12% base HP, +10% base damage/DPS, +10% Healing per level
+  // Additive per-level scaling based on class growth rates
   hero.level += 1;
-  hero.baseHP = Math.floor(hero.baseHP * 1.12);
-  hero.baseDamage = hero.baseDamage * 1.10;
-  hero.dps = hero.baseDamage;
-  hero.healing = hero.healing * 1.10;
+  
+  // Initialize levelBonus if missing (shouldn't happen, but safety)
+  hero.levelBonus = hero.levelBonus || { hp: 0, dmg: 0, mana: 0, end: 0 };
+  
+  // Per-class growth constants
+  const GROWTH = {
+    warrior:   { hp: 40,  dmg: 1.2, mana: 0,  end: 3 },
+    ranger:    { hp: 30,  dmg: 1.6, mana: 10, end: 2 },
+    cleric:    { hp: 28,  dmg: 1.0, mana: 18, end: 0 },
+    wizard:    { hp: 18,  dmg: 2.0, mana: 20, end: 0 },
+    enchanter: { hp: 22,  dmg: 1.2, mana: 20, end: 0 },
+  };
+  
+  // Get growth for this class (default to warrior if unknown)
+  const g = GROWTH[hero.classKey] || { hp: 40, dmg: 1.2, mana: 0, end: 3 };
+  
+  // Accumulate bonuses (these persist on the hero object)
+  hero.levelBonus.hp += g.hp;
+  hero.levelBonus.dmg += g.dmg;
+  hero.levelBonus.mana += g.mana;
+  hero.levelBonus.end += g.end;
+  
+  // Recalculate all derived stats with new bonuses
   refreshHeroDerived(hero);
+  
+  // Healing scales with class damage growth
+  hero.healing = (hero.healing || 5) * 1.10;
+  
+  // Warrior double attack progression
   if (hero.classKey === "warrior") {
     const cap = doubleAttackCap(hero.level);
     if (hero.level >= 5 && (hero.doubleAttackSkill == null || hero.doubleAttackSkill < 1)) {
@@ -408,6 +447,7 @@ function applyLevelScaling(hero) {
       hero.doubleAttackSkill = Math.min(hero.doubleAttackSkill, cap);
     }
   }
+  
   // Reset skill cooldowns so new level feels responsive
   if (hero.skillTimers) {
     for (const key of Object.keys(hero.skillTimers)) {
