@@ -27,6 +27,15 @@ export default {
     cha: 8
   },
 
+  passives: [
+    {
+      key: "double_attack",
+      name: "Double Attack",
+      level: 5,
+      description: "Unlocks at level 5 and increases over time, granting a chance for an extra melee swing."
+    }
+  ],
+
   skills: [
     { key: "kick", name: "Kick", level: 1, type: "damage", damageType: "physical", minDamage: 2, maxDamage: 7, cost: 5, cooldownSeconds: 4 },
     { key: "shield_bash", name: "Shield Bash", level: 3, type: "damage", damageType: "physical", minDamage: 10, maxDamage: 14, cost: 12, cooldownSeconds: 8 },

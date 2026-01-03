@@ -674,29 +674,63 @@ export function renderParty() {
       // Check for unassigned ability slots
       const hasUnassignedSlots = checkHasUnassignedSlots(hero);
 
-      // Debuff indicator (e.g., weakening debuff)
+      // Buff and debuff indicators in bottom-right corner
+      const hasBuff = hero.tempACBuffTicks && hero.tempACBuffTicks > 0;
       const hasWeak = hero.tempDamageDebuffTicks && hero.tempDamageDebuffTicks > 0;
-      if (hasWeak) {
-        const debuff = document.createElement("div");
-        debuff.style.cssText = `
+      
+      if (hasBuff || hasWeak) {
+        const statusContainer = document.createElement("div");
+        statusContainer.style.cssText = `
           position: absolute;
           right: 6px;
           bottom: 6px;
-          width: 20px;
-          height: 20px;
-          border-radius: 50%;
-          background: #b91c1c;
-          color: #fff;
-          font-size: 12px;
           display: flex;
+          gap: 4px;
           align-items: center;
-          justify-content: center;
-          cursor: default;
-          box-shadow: 0 0 6px rgba(0,0,0,0.5);
         `;
-        debuff.textContent = "-";
-        debuff.title = `Weakened: -${hero.tempDamageDebuffAmount || 1} damage for ${hero.tempDamageDebuffTicks} ticks`;
-        div.appendChild(debuff);
+
+        if (hasBuff) {
+          const buff = document.createElement("div");
+          buff.style.cssText = `
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4f46e5;
+            color: #fff;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: default;
+            box-shadow: 0 0 6px rgba(0,0,0,0.5);
+            font-weight: bold;
+          `;
+          buff.textContent = hero.tempACBuffTicks.toString();
+          buff.title = `Fortified: +${hero.tempACBuffAmount || 0} AC for ${hero.tempACBuffTicks} ticks`;
+          statusContainer.appendChild(buff);
+        }
+
+        if (hasWeak) {
+          const debuff = document.createElement("div");
+          debuff.style.cssText = `
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #b91c1c;
+            color: #fff;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: default;
+            box-shadow: 0 0 6px rgba(0,0,0,0.5);
+          `;
+          debuff.textContent = "-";
+          debuff.title = `Weakened: -${hero.tempDamageDebuffAmount || 1} damage for ${hero.tempDamageDebuffTicks} ticks`;
+          statusContainer.appendChild(debuff);
+        }
+
+        div.appendChild(statusContainer);
       }
 
       // Unassigned ability slots warning

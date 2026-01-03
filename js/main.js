@@ -525,12 +525,75 @@ function wireRecruitModal() {
     
     const skillsContainer = document.getElementById("recruitClassSkills");
     skillsContainer.innerHTML = "";
+
+    // Passives section (with warrior fallback)
+    const passives = Array.isArray(cls.passives) ? cls.passives : [];
+    const warriorFallback = cls.key === "warrior" && passives.length === 0 ? [
+      {
+        key: "double_attack",
+        name: "Double Attack",
+        level: 5,
+        description: "Unlocked at level 5; skill-ups increase chance for an extra melee swing."
+      }
+    ] : [];
+    const allPassives = [...passives, ...warriorFallback];
+
+    if (allPassives.length > 0) {
+      const passivesHeader = document.createElement("div");
+      passivesHeader.style.cssText = "color:#9ca3af;font-size:11px;margin:4px 0;";
+      passivesHeader.textContent = "Passives";
+      skillsContainer.appendChild(passivesHeader);
+
+      for (const p of allPassives) {
+        const passiveDiv = document.createElement("div");
+        passiveDiv.style.cssText = `
+          background: #111;
+          padding: 8px;
+          border-radius: 4px;
+          border: 1px solid #333;
+          font-size: 11px;
+          line-height: 1.4;
+        `;
+        passiveDiv.innerHTML = `
+          <div style="font-weight:bold;margin-bottom:2px;">${p.name}${p.level ? ` (Lv${p.level})` : ""}</div>
+          <div style="color:#aaa;">${p.description || ""}</div>
+        `;
+        skillsContainer.appendChild(passiveDiv);
+      }
+    }
+
+    // Active skills
     for (const sk of cls.skills) {
       const skillDiv = document.createElement("div");
-      let typeLabel = sk.type === "damage" ? "DMG" : "HEAL";
-      if (sk.damageType) {
-        typeLabel += ` (${sk.damageType})`;
+      let typeLabel = "";
+      if (sk.type === "damage") {
+        typeLabel = "DMG" + (sk.damageType ? ` (${sk.damageType})` : "");
+      } else if (sk.type === "heal") {
+        typeLabel = "HEAL";
+      } else if (sk.type === "buff") {
+        typeLabel = "BUFF";
+      } else if (sk.type === "debuff") {
+        typeLabel = "DEBUFF";
+      } else {
+        typeLabel = sk.type?.toUpperCase?.() || "SKILL";
       }
+
+      let detail = "";
+      if (sk.type === "damage") {
+        const minDmg = sk.minDamage ?? sk.amount ?? 0;
+        const maxDmg = sk.maxDamage ?? sk.amount ?? minDmg;
+        detail = `${minDmg}-${maxDmg}`;
+      } else if (sk.type === "heal") {
+        detail = `+${sk.amount ?? 0}`;
+      } else if (sk.type === "buff") {
+        if (sk.buff === "ac") {
+          detail = `+AC (${sk.durationTicks ?? 0}t)`;
+        }
+      } else if (sk.type === "debuff") {
+        detail = sk.debuff || "";
+      }
+
+      const cdText = sk.cooldownSeconds ? ` | CD ${sk.cooldownSeconds}s` : "";
       skillDiv.style.cssText = `
         background: #111;
         padding: 8px;
@@ -541,10 +604,11 @@ function wireRecruitModal() {
       `;
       skillDiv.innerHTML = `
         <div style="font-weight:bold;margin-bottom:2px;">${sk.name} (Lv${sk.level})</div>
-        <div style="color:#aaa;">${typeLabel} +${sk.amount} | CD ${sk.cooldownSeconds}s</div>
+        <div style="color:#aaa;">${typeLabel}${detail ? ` ${detail}` : ""}${cdText}</div>
       `;
       skillsContainer.appendChild(skillDiv);
     }
+
 
     // Starting stats preview
     if (recruitStatsGrid) {
