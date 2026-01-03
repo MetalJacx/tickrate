@@ -807,7 +807,8 @@ function onEnemyKilled(enemy, totalDPS) {
 
   // Award to account (use total XP with account multiplier)
   const accountXP = totalXPRounded * accountXPMult(state.accountLevel);
-  state.accountLevelXP += accountXP;
+  const accountXPMultiplier = 1 - (XP_TEST_REDUCTION_PERCENT / 100);
+  state.accountLevelXP += accountXP * accountXPMultiplier;
   checkAccountLevelUp();
 
   // Passive sub-area discovery rolls
@@ -1370,7 +1371,8 @@ export function gameTick() {
         const abilityXP = 2;
         if (!hero.xp) hero.xp = 0;
         hero.xp += abilityXP;
-        state.accountLevelXP += abilityXP * accountXPMult(state.accountLevel);
+        const accountXPMultiplier = 1 - (XP_TEST_REDUCTION_PERCENT / 100);
+        state.accountLevelXP += abilityXP * accountXPMult(state.accountLevel) * accountXPMultiplier;
         checkAccountLevelUp();
 
         if (sk.type === "damage") {
