@@ -267,15 +267,82 @@ function renderClassDetails() {
 
   if (skillsContainer) {
     skillsContainer.innerHTML = "";
+    // Passives (with warrior fallback to ensure Double Attack shows)
+    const passives = Array.isArray(cls.passives) ? cls.passives : [];
+    const warriorFallback = cls.key === "warrior" && passives.length === 0 ? [
+      {
+        key: "double_attack",
+        name: "Double Attack",
+        level: 5,
+        description: "Unlocked at level 5; skill-ups increase chance for an extra melee swing."
+      }
+    ] : [];
+    const allPassives = [...passives, ...warriorFallback];
+
+    if (allPassives.length > 0) {
+      const passivesHeader = document.createElement("div");
+      passivesHeader.style.cssText = "color:#9ca3af;font-size:11px;margin:4px 0;";
+      passivesHeader.textContent = "Passives";
+      skillsContainer.appendChild(passivesHeader);
+
+      for (const p of allPassives) {
+        const passiveCard = document.createElement("div");
+        passiveCard.className = "skill-card";
+        passiveCard.innerHTML = `
+          <div class="skill-name">${p.name}${p.level ? ` (Lv${p.level})` : ""}</div>
+          <div style="color:#aaa;font-size:11px;">${p.description || ""}</div>
+        `;
+        skillsContainer.appendChild(passiveCard);
+      }
+
+      const spacer = document.createElement("div");
+      spacer.style.height = "4px";
+      skillsContainer.appendChild(spacer);
+    }
+
+    // Active skills header for clarity
+    const activesHeader = document.createElement("div");
+    activesHeader.style.cssText = "color:#9ca3af;font-size:11px;margin:6px 0 2px;";
+    activesHeader.textContent = "Active Skills";
+    skillsContainer.appendChild(activesHeader);
+
+    // Active skills
     for (const sk of cls.skills) {
       const card = document.createElement("div");
       card.className = "skill-card";
-      const typeLabel = sk.type === "damage" ? "DMG" : "HEAL";
-      const dmgType = sk.damageType ? ` (${sk.damageType})` : "";
-      const amountLabel = sk.amount != null ? `+${sk.amount}` : (sk.minDamage != null ? `${sk.minDamage}-${sk.maxDamage}` : "");
+
+      let typeLabel = "";
+      if (sk.type === "damage") {
+        typeLabel = "DMG" + (sk.damageType ? ` (${sk.damageType})` : "");
+      } else if (sk.type === "heal") {
+        typeLabel = "HEAL";
+      } else if (sk.type === "buff") {
+        typeLabel = "BUFF";
+      } else if (sk.type === "debuff") {
+        typeLabel = "DEBUFF";
+      } else {
+        typeLabel = sk.type?.toUpperCase?.() || "SKILL";
+      }
+
+      let detail = "";
+      if (sk.type === "damage") {
+        const minDmg = sk.minDamage ?? sk.amount ?? 0;
+        const maxDmg = sk.maxDamage ?? sk.amount ?? minDmg;
+        detail = `${minDmg}-${maxDmg}`;
+      } else if (sk.type === "heal") {
+        detail = `+${sk.amount ?? 0}`;
+      } else if (sk.type === "buff") {
+        if (sk.buff === "ac") {
+          detail = `+AC (${sk.durationTicks ?? 0}t)`;
+        }
+      } else if (sk.type === "debuff") {
+        detail = sk.debuff || "";
+      }
+
+      const cdText = sk.cooldownSeconds ? ` | CD ${sk.cooldownSeconds}s` : "";
       card.innerHTML = `
         <div class="skill-name">${sk.name} (Lv${sk.level})</div>
-        <div class="skill-meta">${typeLabel}${dmgType} ${amountLabel} | CD ${sk.cooldownSeconds}s</div>
+        <div style="color:#aaa;">${typeLabel}${detail ? ` ${detail}` : ""}${cdText}</div>
       `;
       skillsContainer.appendChild(card);
     }
@@ -560,7 +627,18 @@ function wireRecruitModal() {
         `;
         skillsContainer.appendChild(passiveDiv);
       }
+
+      // Spacer between passives and actives
+      const spacer = document.createElement("div");
+      spacer.style.height = "4px";
+      skillsContainer.appendChild(spacer);
     }
+
+    // Active skills header for clarity
+    const activesHeader = document.createElement("div");
+    activesHeader.style.cssText = "color:#9ca3af;font-size:11px;margin:6px 0 2px;";
+    activesHeader.textContent = "Active Skills";
+    skillsContainer.appendChild(activesHeader);
 
     // Active skills
     for (const sk of cls.skills) {
