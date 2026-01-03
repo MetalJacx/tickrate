@@ -37,9 +37,45 @@ export default {
   ],
 
   skills: [
-    { key: "heal", name: "Heal", level: 1, type: "heal", amount: 18, cost: 5, cooldownSeconds: 4 },
-    { key: "prayer", name: "Prayer of Protection", level: 3, type: "heal", amount: 35, cost: 10, cooldownSeconds: 10 },
-    { key: "smite", name: "Smite", level: 5, type: "damage", damageType: "holy", minDamage: 6, maxDamage: 10, cost: 25, cooldownSeconds: 6 },
-    { key: "resurrection", name: "Resurrection", level: 10, type: "resurrect", cost: 60, cooldownSeconds: 30 }
+    { 
+      key: "minor_heal", 
+      name: "Minor Heal", 
+      level: 1, 
+      type: "heal", 
+      minAmount: 10,
+      maxAmount: 20, 
+      cost: 10, 
+      cooldownSeconds: 24 // 4 ticks × 6 seconds
+    },
+    { 
+      key: "courage", 
+      name: "Courage", 
+      level: 3, 
+      type: "buff",
+      buffType: "courage",
+      cost: 12, 
+      cooldownSeconds: 6, // Minimum 1-tick cooldown to prevent spam; cast cycle manages who gets buffed
+      targetMode: "individual", // Cast on one party member at a time
+      notes: "Grants AC and HP bonus. Long-duration buff. Scales with cleric level."
+    },
+    { 
+      key: "fear", 
+      name: "Fear", 
+      level: 8, 
+      type: "debuff",
+      debuffType: "fear",
+      cost: 40, 
+      cooldownSeconds: 42 // 7 ticks × 6 seconds
+    },
+    { 
+      key: "healing", 
+      name: "Healing", 
+      level: 10, 
+      type: "heal", 
+      minAmount: 95,
+      maxAmount: 175, 
+      cost: 65, 
+      cooldownSeconds: 72 // 12 ticks × 6 seconds
+    }
   ]
 };

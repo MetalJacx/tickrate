@@ -132,6 +132,8 @@ export function initUI({ onRecruit, onReset, onOpenRecruitModal }) {
         state.killsThisZone = 0;
         state.currentEnemies = [];
         state.waitingToRespawn = false;
+        // Mark as unlocked when traveling so UI doesn't grey out
+        state.highestUnlockedZone = Math.max(state.highestUnlockedZone || 1, state.zone);
         spawnEnemy();
       } else if (selectedSubAreaForTravel) {
         // Just switching sub-area in same zone
@@ -569,6 +571,31 @@ export function renderParty() {
       xpDiv.style.cssText = "font-size:11px;color:#aaa;margin-top:4px;";
       xpDiv.textContent = `XP: ${(hero.xp || 0).toFixed(0)}`;
 
+      // Buff indicators
+      const buffRow = document.createElement("div");
+      buffRow.style.cssText = "display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;";
+      if (hero.activeBuffs) {
+        const now = Date.now();
+        for (const [buffKey, buffData] of Object.entries(hero.activeBuffs)) {
+          if (now <= buffData.expiresAt) {
+            const buffPill = document.createElement("div");
+            const timeLeft = ((buffData.expiresAt - now) / 1000).toFixed(0);
+            buffPill.style.cssText = `
+              display:inline-block;
+              padding:2px 6px;
+              border-radius:3px;
+              background:#1a3a1a;
+              color:#86efac;
+              border:1px solid #22c55e;
+              font-size:9px;
+            `;
+            const buffName = buffKey === "courage" ? "Courage" : buffKey;
+            buffPill.textContent = `${buffName} (${timeLeft}s)`;
+            buffRow.appendChild(buffPill);
+          }
+        }
+      }
+
       // Cooldown display for assigned skills that are currently cooling down
       const cdRow = document.createElement("div");
       cdRow.style.cssText = "display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;";
@@ -660,6 +687,11 @@ export function renderParty() {
         div.appendChild(res.bar);
         div.appendChild(res.label);
       });
+      
+      // Append buff row
+      if (buffRow.childNodes.length > 0) {
+        div.appendChild(buffRow);
+      }
       
       statsRow.appendChild(stats);
       if (cdRow.childNodes.length > 0) {
@@ -914,7 +946,8 @@ function renderZones() {
     return;
   }
 
-  const highest = state.highestUnlockedZone || 1;
+  // Ensure current zone counts as unlocked even if highestUnlockedZone is stale
+  const highest = Math.max(state.highestUnlockedZone || 1, state.zone || 1);
   
   // Initialize selected zone if not set
   if (selectedZoneForTravel === null || selectedZoneForTravel === undefined) {

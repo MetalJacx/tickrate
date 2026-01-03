@@ -2,7 +2,7 @@ import { state, nextHeroId, updateCurrencyDisplay, formatPGSC } from "./state.js
 import { getClassDef, CLASS_DEFS } from "./classes/index.js";
 import { getZoneDef, getEnemyForZone, MAX_ZONE, rollSubAreaDiscoveries, ensureZoneDiscovery, getZoneById, getActiveSubArea } from "./zones/index.js";
 import { addLog, randInt } from "./util.js";
-import { ACCOUNT_SLOT_UNLOCKS, GAME_TICK_MS, MEDITATE_UNLOCK_LEVEL, MEDITATE_SKILL_HARD_CAP, MEDITATE_BASE_REGEN_FACTOR, COMBAT_REGEN_MULT, OOC_REGEN_MULT } from "./defs.js";
+import { ACCOUNT_SLOT_UNLOCKS, GAME_TICK_MS, MEDITATE_UNLOCK_LEVEL, MEDITATE_SKILL_HARD_CAP, MEDITATE_BASE_REGEN_FACTOR, COMBAT_REGEN_MULT, OOC_REGEN_MULT, XP_TEST_REDUCTION_PERCENT } from "./defs.js";
 import { updateStatsModalSkills } from "./ui.js";
 import { getItemDef } from "./items.js";
 import { getRaceDef, DEFAULT_RACE_KEY } from "./races.js";
@@ -341,6 +341,9 @@ export function createHero(classKey, customName = null, raceKey = DEFAULT_RACE_K
     tempACBuffTicks: 0,
     tempACBuffAmount: 0,
 
+    // Active buffs (key -> { expiresAt timestamp, data })
+    activeBuffs: {},
+
     // Revival countdown tracking
     revivalNotifications: {},
 
@@ -409,7 +412,9 @@ export function recalcPartyTotals() {
 
 // XP needed for the next hero level (P99 curve)
 export function heroLevelUpCost(hero) {
-  return p99XpToNext(hero.level);
+  const baseCost = p99XpToNext(hero.level);
+  const multiplier = 1 - (XP_TEST_REDUCTION_PERCENT / 100);
+  return Math.floor(baseCost * multiplier);
 }
 
 function applyLevelScaling(hero) {
@@ -495,7 +500,9 @@ function totalXpAtEnd(level) {
 // XP needed to complete current level (exported for reuse)
 export function p99XpToNext(level) {
   if (level <= 0) return 0;
-  return totalXpAtEnd(level) - totalXpAtEnd(level - 1);
+  const baseCost = totalXpAtEnd(level) - totalXpAtEnd(level - 1);
+  const multiplier = 1 - (XP_TEST_REDUCTION_PERCENT / 100);
+  return Math.floor(baseCost * multiplier);
 }
 
 // Account XP gain multiplier (slower after level 10)
@@ -944,6 +951,62 @@ function meditateTick(hero) {
   }
 }
 
+// Apply a buff to a hero
+export function applyBuff(hero, buffKey, durationMs, data = {}) {
+  hero.activeBuffs = hero.activeBuffs || {};
+  hero.activeBuffs[buffKey] = {
+    expiresAt: Date.now() + durationMs,
+    data
+  };
+}
+
+// Check if a hero has an active buff
+export function hasBuff(hero, buffKey) {
+  if (!hero.activeBuffs) return false;
+  const buff = hero.activeBuffs[buffKey];
+  if (!buff) return false;
+  // Check if buff has expired
+  if (Date.now() > buff.expiresAt) {
+    delete hero.activeBuffs[buffKey];
+    return false;
+  }
+  return true;
+}
+
+// Get buff data if active
+export function getBuff(hero, buffKey) {
+  if (!hasBuff(hero, buffKey)) return null;
+  return hero.activeBuffs[buffKey].data;
+}
+
+// Clean up expired buffs for a hero
+function cleanupExpiredBuffs(hero) {
+  if (!hero.activeBuffs) return;
+  const now = Date.now();
+  for (const key of Object.keys(hero.activeBuffs)) {
+    if (now > hero.activeBuffs[key].expiresAt) {
+      delete hero.activeBuffs[key];
+    }
+  }
+}
+
+// Courage buff handler - applies AC and HP bonus
+export function applyCourageBuff(hero, clericLevel) {
+  const acBonus = Math.min(7, 3 + Math.floor((clericLevel - 3) / 2));
+  const hpBonus = Math.min(11, 6 + Math.floor((clericLevel - 3) / 2));
+  
+  const durationMinutes = Math.min(25, 3 + (clericLevel - 3) * 3);
+  const durationMs = durationMinutes * 60 * 1000;
+  
+  applyBuff(hero, "courage", durationMs, { acBonus, hpBonus });
+  
+  // Apply immediate HP bonus
+  hero.maxHP = (hero.maxHP || 0) + hpBonus;
+  if (hero.health > 0) {
+    hero.health = Math.min(hero.health + hpBonus, hero.maxHP);
+  }
+}
+
 export function gameTick() {
   // Handle auto-revival for dead members (60 second timer)
   const now = Date.now();
@@ -1177,6 +1240,13 @@ export function gameTick() {
         if (sk.type === "resurrect" && !anyDead) {
           hasResources = false;
         }
+        // For buffs, only cast if someone doesn't have it
+        if (sk.type === "buff" && sk.buffType === "courage") {
+          const needsBuff = state.party.find(h => !h.isDead && !hasBuff(h, "courage"));
+          if (!needsBuff) {
+            hasResources = false; // Everyone has the buff, don't cast
+          }
+        }
         
         if (!hasResources) {
           continue; // Skip this skill if not enough resources or no one needs healing
@@ -1277,9 +1347,28 @@ export function gameTick() {
           }, healable[0]);
 
           const missingHP = target.maxHP - target.health;
-          const healAmount = Math.min(sk.amount, missingHP);
+          // Support both old (amount) and new (minAmount/maxAmount) formats
+          let baseHeal = sk.amount || sk.minAmount || 0;
+          if (sk.minAmount !== undefined && sk.maxAmount !== undefined) {
+            baseHeal = sk.minAmount + Math.random() * (sk.maxAmount - sk.minAmount);
+          }
+          const healAmount = Math.min(baseHeal, missingHP);
           target.health += healAmount;
           addLog(`${hero.name} casts ${sk.name} on ${target.name} for ${healAmount.toFixed(1)} healing!`, "healing");
+        }
+        if (sk.type === "buff") {
+          // Handle buff skills (e.g., Courage)
+          if (sk.buffType === "courage") {
+            // Find first party member without Courage buff
+            const needsBuff = state.party.find(h => !h.isDead && !hasBuff(h, "courage"));
+            if (needsBuff) {
+              applyCourageBuff(needsBuff, hero.level);
+              addLog(`${hero.name} casts ${sk.name} on ${needsBuff.name}!`, "normal");
+            } else {
+              // Everyone has the buff; refund mana
+              hero.mana += cost;
+            }
+          }
         }
         if (sk.type === "resurrect") {
           // Find first dead party member and revive them at 10% HP

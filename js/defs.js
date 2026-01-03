@@ -13,6 +13,12 @@ export const MEDITATE_SKILL_HARD_CAP = 252;
 export const MEDITATE_BASE_REGEN_FACTOR = 0.002; // max(1, floor(maxMana * this))
 export const COMBAT_REGEN_MULT = 0.25;
 export const OOC_REGEN_MULT = 1.0;
+// TESTING: XP requirement reduction (0-100)
+// Set to 0 for normal XP requirements
+// Set to 20 to reduce requirements by 20%
+// Set to 90 to reduce requirements by 90%
+export const XP_TEST_REDUCTION_PERCENT = 0;
+
 // Party slot unlocks based on Account level (not zone)
 export const ACCOUNT_SLOT_UNLOCKS = [
   { level: 1, slots: 1 },

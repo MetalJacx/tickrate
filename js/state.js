@@ -315,12 +315,25 @@ export function loadGame() {
       if (h.inCombat === undefined) {
         h.inCombat = false;
       }
+      // Initialize active buffs (need to clean up expired ones on load)
+      if (h.activeBuffs === undefined) {
+        h.activeBuffs = {};
+      }
+      // Remove expired buffs from old saves
+      const now = Date.now();
+      for (const key of Object.keys(h.activeBuffs)) {
+        if (now > h.activeBuffs[key]?.expiresAt) {
+          delete h.activeBuffs[key];
+        }
+      }
       return h;
     }) : [];
     state.partyMaxHP = data.partyMaxHP ?? 0;
     state.partyHP = data.partyHP ?? 0;
     state.huntRemaining = data.huntRemaining ?? 0;
     state.highestUnlockedZone = data.highestUnlockedZone ?? 1;
+    // Ensure current zone is always considered unlocked (fixes greyed zones on old saves)
+    state.highestUnlockedZone = Math.max(state.highestUnlockedZone, state.zone);
     state.zoneDiscoveries = data.zoneDiscoveries ?? {};
     state.showXPBreakdown = data.showXPBreakdown ?? false;
     state.automationRules = data.automationRules ?? [];
