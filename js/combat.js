@@ -1156,6 +1156,14 @@ export function gameTick() {
         addLog(`${hero.name}'s fortification fades.`, "normal");
       }
     }
+
+    // Tick down Arcane Shield lockout (prevents offensive spells for 1 tick)
+    if (hero.arcaneShieldLockout && hero.arcaneShieldLockout > 0) {
+      hero.arcaneShieldLockout -= 1;
+    }
+
+    // Clean up expired buffs
+    cleanupExpiredBuffs(hero);
   }
 
   // Check for reinforcements if in combat
@@ -1330,6 +1338,16 @@ export function gameTick() {
             hasResources = false; // Hero already has Fortify, don't cast
           }
         }
+        // Arcane Shield is self-only and can't stack
+        if (sk.type === "buff" && sk.buffType === "arcane_shield") {
+          if (hasBuff(hero, "arcane_shield")) {
+            hasResources = false; // Hero already has shield, don't cast
+          }
+        }
+        // Prevent offensive spells after Arcane Shield cast (1 tick lockout)
+        if ((sk.type === "damage" || sk.type === "debuff") && hero.arcaneShieldLockout > 0) {
+          hasResources = false; // Still in lockout, don't cast
+        }
         
         if (!hasResources) {
           continue; // Skip this skill if not enough resources or no one needs healing
@@ -1359,24 +1377,46 @@ export function gameTick() {
           const damageTypeLabel = sk.damageType ? ` (${sk.damageType})` : "";
 
           // Determine base damage for this skill
+          let minDmg = sk.minDamage || sk.amount || 0;
+          let maxDmg = sk.maxDamage || sk.amount || 0;
+          
+          // Apply Wizard damage scaling
+          if (sk.key === "fireblast") {
+            // Fireblast: +1 max damage per 2 levels, caps at level 10
+            const levelScaling = Math.min(5, Math.floor((hero.level - 1) / 2)); // 0-5 scaling
+            maxDmg = 20 + levelScaling;
+          } else if (sk.key === "iceblast") {
+            // Iceblast: +1 max damage per 2 levels, caps at level 18
+            const levelScaling = Math.min(9, Math.floor((hero.level - 7) / 2)); // 0-9 scaling
+            maxDmg = 30 + levelScaling;
+          }
+          
           let calcDamage = 0;
           if (sk.usesBaseDamage) {
             // Use hero's current base damage (after gear/bonuses)
             calcDamage = hero.baseDamage || hero.dps || 0;
           } else {
-            const minDmg = sk.minDamage || sk.amount || 0;
-            const maxDmg = sk.maxDamage || sk.amount || 0;
             calcDamage = minDmg + Math.random() * (maxDmg - minDmg);
           }
 
           // Cleave: hit multiple targets from the front of the list
-          const targets = sk.cleaveTargets ? state.currentEnemies.slice(0, sk.cleaveTargets) : (state.currentEnemies[0] ? [state.currentEnemies[0]] : []);
+          let targets = sk.cleaveTargets ? state.currentEnemies.slice(0, sk.cleaveTargets) : (state.currentEnemies[0] ? [state.currentEnemies[0]] : []);
 
           if (targets.length === 0) {
             addLog(`${hero.name} uses ${sk.name}${damageTypeLabel}, but there is nothing to hit.`, "normal");
           } else {
-            for (const target of targets) {
-              const mitigated = applyACMitigation(calcDamage, target);
+            for (let i = 0; i < targets.length; i++) {
+              const target = targets[i];
+              let damageToApply = calcDamage;
+              
+              // AOE diminishing returns: full damage first 3, then -20% per additional
+              if (sk.aoeDiminishing && i >= 3) {
+                const diminishCount = i - 2; // 1 for 4th target, 2 for 5th, etc.
+                let diminishPercent = Math.max(0.4, 1.0 - (diminishCount * 0.2)); // Min 40%
+                damageToApply = calcDamage * diminishPercent;
+              }
+              
+              const mitigated = applyACMitigation(damageToApply, target);
               target.hp = Math.max(0, target.hp - mitigated);
               totalDamageThisTick += mitigated;
               addLog(`${hero.name} uses ${sk.name}${damageTypeLabel} for ${mitigated.toFixed(1)} damage!`, "damage_dealt");
@@ -1451,7 +1491,7 @@ export function gameTick() {
           addLog(`${hero.name} casts ${sk.name} on ${target.name} for ${healAmount.toFixed(1)} healing!`, "healing");
         }
         if (sk.type === "buff") {
-          // Handle buff skills (e.g., Courage)
+          // Handle buff skills (e.g., Courage, Arcane Shield)
           if (sk.buffType === "courage") {
             // Find first party member without Courage buff
             const needsBuff = state.party.find(h => !h.isDead && !hasBuff(h, "courage"));
@@ -1461,6 +1501,31 @@ export function gameTick() {
             } else {
               // Everyone has the buff; refund mana
               hero.mana += cost;
+            }
+          } else if (sk.buffType === "arcane_shield") {
+            // Check if hero already has Arcane Shield
+            if (hasBuff(hero, "arcane_shield")) {
+              // Already shielded; refund mana and skip
+              hero.mana += cost;
+            } else {
+              // Apply Arcane Shield buff (90 second duration)
+              applyBuff(hero, "arcane_shield", 90000, { tempHP: 50 });
+              addLog(`${hero.name} casts ${sk.name} and gains a protective shield!`, "normal");
+              // Set cast lockout: prevent offensive spells for next tick
+              hero.arcaneShieldLockout = 1;
+            }
+          }
+        }
+        if (sk.type === "utility") {
+          // Handle utility skills (e.g., Gather Mana)
+          if (sk.key === "gather_mana") {
+            // Gather Mana: restore mana based on hero level, capped at 18
+            const manaRestored = Math.floor(Math.min(hero.level, 12) * 1.5);
+            const newMana = Math.min(hero.maxMana, hero.mana + manaRestored);
+            const actualRestored = newMana - hero.mana;
+            hero.mana = newMana;
+            if (actualRestored > 0) {
+              addLog(`${hero.name} gathers mana, restoring ${actualRestored.toFixed(0)} mana!`, "skill");
             }
           }
         }
@@ -1605,7 +1670,17 @@ export function gameTick() {
       const isCrit = Math.random() < computeCritChance(enemy);
       const rawDamage = computeRawDamage(enemy, isCrit);
       const mitigated = applyACMitigation(rawDamage, target);
-      target.health = Math.max(0, target.health - mitigated);
+      
+      // Apply tempHP absorption (e.g., from Arcane Shield buff)
+      let damageToHealth = mitigated;
+      const arcaneShieldBuff = getBuff(target, "arcane_shield");
+      if (arcaneShieldBuff && arcaneShieldBuff.data && arcaneShieldBuff.data.tempHP > 0) {
+        const tempHPAbsorbed = Math.min(arcaneShieldBuff.data.tempHP, damageToHealth);
+        arcaneShieldBuff.data.tempHP -= tempHPAbsorbed;
+        damageToHealth -= tempHPAbsorbed;
+      }
+      
+      target.health = Math.max(0, target.health - damageToHealth);
       addLog(`${enemy.name} hits ${target.name} for ${mitigated.toFixed(1)}${isCrit ? " (CRIT)" : ""}!`, "damage_taken");
 
       // Apply any enemy-sourced debuffs defined on the enemy

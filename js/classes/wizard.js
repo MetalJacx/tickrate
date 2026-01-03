@@ -1,30 +1,30 @@
 export default {
   key: "wizard",
   name: "Wizard",
-  symbol: "🔥",
-  role: "DPS",
-  cost: 60,
+  symbol: "🧙",
+  role: "Caster",
+  cost: 50,
   primaryStat: "int",
-  baseMana: 0,
+  baseMana: 100,
   
   resourceType: "mana",
-  maxMana: 120,
-  manaRegenPerTick: 6,
+  maxMana: 100,
+  manaRegenPerTick: 3,
 
-  baseHP: 40,
-  baseDamage: 18,
-  baseDPS: 18,
+  baseHP: 50,
+  baseDamage: 3,
+  baseDPS: 3,
   baseHealing: 1,
 
   stats: {
     str: 6,
-    con: 7,
+    con: 8,
     dex: 10,
-    agi: 9,
-    ac: 10,
-    wis: 8,
-    int: 12,
-    cha: 9
+    agi: 11,
+    ac: 14,
+    wis: 9,
+    int: 16,
+    cha: 10
   },
 
   passives: [
@@ -32,13 +32,70 @@ export default {
       key: "meditate",
       name: "Meditate",
       level: 5,
-      description: "Unlocks at level 5 and increases mana regeneration out of combat. Skill grows from 0-252 as you meditate while recovering mana."
+      description: "Out of combat only: regenerate mana progressively as skill increases. Max cap 252."
     }
   ],
 
   skills: [
-    { key: "fireball", name: "Fireball", level: 1, type: "damage", damageType: "fire", minDamage: 12, maxDamage: 18, cost: 30, cooldownSeconds: 5 },
-    { key: "meteor", name: "Meteor", level: 4, type: "damage", damageType: "fire", minDamage: 30, maxDamage: 40, cost: 50, cooldownSeconds: 12 },
-    { key: "arcane_shield", name: "Arcane Shield", level: 6, type: "heal", amount: 12, cost: 25, cooldownSeconds: 8 }
+    {
+      key: "fireblast",
+      name: "Fireblast",
+      level: 1,
+      type: "damage",
+      damageType: "fire",
+      minDamage: 12,
+      maxDamage: 20,
+      cost: 10,
+      cooldownSeconds: 18,
+      description: "Starter nuke. Damage scales +1 max per 2 levels, capping at level 10 (12–25)."
+    },
+    {
+      key: "gather_mana",
+      name: "Gather Mana",
+      level: 3,
+      type: "utility",
+      cost: 0,
+      cooldownSeconds: 72,
+      manaRestoration: null, // Calculated as floor(level * 1.5) in handler
+      description: "Restore mana out of combat. Restores floor(Level × 1.5) mana, capping at level 12 (18 max)."
+    },
+    {
+      key: "iceblast",
+      name: "Iceblast",
+      level: 7,
+      type: "damage",
+      damageType: "frost",
+      minDamage: 18,
+      maxDamage: 30,
+      cost: 18,
+      cooldownSeconds: 24,
+      description: "Higher burst nuke. Damage scales +1 max per 2 levels, capping at level 18 (18–39)."
+    },
+    {
+      key: "rain_of_fire",
+      name: "Rain of Fire",
+      level: 8,
+      type: "damage",
+      damageType: "fire",
+      minDamage: 10,
+      maxDamage: 16,
+      cost: 30,
+      cooldownSeconds: 48,
+      cleaveTargets: 99, // Affects all targets
+      aoeDiminishing: true, // Flag for AOE diminishing logic
+      description: "AOE nuke. Full damage to first 3 targets, then -20% per additional target (min 40%)."
+    },
+    {
+      key: "arcane_shield",
+      name: "Arcane Shield",
+      level: 10,
+      type: "buff",
+      buffType: "arcane_shield",
+      cost: 25,
+      cooldownSeconds: 90,
+      tempHP: 50,
+      castLockoutTicks: 1,
+      description: "Grant self 50 Temp HP. Cannot cast offensive spells for 1 tick after."
+    }
   ]
 };
