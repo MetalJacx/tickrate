@@ -412,9 +412,7 @@ export function recalcPartyTotals() {
 
 // XP needed for the next hero level (P99 curve)
 export function heroLevelUpCost(hero) {
-  const baseCost = p99XpToNext(hero.level);
-  const multiplier = 1 - (XP_TEST_REDUCTION_PERCENT / 100);
-  return Math.floor(baseCost * multiplier);
+  return p99XpToNext(hero.level);
 }
 
 function applyLevelScaling(hero) {
@@ -510,6 +508,29 @@ function accountXPMult(accountLevel) {
   return accountLevel <= 10 ? 1.0 : 0.6;
 }
 
+// Calculate what level you should be given total XP with current reduction
+export function calculateLevelFromTotalXP(totalXP) {
+  let level = 1;
+  let xpUsed = 0;
+  
+  // Keep leveling up until we run out of XP
+  while (level < 100) { // Safety cap at level 100
+    const xpForNextLevel = p99XpToNext(level);
+    if (xpUsed + xpForNextLevel > totalXP) {
+      // Not enough XP for next level
+      break;
+    }
+    xpUsed += xpForNextLevel;
+    level++;
+  }
+  
+  return {
+    level: level,
+    xpIntoCurrentLevel: totalXP - xpUsed,
+    xpForNextLevel: p99XpToNext(level)
+  };
+}
+
 function resolveEnemyLevel(enemyDef, zoneNumber) {
   const zoneBase = zoneNumber || 1;
 
@@ -542,7 +563,7 @@ function resolveEnemyLevel(enemyDef, zoneNumber) {
   return zoneBase + randInt(3);
 }
 
-function checkAccountLevelUp() {
+export function checkAccountLevelUp() {
   if (!state.accountLevelUpCost) {
     state.accountLevelUpCost = p99XpToNext(state.accountLevel);
   }
@@ -807,8 +828,7 @@ function onEnemyKilled(enemy, totalDPS) {
 
   // Award to account (use total XP with account multiplier)
   const accountXP = totalXPRounded * accountXPMult(state.accountLevel);
-  const accountXPMultiplier = 1 - (XP_TEST_REDUCTION_PERCENT / 100);
-  state.accountLevelXP += accountXP * accountXPMultiplier;
+  state.accountLevelXP += accountXP;
   checkAccountLevelUp();
 
   // Passive sub-area discovery rolls
@@ -1371,8 +1391,7 @@ export function gameTick() {
         const abilityXP = 2;
         if (!hero.xp) hero.xp = 0;
         hero.xp += abilityXP;
-        const accountXPMultiplier = 1 - (XP_TEST_REDUCTION_PERCENT / 100);
-        state.accountLevelXP += abilityXP * accountXPMult(state.accountLevel) * accountXPMultiplier;
+        state.accountLevelXP += abilityXP * accountXPMult(state.accountLevel);
         checkAccountLevelUp();
 
         if (sk.type === "damage") {

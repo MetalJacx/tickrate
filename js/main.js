@@ -1,7 +1,7 @@
 import { GAME_TICK_MS, AUTO_SAVE_EVERY_MS, MAX_OFFLINE_SECONDS} from "./defs.js";
 import { state, loadGame, saveGame, clearSave, serializeState, updateCurrencyDisplay } from "./state.js";
 import { addLog } from "./util.js";
-import { createHero, levelHeroTo, spawnEnemy, gameTick, travelToNextZone, travelToPreviousZone, p99XpToNext, recalcPartyTotals } from "./combat.js";
+import { createHero, levelHeroTo, spawnEnemy, gameTick, travelToNextZone, travelToPreviousZone, p99XpToNext, recalcPartyTotals, checkAccountLevelUp, calculateLevelFromTotalXP } from "./combat.js";
 import { getZoneDef } from "./zones/index.js";
 import { initUI, renderAll, showOfflineModal } from "./ui.js";
 import { CLASSES, getClassDef } from "./classes/index.js"
@@ -858,9 +858,24 @@ function start() {
   // Load saved data (if any)
   const { loaded, lastSavedAt } = loadGame();
 
-  // Initialize account XP cost if missing (migration to P99 curve)
-  if (!state.accountLevelUpCost) {
+  // Retroactively recalculate account level based on total XP with current reduction
+  if (state.totalXP > 0) {
+    const recalc = calculateLevelFromTotalXP(state.totalXP);
+    console.log("Recalculating account level from total XP:", {
+      totalXP: state.totalXP,
+      oldLevel: state.accountLevel,
+      newLevel: recalc.level,
+      xpIntoCurrentLevel: recalc.xpIntoCurrentLevel,
+      xpForNextLevel: recalc.xpForNextLevel
+    });
+    state.accountLevel = recalc.level;
+    state.accountLevelXP = recalc.xpIntoCurrentLevel;
+    state.accountLevelUpCost = recalc.xpForNextLevel;
+  } else {
+    // Recalculate account XP cost to reflect current XP settings
     state.accountLevelUpCost = p99XpToNext(state.accountLevel || 1);
+    // Check if player should level up with the new reduced cost
+    checkAccountLevelUp();
   }
 
   // Debug logging
