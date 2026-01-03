@@ -27,6 +27,15 @@ export default {
     cha: 10
   },
 
+  passives: [
+    {
+      key: "meditate",
+      name: "Meditate",
+      level: 5,
+      description: "Unlocks at level 5 and increases mana regeneration out of combat. Skill grows from 0-252 as you meditate while recovering mana."
+    }
+  ],
+
   skills: [
     { key: "heal", name: "Heal", level: 1, type: "heal", amount: 18, cost: 5, cooldownSeconds: 4 },
     { key: "prayer", name: "Prayer of Protection", level: 3, type: "heal", amount: 35, cost: 10, cooldownSeconds: 10 },

@@ -302,6 +302,19 @@ export function loadGame() {
         }
         h.doubleAttackSkill = Math.min(h.doubleAttackSkill || 0, cap);
       }
+      // Initialize meditate skill and regen fields (new system)
+      if (h.meditateSkill === undefined) {
+        h.meditateSkill = 0;
+      }
+      if (h.gearManaRegen === undefined) {
+        h.gearManaRegen = 0;
+      }
+      if (h.buffManaRegen === undefined) {
+        h.buffManaRegen = 0;
+      }
+      if (h.inCombat === undefined) {
+        h.inCombat = false;
+      }
       return h;
     }) : [];
     state.partyMaxHP = data.partyMaxHP ?? 0;

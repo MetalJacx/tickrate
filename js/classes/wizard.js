@@ -27,6 +27,15 @@ export default {
     cha: 9
   },
 
+  passives: [
+    {
+      key: "meditate",
+      name: "Meditate",
+      level: 5,
+      description: "Unlocks at level 5 and increases mana regeneration out of combat. Skill grows from 0-252 as you meditate while recovering mana."
+    }
+  ],
+
   skills: [
     { key: "fireball", name: "Fireball", level: 1, type: "damage", damageType: "fire", minDamage: 12, maxDamage: 18, cost: 30, cooldownSeconds: 5 },
     { key: "meteor", name: "Meteor", level: 4, type: "damage", damageType: "fire", minDamage: 30, maxDamage: 40, cost: 50, cooldownSeconds: 12 },

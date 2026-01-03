@@ -2,7 +2,7 @@ import { state, nextHeroId, updateCurrencyDisplay, formatPGSC } from "./state.js
 import { getClassDef, CLASS_DEFS } from "./classes/index.js";
 import { getZoneDef, getEnemyForZone, MAX_ZONE, rollSubAreaDiscoveries, ensureZoneDiscovery, getZoneById, getActiveSubArea } from "./zones/index.js";
 import { addLog, randInt } from "./util.js";
-import { ACCOUNT_SLOT_UNLOCKS, GAME_TICK_MS } from "./defs.js";
+import { ACCOUNT_SLOT_UNLOCKS, GAME_TICK_MS, MEDITATE_UNLOCK_LEVEL, MEDITATE_SKILL_HARD_CAP, MEDITATE_BASE_REGEN_FACTOR, COMBAT_REGEN_MULT, OOC_REGEN_MULT } from "./defs.js";
 import { updateStatsModalSkills } from "./ui.js";
 import { getItemDef } from "./items.js";
 import { getRaceDef, DEFAULT_RACE_KEY } from "./races.js";
@@ -323,6 +323,12 @@ export function createHero(classKey, customName = null, raceKey = DEFAULT_RACE_K
     maxEndurance: cls.maxEndurance || 0,
     endurance: cls.maxEndurance || 0,
     enduranceRegenPerTick: cls.enduranceRegenPerTick || 0,
+
+    // Meditate skill (casters only; 0-252)
+    meditateSkill: 0,
+    gearManaRegen: 0,
+    buffManaRegen: 0,
+    inCombat: false,
 
     // Double Attack progression (warrior-only; unlocks at 5)
     doubleAttackSkill: cls.key === "warrior" ? 0 : undefined,
@@ -876,6 +882,68 @@ function checkCampThresholds() {
   return { shouldCamp: false, reasons: [] };
 }
 
+// Meditate skill helper: get skill cap by level
+export function getMeditateCap(level) {
+  if (level < MEDITATE_UNLOCK_LEVEL) return 0;
+  return Math.min(MEDITATE_SKILL_HARD_CAP, Math.floor((level - MEDITATE_UNLOCK_LEVEL) * MEDITATE_SKILL_HARD_CAP / 55));
+}
+
+// Meditate tick: mana regen with meditate bonus and skill progression
+function meditateTick(hero) {
+  // Only casters with mana
+  if (!hero.maxMana || hero.maxMana <= 0) return;
+  
+  // Get skill cap
+  const cap = getMeditateCap(hero.level);
+  
+  // Initialize meditateSkill if missing (old saves)
+  if (hero.meditateSkill === undefined) {
+    hero.meditateSkill = 0;
+  }
+  
+  // Unlock at level 5: initialize skill to 10 if it's 0
+  if (hero.level >= MEDITATE_UNLOCK_LEVEL && hero.meditateSkill === 0) {
+    hero.meditateSkill = Math.min(10, cap);
+  }
+  
+  // Base mana regen (always available)
+  const baseManaRegen = Math.max(1, Math.floor(hero.maxMana * MEDITATE_BASE_REGEN_FACTOR));
+  
+  // Meditate bonus (only if level >= 5)
+  let meditateBonusPerTick = 0;
+  if (hero.level >= MEDITATE_UNLOCK_LEVEL && cap > 0) {
+    const skillNorm = Math.min(1, hero.meditateSkill / MEDITATE_SKILL_HARD_CAP);
+    const levelNorm = Math.min(1, (hero.level - MEDITATE_UNLOCK_LEVEL) / 55);
+    const meditateBonus = 2 + 18 * Math.pow(skillNorm, 0.9);
+    const levelFactor = 0.25 + 0.75 * levelNorm;
+    meditateBonusPerTick = Math.floor(meditateBonus * levelFactor);
+  }
+  
+  // Total regen before combat multiplier
+  const gearRegen = hero.gearManaRegen || 0;
+  const buffRegen = hero.buffManaRegen || 0;
+  const totalRegenRaw = baseManaRegen + meditateBonusPerTick + gearRegen + buffRegen;
+  
+  // Apply combat multiplier
+  const stateMult = hero.inCombat ? COMBAT_REGEN_MULT : OOC_REGEN_MULT;
+  const manaRegenThisTick = Math.floor(totalRegenRaw * stateMult);
+  
+  // Apply regen and detect if mana actually increased
+  const manaBefore = hero.mana;
+  const manaAfter = Math.min(hero.maxMana, manaBefore + manaRegenThisTick);
+  const didRegenMana = manaAfter > manaBefore;
+  hero.mana = manaAfter;
+  
+  // Meditate skill-up: only OOC, only if mana increased, only if skill < cap
+  if (!hero.inCombat && didRegenMana && hero.level >= MEDITATE_UNLOCK_LEVEL && hero.meditateSkill < cap) {
+    const skillNorm = Math.min(1, hero.meditateSkill / MEDITATE_SKILL_HARD_CAP);
+    const skillUpChance = Math.max(0.01, Math.min(0.06, 0.06 - skillNorm * 0.05));
+    if (Math.random() < skillUpChance) {
+      hero.meditateSkill = Math.min(hero.meditateSkill + 1, cap);
+    }
+  }
+}
+
 export function gameTick() {
   // Handle auto-revival for dead members (60 second timer)
   const now = Date.now();
@@ -971,7 +1039,12 @@ export function gameTick() {
   // Determine if in combat (affects regen rates)
   const inCombat = state.currentEnemies.length > 0;
   
-  // 1) Regenerate resources for all living members (every 2 ticks)
+  // 1) Update inCombat flag for all heroes
+  for (const hero of state.party) {
+    hero.inCombat = inCombat;
+  }
+  
+  // 2) Regenerate resources for all living members (every 2 ticks)
   for (const hero of state.party) {
     if (hero.isDead) continue;
     
@@ -982,20 +1055,20 @@ export function gameTick() {
     if (hero.regenTickCounter >= 2) {
       hero.regenTickCounter = 0;
       
-      // Apply regen rates: full out of combat, 1/3 in combat
-      const manaRegenRate = inCombat ? hero.manaRegenPerTick / 3 : hero.manaRegenPerTick;
-      const enduranceRegenRate = inCombat ? hero.enduranceRegenPerTick / 3 : hero.enduranceRegenPerTick;
-      
-      if (manaRegenRate && hero.mana < hero.maxMana) {
-        hero.mana = Math.min(hero.maxMana, hero.mana + manaRegenRate);
+      // Mana: use meditateTick for casters (has built-in meditate logic)
+      if (hero.maxMana && hero.maxMana > 0) {
+        meditateTick(hero);
       }
+      
+      // Endurance: traditional regen (no meditate)
+      const enduranceRegenRate = inCombat ? hero.enduranceRegenPerTick / 3 : hero.enduranceRegenPerTick;
       if (enduranceRegenRate && hero.endurance < hero.maxEndurance) {
         hero.endurance = Math.min(hero.maxEndurance, hero.endurance + enduranceRegenRate);
       }
     }
   }
   
-  // 2) Apply passive health regeneration to living members only (every 2 ticks)
+  // 3) Apply passive health regeneration to living members only (every 2 ticks)
   // Passive regen: full out of combat, 1/3 in combat
   const passiveRegenAmount = 2;
   const healthRegenRate = inCombat ? passiveRegenAmount / 3 : passiveRegenAmount;

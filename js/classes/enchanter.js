@@ -27,6 +27,15 @@ export default {
     cha: 12
   },
 
+  passives: [
+    {
+      key: "meditate",
+      name: "Meditate",
+      level: 5,
+      description: "Unlocks at level 5 and increases mana regeneration out of combat. Skill grows from 0-252 as you meditate while recovering mana."
+    }
+  ],
+
   skills: [
     { key: "hex", name: "Hex", level: 1, type: "damage", damageType: "arcane", minDamage: 7, maxDamage: 11, cost: 20, cooldownSeconds: 5 },
     { key: "drain", name: "Drain", level: 3, type: "damage", damageType: "shadow", minDamage: 9, maxDamage: 13, cost: 25, cooldownSeconds: 6 },
