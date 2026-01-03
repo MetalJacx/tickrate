@@ -17,7 +17,7 @@ export const OOC_REGEN_MULT = 1.0;
 // Set to 0 for normal XP requirements
 // Set to 20 to reduce requirements by 20%
 // Set to 90 to reduce requirements by 90%
-export const XP_TEST_REDUCTION_PERCENT = 0;
+export const XP_TEST_REDUCTION_PERCENT = 90;
 
 // Party slot unlocks based on Account level (not zone)
 export const ACCOUNT_SLOT_UNLOCKS = [
