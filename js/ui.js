@@ -923,7 +923,16 @@ function renderZones() {
 
   // Render zone list
   for (const z of zones) {
-    const unlocked = z.zoneNumber <= highest;
+    const isCurrentZone = z.zoneNumber === state.zone;
+    const isPreviousZone = z.zoneNumber < state.zone;
+    const isNextZone = z.zoneNumber === state.zone + 1;
+    
+    // Zone is unlocked if: it's a previously visited zone OR it's the current zone OR it's the next zone and we can travel forward
+    let unlocked = z.zoneNumber <= highest;
+    if (isNextZone && !unlocked) {
+      unlocked = canTravelForward();
+    }
+    
     const isSelected = selectedZoneForTravel === z.zoneNumber;
     
     const btn = document.createElement("button");
