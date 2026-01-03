@@ -37,8 +37,8 @@ export default {
   ],
 
   skills: [
-    { key: "kick", name: "Kick", level: 1, type: "damage", damageType: "physical", minDamage: 2, maxDamage: 7, cost: 5, cooldownSeconds: 4 },
-    { key: "shield_bash", name: "Shield Bash", level: 3, type: "damage", damageType: "physical", minDamage: 10, maxDamage: 14, cost: 12, cooldownSeconds: 8 },
+    { key: "kick", name: "Kick", level: 1, type: "damage", damageType: "physical", minDamage: 2, maxDamage: 7, cost: 5, cooldownTicks: 4 },
+    { key: "shield_bash", name: "Shield Bash", level: 3, type: "damage", damageType: "physical", minDamage: 10, maxDamage: 14, cost: 12, cooldownTicks: 8 },
     {
       key: "taunt",
       name: "Taunt",
@@ -62,6 +62,6 @@ export default {
       cooldownSeconds: 12,
       description: "Increases AC by 10 at level 8. Bonus scales by +1 AC every 2 levels, reaching a maximum of +15 AC at level 18."
     },
-    { key: "cleave", name: "Cleave", level: 10, type: "damage", damageType: "physical", usesBaseDamage: true, cleaveTargets: 3, cost: 25, cooldownSeconds: 5 }
+    { key: "cleave", name: "Cleave", level: 10, type: "damage", damageType: "physical", usesBaseDamage: true, cleaveTargets: 3, cost: 25, cooldownTicks: 5 }
   ]
 };

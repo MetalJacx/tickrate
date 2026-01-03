@@ -45,7 +45,7 @@ export default {
       minAmount: 10,
       maxAmount: 20, 
       cost: 10, 
-      cooldownSeconds: 24 // 4 ticks × 6 seconds
+      cooldownTicks: 4 // 4 ticks
     },
     { 
       key: "courage", 
@@ -54,7 +54,7 @@ export default {
       type: "buff",
       buffType: "courage",
       cost: 12, 
-      cooldownSeconds: 6, // Minimum 1-tick cooldown to prevent spam; cast cycle manages who gets buffed
+      cooldownTicks: 1, // Minimum 1-tick cooldown to prevent spam; cast cycle manages who gets buffed
       targetMode: "individual", // Cast on one party member at a time
       notes: "Grants AC and HP bonus. Long-duration buff. Scales with cleric level."
     },
@@ -65,7 +65,7 @@ export default {
       type: "debuff",
       debuffType: "fear",
       cost: 40, 
-      cooldownSeconds: 42 // 7 ticks × 6 seconds
+      cooldownTicks: 7 // 7 ticks
     },
     { 
       key: "healing", 
@@ -75,7 +75,7 @@ export default {
       minAmount: 95,
       maxAmount: 175, 
       cost: 65, 
-      cooldownSeconds: 72 // 12 ticks × 6 seconds
+      cooldownTicks: 12 // 12 ticks
     }
   ]
 };

@@ -1544,7 +1544,7 @@ export function gameTick() {
           }
           // If no one was dead, skill is skipped earlier; no log needed here
         }
-        hero.skillTimers[sk.key] = sk.cooldownSeconds;
+        hero.skillTimers[sk.key] = sk.cooldownTicks;
       }
     }
   }
