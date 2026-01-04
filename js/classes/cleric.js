@@ -65,6 +65,7 @@ export default {
       type: "debuff",
       debuffType: "fear",
       durationTicks: 2,
+      fearAggroMultiplier: 1.4, // Increases reinforcement chance by 40% while this fear is active
       cost: 40, 
       cooldownTicks: 7 // 7 ticks
     },

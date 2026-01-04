@@ -370,6 +370,9 @@ export function renderLog() {
         case "damage_taken":
           color = "#ff6b6b"; // red
           break;
+        case "dot_fire":
+          color = "#ff9f43"; // orange for Flame Lick DOT ticks
+          break;
         case "gold":
         case "xp":
           color = "#ffd700"; // yellow/gold

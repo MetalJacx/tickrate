@@ -680,7 +680,17 @@ function checkForReinforcement() {
     if (!hasRealEnemy) return; // Skip reinforcements if only target dummy
     
     const zone = getZoneDef(state.zone);
-    const reinforcementChance = zone?.aggroChance ?? 0.05;
+    let reinforcementChance = zone?.aggroChance ?? 0.05;
+
+    // If any enemy is currently feared, scale aggro risk by the fear's defined multiplier
+    const fearMultipliers = state.currentEnemies
+      .filter(e => hasBuff(e, "fear"))
+      .map(e => getBuff(e, "fear")?.fearAggroMultiplier ?? 1.0);
+    if (fearMultipliers.length > 0) {
+      const maxMult = Math.max(...fearMultipliers, 1.0);
+      reinforcementChance = Math.min(0.9, reinforcementChance * maxMult);
+    }
+
     if (Math.random() < reinforcementChance) {
       spawnEnemyToList();
     }
@@ -1246,7 +1256,7 @@ export function gameTick() {
       if (now <= flameLick.expiresAt && flameLick.data?.dotDamagePerTick) {
         const dotDamage = flameLick.data.dotDamagePerTick;
         enemy.hp = Math.max(0, enemy.hp - dotDamage);
-        addLog(`${enemy.name} burns for ${dotDamage.toFixed(1)} fire damage!`, "damage_dealt");
+        addLog(`${enemy.name} burns for ${dotDamage.toFixed(1)} fire damage!`, "dot_fire");
 
             if (hasBuff(enemy, "mesmerize")) {
               removeBuff(enemy, "mesmerize");
@@ -1676,11 +1686,32 @@ export function gameTick() {
             // Fear debuff on first enemy
             const targetEnemy = state.currentEnemies[0];
             if (targetEnemy) {
-              // Fear duration: use skill definition if provided; otherwise 2 ticks at level 8, 3+ at level 9+
-              const durationTicks = sk.durationTicks ?? (hero.level >= 9 ? 3 : 2);
-              const durationMs = durationTicks * 3000; // GAME_TICK_MS
-              applyBuff(targetEnemy, "fear", durationMs, { durationTicks });
-              addLog(`${hero.name} casts ${sk.name} on ${targetEnemy.name}! ${targetEnemy.name} runs in fear for ${durationTicks} ticks!`, "skill");
+              // Level cap: Fear affects mobs up to level 52
+              if (targetEnemy.level > 52) {
+                addLog(`${hero.name} attempts Fear, but ${targetEnemy.name} is too powerful.`, "normal");
+              } else {
+                // Per-mob diminishing returns: reduce duration by DR count, floor at 1 tick
+                const drCount = targetEnemy.fearDRCount || 0;
+                const baseDuration = sk.durationTicks ?? (hero.level >= 9 ? 3 : 2);
+                const effectiveDuration = Math.max(1, baseDuration - drCount);
+                const durationMs = effectiveDuration * GAME_TICK_MS;
+                const fearAggroMultiplier = sk.fearAggroMultiplier ?? 1.4; // default 40% increase
+                applyBuff(targetEnemy, "fear", durationMs, { durationTicks: effectiveDuration, fleeing: true, fearAggroMultiplier });
+                targetEnemy.fearDRCount = drCount + 1;
+                addLog(`${hero.name} casts ${sk.name} on ${targetEnemy.name}! ${targetEnemy.name} flees for ${effectiveDuration} ticks.`, "skill");
+
+                // Spawn risk roll per cast
+                let spawnChance = Math.max(0.10, 0.40 - 0.05 * Math.max(0, hero.level - 8));
+                if (hasBuff(targetEnemy, "root")) {
+                  spawnChance = 0;
+                } else if (hasBuff(targetEnemy, "snare")) {
+                  spawnChance *= 0.5;
+                }
+                if (Math.random() < spawnChance) {
+                  spawnEnemyToList();
+                  addLog(`Fear backfires! An additional enemy joins the fray.`, "damage_taken");
+                }
+              }
             }
           } else if (sk.debuffType === "flame_lick") {
             // Flame Lick: DOT + AC reduction
