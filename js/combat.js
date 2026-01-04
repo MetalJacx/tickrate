@@ -16,6 +16,10 @@ import {
   computeRawDamage
 } from "./combatMath.js";
 
+// Meditate regen tick multiplier: meditateTick runs every 2 game ticks (6 seconds)
+// manaRegenPerTick is per game tick (3 sec), so multiply by 2
+const REGEN_TICK_MULT = 2;
+
 // Simple loot entry shape: { itemId, dropRate (0-1), minQty?, maxQty? }
 function rollLoot(enemyDef, zoneDef) {
   const rolls = [];
@@ -972,8 +976,8 @@ function meditateTick(hero) {
     hero.meditateSkill = Math.min(10, cap);
   }
   
-  // Base mana regen (always available)
-  const baseManaRegen = Math.max(1, Math.floor(hero.maxMana * MEDITATE_BASE_REGEN_FACTOR));
+  // Base mana regen: use stat-based manaRegenPerTick (scaled for 2-tick interval)
+  const baseManaRegen = Math.max(1, Math.floor((hero.manaRegenPerTick || 0) * REGEN_TICK_MULT));
   
   // Meditate bonus (only if level >= 5)
   let meditateBonusPerTick = 0;
