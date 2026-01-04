@@ -43,15 +43,43 @@ export function rand01() {
 
 function getStats(entity) {
   const stats = entity?.stats || {};
-  // Include both old tempACBuffAmount (for backwards compatibility) and new Fortify buff
+  // Include both old tempACBuffAmount (for backwards compatibility) and new buffs
   let acBonus = entity?.tempACBuffAmount || 0;
+  
+  const now = Date.now();
+  
+  // Fortify buff
   if (entity?.activeBuffs?.fortify) {
     const fortifyBuff = entity.activeBuffs.fortify;
-    const now = Date.now();
     if (now <= fortifyBuff.expiresAt && fortifyBuff.data?.acBonus) {
       acBonus += fortifyBuff.data.acBonus;
     }
   }
+  
+  // Courage buff
+  if (entity?.activeBuffs?.courage) {
+    const courageBuff = entity.activeBuffs.courage;
+    if (now <= courageBuff.expiresAt && courageBuff.data?.acBonus) {
+      acBonus += courageBuff.data.acBonus;
+    }
+  }
+  
+  // WoodSkin buff
+  if (entity?.activeBuffs?.woodskin) {
+    const woodskinBuff = entity.activeBuffs.woodskin;
+    if (now <= woodskinBuff.expiresAt && woodskinBuff.data?.acBonus) {
+      acBonus += woodskinBuff.data.acBonus;
+    }
+  }
+  
+  // Flame Lick debuff (reduces AC)
+  if (entity?.activeBuffs?.flame_lick) {
+    const flameLickBuff = entity.activeBuffs.flame_lick;
+    if (now <= flameLickBuff.expiresAt && flameLickBuff.data?.acReduction) {
+      acBonus -= flameLickBuff.data.acReduction;
+    }
+  }
+  
   if (!acBonus) return stats;
   return { ...stats, ac: (stats.ac || 0) + acBonus };
 }

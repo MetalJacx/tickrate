@@ -30,8 +30,72 @@ export default {
   },
 
   skills: [
-    { key: "shot", name: "Shot", level: 1, type: "damage", damageType: "physical", minDamage: 8, maxDamage: 12, cost: 10, costType: "endurance", cooldownTicks: 3 },
-    { key: "multishot", name: "Multishot", level: 4, type: "damage", damageType: "physical", minDamage: 18, maxDamage: 24, cost: 25, costType: "endurance", cooldownTicks: 8 },
-    { key: "mend", name: "Mend Wounds", level: 6, type: "heal", amount: 14, cost: 20, costType: "mana", cooldownTicks: 7 }
+    {
+      key: "shot",
+      name: "Shot",
+      level: 1,
+      type: "damage",
+      damageType: "physical",
+      minDamage: 2,
+      maxDamage: 2,
+      cost: 1,
+      costType: "endurance",
+      cooldownTicks: 1,
+      description: "Ranged bow attack. Damage scales to 5 at level 8."
+    },
+    {
+      key: "flame_lick",
+      name: "Flame Lick",
+      level: 3,
+      type: "debuff",
+      debuffType: "flame_lick",
+      damageType: "fire",
+      dotDamagePerTick: 1, // Scales to 3 at level 6
+      durationTicks: 6,
+      acReduction: 3,
+      cost: 12,
+      costType: "mana",
+      cooldownTicks: 6,
+      description: "Fire DOT that reduces target AC by 3 for 6 ticks. Damage scales to 3/tick at level 6."
+    },
+    {
+      key: "salve",
+      name: "Salve",
+      level: 5,
+      type: "heal",
+      minAmount: 5,
+      maxAmount: 9,
+      cost: 8,
+      costType: "endurance",
+      cooldownTicks: 5,
+      description: "Minor healing ability targeting the most injured ally."
+    },
+    {
+      key: "woodskin",
+      name: "WoodSkin",
+      level: 8,
+      type: "buff",
+      buffType: "woodskin",
+      acBonus: 3, // Scales to 7 at level 18
+      conBonus: 2,
+      cost: 10,
+      costType: "mana",
+      cooldownTicks: 1,
+      targetMode: "individual",
+      description: "Defensive barkskin buff. Single target (self or ally). Duration: 3 min @ L8 → 25 min @ L18."
+    },
+    {
+      key: "hawk_eye",
+      name: "Hawk Eye",
+      level: 10,
+      type: "buff",
+      buffType: "hawk_eye",
+      hitChanceBonus: 2, // +2% to hit
+      cost: 45,
+      costType: "mana",
+      cooldownTicks: 1,
+      targetMode: "self",
+      description: "Improves ranged accuracy. Self-only. Duration: 33.3 min @ L11 → 70 min @ L24."
+    }
   ]
 };

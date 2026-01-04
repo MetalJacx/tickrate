@@ -1105,6 +1105,31 @@ export function applyFortifyBuff(hero, warriorLevel) {
   applyBuff(hero, "fortify", durationMs, { acBonus });
 }
 
+// WoodSkin buff handler - AC and CON bonus
+export function applyWoodSkinBuff(hero, rangerLevel) {
+  // AC scales: +3 @ L8 → +7 @ L18
+  const acBonus = Math.min(7, 3 + Math.floor((rangerLevel - 8) * 4 / 10));
+  const conBonus = 2;
+  
+  // Duration: 3 min @ L8 → 25 min @ L18
+  const durationMinutes = Math.min(25, 3 + Math.floor((rangerLevel - 8) * 22 / 10));
+  const durationMs = durationMinutes * 60 * 1000;
+  
+  applyBuff(hero, "woodskin", durationMs, { acBonus, conBonus });
+}
+
+// Hawk Eye buff handler - hit chance bonus
+export function applyHawkEyeBuff(hero, rangerLevel) {
+  const hitChanceBonus = 2; // +2% to hit
+  
+  // Duration: 33.3 min @ L11 → 70 min @ L24
+  const durationMinutes = Math.min(70, 33.3 + Math.floor((rangerLevel - 11) * 36.7 / 13));
+  const durationMs = durationMinutes * 60 * 1000;
+  
+  applyBuff(hero, "hawk_eye", durationMs, { hitChanceBonus });
+}
+
+
 export function gameTick() {
   // Handle auto-revival for dead members (60 second timer)
   const now = Date.now();
@@ -1201,6 +1226,24 @@ export function gameTick() {
         enemy.forcedTargetId = null;
       }
     }
+    
+    // Process DOT effects (Flame Lick)
+    if (enemy.activeBuffs?.flame_lick) {
+      const flameLick = enemy.activeBuffs.flame_lick;
+      const now = Date.now();
+      if (now <= flameLick.expiresAt && flameLick.data?.dotDamagePerTick) {
+        const dotDamage = flameLick.data.dotDamagePerTick;
+        enemy.hp = Math.max(0, enemy.hp - dotDamage);
+        addLog(`${enemy.name} burns for ${dotDamage.toFixed(1)} fire damage!`, "damage_dealt");
+        
+        if (enemy.hp <= 0) {
+          addLog(`${enemy.name} succumbs to the flames!`, "gold");
+        }
+      }
+    }
+    
+    // Clean up expired buffs on enemies
+    cleanupExpiredBuffs(enemy);
   }
 
   recalcPartyTotals();
@@ -1365,6 +1408,19 @@ export function gameTick() {
             hasResources = false; // Hero already has shield, don't cast
           }
         }
+        // WoodSkin: check if anyone needs the buff
+        if (sk.type === "buff" && sk.buffType === "woodskin") {
+          const needsBuff = state.party.find(h => !h.isDead && !hasBuff(h, "woodskin"));
+          if (!needsBuff) {
+            hasResources = false; // Everyone has the buff, don't cast
+          }
+        }
+        // Hawk Eye is self-only and can't stack
+        if (sk.type === "buff" && sk.buffType === "hawk_eye") {
+          if (hasBuff(hero, "hawk_eye")) {
+            hasResources = false; // Hero already has Hawk Eye, don't cast
+          }
+        }
         // Prevent offensive spells after Arcane Shield cast (1 tick lockout)
         if ((sk.type === "damage" || sk.type === "debuff") && hero.arcaneShieldLockout > 0) {
           hasResources = false; // Still in lockout, don't cast
@@ -1410,6 +1466,11 @@ export function gameTick() {
             // Iceblast: +1 max damage per 2 levels, caps at level 18
             const levelScaling = Math.min(9, Math.floor((hero.level - 7) / 2)); // 0-9 scaling
             maxDmg = 30 + levelScaling;
+          } else if (sk.key === "shot") {
+            // Ranger Shot: damage scales from 2 @ L1 to 5 @ L8
+            const scaledDamage = Math.min(5, 2 + Math.floor((hero.level - 1) * 3 / 7));
+            minDmg = scaledDamage;
+            maxDmg = scaledDamage;
           }
           
           let calcDamage = 0;
@@ -1463,6 +1524,37 @@ export function gameTick() {
             if (buffData) {
               addLog(`${hero.name} fortifies, gaining +${buffData.acBonus} AC for 8 ticks.`, "skill");
             }
+          } else if (sk.buffType === "woodskin") {
+            // WoodSkin: single target buff (self or ally)
+            const needsBuff = state.party.find(h => !h.isDead && !hasBuff(h, "woodskin"));
+            if (needsBuff) {
+              applyWoodSkinBuff(needsBuff, hero.level);
+              addLog(`${hero.name} casts ${sk.name} on ${needsBuff.name}!`, "normal");
+            } else {
+              // Everyone has the buff; refund mana
+              hero.mana += cost;
+            }
+          } else if (sk.buffType === "hawk_eye") {
+            // Hawk Eye: self-only
+            if (hasBuff(hero, "hawk_eye")) {
+              // Already has buff; refund mana
+              hero.mana += cost;
+            } else {
+              applyHawkEyeBuff(hero, hero.level);
+              addLog(`${hero.name} focuses with ${sk.name}, gaining +${sk.hitChanceBonus}% to hit!`, "skill");
+            }
+          } else if (sk.buffType === "arcane_shield") {
+            // Check if hero already has Arcane Shield
+            if (hasBuff(hero, "arcane_shield")) {
+              // Already shielded; refund mana and skip
+              hero.mana += cost;
+            } else {
+              // Apply Arcane Shield buff (90 second duration)
+              applyBuff(hero, "arcane_shield", 90000, { tempHP: 50 });
+              addLog(`${hero.name} casts ${sk.name} and gains a protective shield!`, "normal");
+              // Set cast lockout: prevent offensive spells for next tick
+              hero.arcaneShieldLockout = 1;
+            }
           }
         }
         if (sk.type === "debuff") {
@@ -1483,6 +1575,22 @@ export function gameTick() {
               const durationMs = durationTicks * 3000; // GAME_TICK_MS
               applyBuff(targetEnemy, "fear", durationMs, { durationTicks });
               addLog(`${hero.name} casts ${sk.name} on ${targetEnemy.name}! ${targetEnemy.name} runs in fear for ${durationTicks} ticks!`, "skill");
+            }
+          } else if (sk.debuffType === "flame_lick") {
+            // Flame Lick: DOT + AC reduction
+            const targetEnemy = state.currentEnemies[0];
+            if (targetEnemy) {
+              const durationTicks = sk.durationTicks || 6;
+              const durationMs = durationTicks * 3000; // GAME_TICK_MS
+              // DOT damage scales: 1 @ L3 → 3 @ L6+
+              const dotDamage = Math.min(3, 1 + Math.floor((hero.level - 3) * 2 / 3));
+              applyBuff(targetEnemy, "flame_lick", durationMs, {
+                durationTicks,
+                dotDamagePerTick: dotDamage,
+                acReduction: sk.acReduction || 3,
+                sourceHero: hero.name
+              });
+              addLog(`${hero.name} casts ${sk.name} on ${targetEnemy.name}! Fire burns for ${durationTicks} ticks (${dotDamage} dmg/tick, -${sk.acReduction || 3} AC)!`, "skill");
             }
           }
         }
@@ -1510,32 +1618,6 @@ export function gameTick() {
           const healAmount = Math.min(baseHeal, missingHP);
           target.health += healAmount;
           addLog(`${hero.name} casts ${sk.name} on ${target.name} for ${healAmount.toFixed(1)} healing!`, "healing");
-        }
-        if (sk.type === "buff") {
-          // Handle buff skills (e.g., Courage, Arcane Shield)
-          if (sk.buffType === "courage") {
-            // Find first party member without Courage buff
-            const needsBuff = state.party.find(h => !h.isDead && !hasBuff(h, "courage"));
-            if (needsBuff) {
-              applyCourageBuff(needsBuff, hero.level);
-              addLog(`${hero.name} casts ${sk.name} on ${needsBuff.name}!`, "normal");
-            } else {
-              // Everyone has the buff; refund mana
-              hero.mana += cost;
-            }
-          } else if (sk.buffType === "arcane_shield") {
-            // Check if hero already has Arcane Shield
-            if (hasBuff(hero, "arcane_shield")) {
-              // Already shielded; refund mana and skip
-              hero.mana += cost;
-            } else {
-              // Apply Arcane Shield buff (90 second duration)
-              applyBuff(hero, "arcane_shield", 90000, { tempHP: 50 });
-              addLog(`${hero.name} casts ${sk.name} and gains a protective shield!`, "normal");
-              // Set cast lockout: prevent offensive spells for next tick
-              hero.arcaneShieldLockout = 1;
-            }
-          }
         }
         if (sk.type === "utility") {
           // Handle utility skills (e.g., Gather Mana)
