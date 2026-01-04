@@ -1695,22 +1695,18 @@ export function gameTick() {
                 const baseDuration = sk.durationTicks ?? (hero.level >= 9 ? 3 : 2);
                 const effectiveDuration = Math.max(1, baseDuration - drCount);
                 const durationMs = effectiveDuration * GAME_TICK_MS;
-                const fearAggroMultiplier = sk.fearAggroMultiplier ?? 1.4; // default 40% increase
+                let fearAggroMultiplier = sk.fearAggroMultiplier ?? 1.4; // default 40% increase
+                // Synergy: Root nullifies aggro boost; Snare halves the bonus portion
+                if (hasBuff(targetEnemy, "root")) {
+                  fearAggroMultiplier = 1.0;
+                } else if (hasBuff(targetEnemy, "snare")) {
+                  const bonusPortion = fearAggroMultiplier - 1;
+                  fearAggroMultiplier = 1 + Math.max(0, bonusPortion * 0.5);
+                }
+
                 applyBuff(targetEnemy, "fear", durationMs, { durationTicks: effectiveDuration, fleeing: true, fearAggroMultiplier });
                 targetEnemy.fearDRCount = drCount + 1;
                 addLog(`${hero.name} casts ${sk.name} on ${targetEnemy.name}! ${targetEnemy.name} flees for ${effectiveDuration} ticks.`, "skill");
-
-                // Spawn risk roll per cast
-                let spawnChance = Math.max(0.10, 0.40 - 0.05 * Math.max(0, hero.level - 8));
-                if (hasBuff(targetEnemy, "root")) {
-                  spawnChance = 0;
-                } else if (hasBuff(targetEnemy, "snare")) {
-                  spawnChance *= 0.5;
-                }
-                if (Math.random() < spawnChance) {
-                  spawnEnemyToList();
-                  addLog(`Fear backfires! An additional enemy joins the fray.`, "damage_taken");
-                }
               }
             }
           } else if (sk.debuffType === "flame_lick") {
