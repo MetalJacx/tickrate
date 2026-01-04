@@ -260,6 +260,12 @@ export function loadGame() {
           off: null
         };
       }
+      // Initialize per-hero consumable slots (4 total)
+      if (!Array.isArray(h.consumableSlots)) {
+        h.consumableSlots = Array(4).fill(null);
+      } else {
+        h.consumableSlots = Array.from({ length: 4 }, (_, idx) => h.consumableSlots[idx] ?? null);
+      }
       // Initialize regen tick counter
       if (h.regenTickCounter === undefined) {
         h.regenTickCounter = 0;

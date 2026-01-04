@@ -368,7 +368,10 @@ export function createHero(classKey, customName = null, raceKey = DEFAULT_RACE_K
     },
 
     // cooldown tracking per hero:
-    skillTimers: {}
+    skillTimers: {},
+
+    // Quick consumables (assigned from shared inventory)
+    consumableSlots: Array(4).fill(null)
   };
 
   refreshHeroDerived(hero);

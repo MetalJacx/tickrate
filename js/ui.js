@@ -5,7 +5,7 @@ import { CLASSES, getClassDef } from "./classes/index.js";
 import { getZoneDef, listZones, ensureZoneDiscovery, getActiveSubArea } from "./zones/index.js";
 import { addLog } from "./util.js";
 import { formatPGSC, saveGame, updateCurrencyDisplay } from "./state.js";
-import { MAX_PARTY_SIZE, ACCOUNT_SLOT_UNLOCKS } from "./defs.js";
+import { MAX_PARTY_SIZE, ACCOUNT_SLOT_UNLOCKS, CONSUMABLE_SLOT_UNLOCK_LEVELS } from "./defs.js";
 import { getItemDef } from "./items.js";
 import { computeSellValue } from "./combatMath.js";
 
@@ -542,6 +542,9 @@ export function renderParty() {
       const div = document.createElement("div");
       div.className = "hero";
       div.style.position = "relative";
+      div.style.paddingRight = "80px";
+
+      hero.consumableSlots = hero.consumableSlots || Array(4).fill(null);
       
       // Greyed out if dead
       if (hero.isDead) {
@@ -567,6 +570,117 @@ export function renderParty() {
       right.textContent = hero.role;
       header.appendChild(left);
       header.appendChild(right);
+
+      const consumableWrap = document.createElement("div");
+      consumableWrap.style.cssText = `
+        position: absolute;
+        top: 8px;
+        right: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      `;
+
+      for (let c = 0; c < 4; c++) {
+        const slotDiv = document.createElement("div");
+        const isUnlocked = isConsumableSlotUnlocked(hero, c);
+        const unlockLevel = getConsumableSlotUnlockLevel(c);
+        const assigned = hero.consumableSlots[c];
+        const itemDef = assigned ? getItemDef(assigned) : null;
+        const qty = assigned ? getSharedItemQuantity(assigned) : 0;
+
+        slotDiv.style.cssText = `
+          width: 38px;
+          height: 38px;
+          border-radius: 6px;
+          border: 1px solid ${isUnlocked ? "#444" : "#222"};
+          background: ${isUnlocked ? "#0f0f0f" : "#090909"};
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          position: relative;
+          cursor: ${isUnlocked ? "pointer" : "not-allowed"};
+          opacity: ${isUnlocked ? 1 : 0.4};
+        `;
+
+        if (!isUnlocked) {
+          const lock = document.createElement("div");
+          lock.style.cssText = "font-size:9px;color:#666;text-align:center;padding:2px;";
+          lock.textContent = `Lv ${unlockLevel}`;
+          slotDiv.appendChild(lock);
+        } else {
+          if (itemDef) {
+            const icon = document.createElement("div");
+            icon.style.cssText = "font-size:16px;";
+            icon.textContent = itemDef.icon || "?";
+            slotDiv.appendChild(icon);
+
+            const qtyBadge = document.createElement("div");
+            qtyBadge.style.cssText = `
+              position: absolute;
+              bottom: -6px;
+              right: -6px;
+              background: #111827;
+              border: 1px solid #1f2937;
+              border-radius: 10px;
+              padding: 2px 6px;
+              font-size: 10px;
+              color: #a5b4fc;
+              box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+            `;
+            qtyBadge.textContent = `x${qty}`;
+            slotDiv.appendChild(qtyBadge);
+            slotDiv.title = `${itemDef.name} (${qty} in stash)`;
+          } else {
+            slotDiv.title = "Assign a consumable";
+          }
+
+          slotDiv.addEventListener("click", (e) => {
+            e.stopPropagation();
+            useConsumableSlot(hero, c);
+          });
+          slotDiv.addEventListener("contextmenu", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            openConsumableMenu(hero, c, e);
+          });
+
+          slotDiv.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            const data = e.dataTransfer.getData("application/json");
+            if (data) {
+              const parsed = JSON.parse(data);
+              if (parsed.fromInventory) {
+                slotDiv.style.borderColor = "#22c55e";
+                slotDiv.style.backgroundColor = "#1a2b1a";
+              }
+            }
+          });
+
+          slotDiv.addEventListener("dragleave", (e) => {
+            e.preventDefault();
+            slotDiv.style.borderColor = "#444";
+            slotDiv.style.backgroundColor = "#0f0f0f";
+          });
+
+          slotDiv.addEventListener("drop", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            slotDiv.style.borderColor = "#444";
+            slotDiv.style.backgroundColor = "#0f0f0f";
+            const data = e.dataTransfer.getData("application/json");
+            if (!data) return;
+            const parsed = JSON.parse(data);
+            if (!parsed.fromInventory || !parsed.itemId) return;
+            hero.consumableSlots = hero.consumableSlots || Array(4).fill(null);
+            hero.consumableSlots[c] = parsed.itemId;
+            saveGame();
+            renderParty();
+          });
+        }
+
+        consumableWrap.appendChild(slotDiv);
+      }
 
       // Individual health bar
       const healthBar = document.createElement("div");
@@ -771,6 +885,7 @@ export function renderParty() {
       btnRow.appendChild(abilBtn);
 
       div.appendChild(header);
+      div.appendChild(consumableWrap);
       div.appendChild(healthBar);
       div.appendChild(healthLabel);
       
@@ -1177,6 +1292,7 @@ function openInventoryModal(hero) {
   const cls = getClassDef(hero.classKey);
   
   title.textContent = `${hero.name} (${cls?.name || 'Unknown'}) - Lv ${hero.level}`;
+  renderConsumableStrip(hero);
   populateInventoryGrid(hero);
   populateEquipmentSection(hero);
   populateInventoryStats(hero);
@@ -1319,6 +1435,130 @@ function showItemTooltip(itemDef, event) {
 function hideItemTooltip() {
   const tooltip = document.getElementById("itemTooltip");
   if (tooltip) tooltip.remove();
+}
+
+function renderConsumableStrip(hero) {
+  const strip = document.getElementById("inventoryConsumableStrip");
+  if (!strip) return;
+  strip.innerHTML = "";
+
+  const label = document.createElement("div");
+  label.style.cssText = "font-size:12px;font-weight:700;color:#e2e8f0;margin-bottom:6px;";
+  label.textContent = "Quick Consumables";
+  strip.appendChild(label);
+
+  const row = document.createElement("div");
+  row.style.cssText = "display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;";
+  strip.appendChild(row);
+
+  hero.consumableSlots = hero.consumableSlots || Array(4).fill(null);
+
+  for (let c = 0; c < 4; c++) {
+    const isUnlocked = isConsumableSlotUnlocked(hero, c);
+    const unlockLevel = getConsumableSlotUnlockLevel(c);
+    const assigned = hero.consumableSlots[c];
+    const itemDef = assigned ? getItemDef(assigned) : null;
+    const qty = assigned ? getSharedItemQuantity(assigned) : 0;
+
+    const slotDiv = document.createElement("div");
+    slotDiv.style.cssText = `
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      border: 1px solid ${isUnlocked ? "#475569" : "#1f2937"};
+      background: ${isUnlocked ? "#0f172a" : "#0b1020"};
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      cursor: ${isUnlocked ? "pointer" : "not-allowed"};
+      opacity: ${isUnlocked ? 1 : 0.5};
+      box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+    `;
+
+    if (!isUnlocked) {
+      const lock = document.createElement("div");
+      lock.style.cssText = "font-size:10px;color:#64748b;text-align:center;padding:2px;";
+      lock.textContent = `Lv ${unlockLevel}`;
+      slotDiv.appendChild(lock);
+    } else {
+      if (itemDef) {
+        const icon = document.createElement("div");
+        icon.style.cssText = "font-size:18px;";
+        icon.textContent = itemDef.icon || "?";
+        slotDiv.appendChild(icon);
+
+        const qtyBadge = document.createElement("div");
+        qtyBadge.style.cssText = `
+          position: absolute;
+          bottom: -6px;
+          right: -6px;
+          background: #111827;
+          border: 1px solid #1f2937;
+          border-radius: 10px;
+          padding: 2px 6px;
+          font-size: 10px;
+          color: #a5b4fc;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+        `;
+        qtyBadge.textContent = `x${qty}`;
+        slotDiv.appendChild(qtyBadge);
+        slotDiv.title = `${itemDef.name} (${qty} in stash)`;
+      } else {
+        slotDiv.title = "Assign a consumable";
+      }
+
+      slotDiv.addEventListener("click", (e) => {
+        e.stopPropagation();
+        useConsumableSlot(hero, c);
+        renderConsumableStrip(hero);
+        populateInventoryGrid(hero);
+      });
+
+      slotDiv.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        openConsumableMenu(hero, c, e);
+      });
+
+      slotDiv.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        const data = e.dataTransfer.getData("application/json");
+        if (data) {
+          const parsed = JSON.parse(data);
+          if (parsed.fromInventory) {
+            slotDiv.style.borderColor = "#22c55e";
+            slotDiv.style.backgroundColor = "#1a2b1a";
+          }
+        }
+      });
+
+      slotDiv.addEventListener("dragleave", (e) => {
+        e.preventDefault();
+        slotDiv.style.borderColor = "#475569";
+        slotDiv.style.backgroundColor = "#0f172a";
+      });
+
+      slotDiv.addEventListener("drop", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        slotDiv.style.borderColor = "#475569";
+        slotDiv.style.backgroundColor = "#0f172a";
+        const data = e.dataTransfer.getData("application/json");
+        if (!data) return;
+        const parsed = JSON.parse(data);
+        if (!parsed.fromInventory || !parsed.itemId) return;
+        hero.consumableSlots = hero.consumableSlots || Array(4).fill(null);
+        hero.consumableSlots[c] = parsed.itemId;
+        saveGame();
+        renderConsumableStrip(hero);
+        renderParty();
+        populateInventoryGrid(hero);
+      });
+    }
+
+    row.appendChild(slotDiv);
+  }
 }
 
 function populateInventoryGrid(hero) {
@@ -1745,6 +1985,14 @@ function getAbilitySlotUnlockLevel(slotIndex) {
   return slotIndex * 5;
 }
 
+function getConsumableSlotUnlockLevel(slotIndex) {
+  return CONSUMABLE_SLOT_UNLOCK_LEVELS[slotIndex] ?? Infinity;
+}
+
+function isConsumableSlotUnlocked(hero, slotIndex) {
+  return hero?.level >= getConsumableSlotUnlockLevel(slotIndex);
+}
+
 function populateAbilityBar(hero) {
   const abilityBar = document.getElementById("characterAbilityBar");
   abilityBar.innerHTML = "";
@@ -1871,6 +2119,248 @@ function checkHasUnassignedSlots(hero) {
     }
   }
   return false;
+}
+
+function getSharedItemQuantity(itemId) {
+  if (!itemId || !state.sharedInventory) return 0;
+  let total = 0;
+  for (const slot of state.sharedInventory) {
+    if (slot?.id === itemId) {
+      total += slot.quantity ?? 1;
+    }
+  }
+  return total;
+}
+
+function consumeSharedItem(itemId) {
+  if (!itemId || !state.sharedInventory) return false;
+  for (let i = 0; i < state.sharedInventory.length; i++) {
+    const slot = state.sharedInventory[i];
+    if (slot?.id === itemId && (slot.quantity ?? 1) > 0) {
+      const newQty = (slot.quantity ?? 1) - 1;
+      if (newQty > 0) {
+        slot.quantity = newQty;
+      } else {
+        state.sharedInventory[i] = null;
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
+function listSharedConsumables() {
+  const buckets = new Map();
+  if (!state.sharedInventory) return [];
+  for (const slot of state.sharedInventory) {
+    if (!slot?.id) continue;
+    const def = getItemDef(slot.id);
+    if (!def || (def.maxStack || 1) <= 1) continue; // Only stackable consumables
+    const qty = slot.quantity ?? 1;
+    const bucket = buckets.get(def.id) || { itemDef: def, quantity: 0 };
+    bucket.quantity += qty;
+    buckets.set(def.id, bucket);
+  }
+  return Array.from(buckets.values());
+}
+
+function applyConsumableEffect(hero, itemId) {
+  if (!hero || !itemId) return { consumed: false, reason: "Invalid target" };
+  const defs = {
+    health_potion_small: { type: "health", percent: 0.25, min: 8, logType: "healing" },
+    health_potion: { type: "health", percent: 0.4, min: 15, logType: "healing" },
+    mana_potion_small: { type: "mana", percent: 0.2, min: 8, logType: "mana_regen" },
+    mana_potion: { type: "mana", percent: 0.35, min: 15, logType: "mana_regen" }
+  };
+
+  const cfg = defs[itemId];
+  if (!cfg) return { consumed: false, reason: "No effect" };
+
+  if (cfg.type === "health") {
+    const missing = Math.max(0, (hero.maxHP || 0) - (hero.health || 0));
+    if (missing <= 0) return { consumed: false, reason: "Already at full health" };
+    const healAmount = Math.min(missing, Math.max(cfg.min, Math.floor((hero.maxHP || 0) * cfg.percent)));
+    hero.health = Math.min(hero.maxHP || 0, (hero.health || 0) + healAmount);
+    return {
+      consumed: true,
+      message: `${hero.name} drinks a potion and heals ${healAmount.toFixed(0)} HP!`,
+      logType: cfg.logType
+    };
+  }
+
+  if (cfg.type === "mana") {
+    if ((hero.maxMana || 0) <= 0) {
+      return { consumed: false, reason: "No mana pool" };
+    }
+    const missing = Math.max(0, (hero.maxMana || 0) - (hero.mana || 0));
+    if (missing <= 0) return { consumed: false, reason: "Mana already full" };
+    const restore = Math.min(missing, Math.max(cfg.min, Math.floor((hero.maxMana || 0) * cfg.percent)));
+    hero.mana = Math.min(hero.maxMana || 0, (hero.mana || 0) + restore);
+    return {
+      consumed: true,
+      message: `${hero.name} drinks a potion and restores ${restore.toFixed(0)} mana!`,
+      logType: cfg.logType
+    };
+  }
+
+  return { consumed: false, reason: "No effect" };
+}
+
+let activeConsumableMenu = null;
+
+function closeConsumableMenu() {
+  if (activeConsumableMenu) {
+    activeConsumableMenu.remove();
+    activeConsumableMenu = null;
+    document.removeEventListener("click", closeConsumableMenu);
+  }
+}
+
+function openConsumableMenu(hero, slotIndex, anchorEvent = null) {
+  closeConsumableMenu();
+
+  const menu = document.createElement("div");
+  activeConsumableMenu = menu;
+  menu.style.cssText = `
+    position: fixed;
+    z-index: 9999;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    padding: 8px;
+    min-width: 180px;
+    color: #e2e8f0;
+  `;
+  if (anchorEvent) {
+    const offsetX = 8;
+    const offsetY = 8;
+    menu.style.left = (anchorEvent.clientX + offsetX) + "px";
+    menu.style.top = (anchorEvent.clientY + offsetY) + "px";
+  } else {
+    menu.style.right = "24px";
+    menu.style.top = "24px";
+  }
+
+  const header = document.createElement("div");
+  header.style.cssText = "display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;font-size:12px;font-weight:700;";
+  header.textContent = "Assign consumable";
+  menu.appendChild(header);
+
+  const list = document.createElement("div");
+  list.style.cssText = "display:flex;flex-direction:column;gap:6px;max-height:240px;overflow:auto;";
+
+  const buckets = listSharedConsumables();
+  if (buckets.length === 0) {
+    const empty = document.createElement("div");
+    empty.style.cssText = "font-size:11px;color:#94a3b8;";
+    empty.textContent = "No consumables in shared inventory.";
+    list.appendChild(empty);
+  } else {
+    for (const bucket of buckets) {
+      const row = document.createElement("div");
+      row.style.cssText = "display:flex;align-items:center;gap:8px;padding:6px;border:1px solid #1e293b;border-radius:6px;background:#0b1221;cursor:pointer;";
+      const icon = document.createElement("div");
+      icon.style.cssText = "font-size:16px;";
+      icon.textContent = bucket.itemDef.icon || "?";
+      const name = document.createElement("div");
+      name.style.cssText = "display:flex;flex-direction:column;gap:2px;";
+      const line1 = document.createElement("div");
+      line1.style.cssText = "font-size:12px;font-weight:700;color:#e2e8f0;";
+      line1.textContent = bucket.itemDef.name;
+      const line2 = document.createElement("div");
+      line2.style.cssText = "font-size:11px;color:#94a3b8;";
+      line2.textContent = `x${bucket.quantity}`;
+      name.appendChild(line1);
+      name.appendChild(line2);
+      row.appendChild(icon);
+      row.appendChild(name);
+      row.addEventListener("click", (e) => {
+        e.stopPropagation();
+        hero.consumableSlots = hero.consumableSlots || Array(4).fill(null);
+        hero.consumableSlots[slotIndex] = bucket.itemDef.id;
+        saveGame();
+        renderParty();
+        closeConsumableMenu();
+      });
+      list.appendChild(row);
+    }
+  }
+
+  menu.appendChild(list);
+
+  const footer = document.createElement("div");
+  footer.style.cssText = "display:flex;gap:8px;justify-content:flex-end;margin-top:8px;";
+  const clearBtn = document.createElement("button");
+  clearBtn.textContent = "Clear";
+  clearBtn.style.cssText = "padding:6px 8px;font-size:11px;";
+  clearBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    hero.consumableSlots = hero.consumableSlots || Array(4).fill(null);
+    hero.consumableSlots[slotIndex] = null;
+    saveGame();
+    renderParty();
+    closeConsumableMenu();
+  });
+  const closeBtn = document.createElement("button");
+  closeBtn.textContent = "Close";
+  closeBtn.style.cssText = "padding:6px 8px;font-size:11px;";
+  closeBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeConsumableMenu();
+  });
+  footer.appendChild(clearBtn);
+  footer.appendChild(closeBtn);
+  menu.appendChild(footer);
+
+  menu.addEventListener("click", (e) => e.stopPropagation());
+  document.body.appendChild(menu);
+  setTimeout(() => {
+    document.addEventListener("click", closeConsumableMenu, { once: true });
+  }, 0);
+}
+
+function useConsumableSlot(hero, slotIndex) {
+  if (!isConsumableSlotUnlocked(hero, slotIndex)) return;
+  if (!hero.consumableSlots) hero.consumableSlots = Array(4).fill(null);
+  const itemId = hero.consumableSlots[slotIndex];
+  if (!itemId) {
+    return openConsumableMenu(hero, slotIndex);
+  }
+  if (hero.isDead) {
+    addLog(`${hero.name} cannot use a consumable while dead.`, "normal");
+    return;
+  }
+  const itemDef = getItemDef(itemId);
+  if (!itemDef) {
+    hero.consumableSlots[slotIndex] = null;
+    addLog("Unknown consumable removed from slot.", "normal");
+    renderParty();
+    return;
+  }
+  const available = getSharedItemQuantity(itemId);
+  if (available <= 0) {
+    addLog(`No ${itemDef.name} left in shared inventory.`, "normal");
+    return;
+  }
+
+  const result = applyConsumableEffect(hero, itemId);
+  if (!result.consumed) {
+    addLog(result.reason || `Cannot use ${itemDef.name} now.`, "normal");
+    return;
+  }
+
+  const took = consumeSharedItem(itemId);
+  if (!took) {
+    addLog(`No ${itemDef.name} left in shared inventory.`, "normal");
+    return;
+  }
+
+  addLog(result.message, result.logType || "skill");
+  recalcPartyTotals();
+  renderParty();
+  renderBattleFooter();
+  saveGame();
 }
 
 function statLine(label, value) {

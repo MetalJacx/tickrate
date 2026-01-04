@@ -28,3 +28,6 @@ export const ACCOUNT_SLOT_UNLOCKS = [
   { level: 18, slots: 5 },
   { level: 24, slots: 6 }
 ];
+
+// Per-hero consumable slots unlock at these hero levels
+export const CONSUMABLE_SLOT_UNLOCK_LEVELS = [1, 15, 30, 50];
