@@ -69,6 +69,17 @@ export default {
       cooldownTicks: 7 // 7 ticks
     },
     { 
+      key: "divine_focus", 
+      name: "Divine Focus", 
+      level: 7, 
+      type: "buff",
+      buffType: "divine_focus",
+      durationTicks: 4,
+      cost: 25,
+      cooldownTicks: 12,
+      description: "Self-only. 4t immunity to all damage; only healing allowed while active."
+    },
+    { 
       key: "healing", 
       name: "Healing", 
       level: 10, 

@@ -1449,6 +1449,13 @@ export function gameTick() {
             hasResources = false;
           }
         }
+        // Cleric: While Divine Focus is active, only healing spells are allowed; block all others without ending the buff
+        if (hero.classKey === "cleric" && hasBuff(hero, "divine_focus")) {
+          const allowed = sk.type === "heal";
+          if (!allowed) {
+            hasResources = false;
+          }
+        }
         // Enchanter: Suffocate cannot be recast while active
         if (isEnchanter && sk.key === "suffocate") {
           const targetEnemy = state.currentEnemies[0];
@@ -1619,6 +1626,16 @@ export function gameTick() {
             } else {
               applyHawkEyeBuff(hero, hero.level);
               addLog(`${hero.name} focuses with ${sk.name}, gaining +${sk.hitChanceBonus}% to hit!`, "skill");
+            }
+          } else if (hero.classKey === "cleric" && sk.buffType === "divine_focus") {
+            // Divine Focus: self-only immunity, cannot be refreshed
+            if (hasBuff(hero, "divine_focus")) {
+              hero.mana += cost;
+            } else {
+              const durationTicks = sk.durationTicks ?? 4;
+              const durationMs = durationTicks * GAME_TICK_MS;
+              applyBuff(hero, "divine_focus", durationMs, {});
+              addLog(`${hero.name} enters Divine Focus for ${durationTicks} ticks, becoming immune to damage.`, "skill");
             }
           } else if (isEnchanter && sk.buffType === "lesser_rune") {
             const absorb = Math.min(40, 20 + Math.max(0, hero.level - 10) * (20 / 8));
@@ -1874,6 +1891,12 @@ export function gameTick() {
       const rawDamage = computeRawDamage(enemy, isCrit);
       const mitigated = applyACMitigation(rawDamage, target);
       
+      // Divine Focus: complete immunity to incoming damage
+      if (hasBuff(target, "divine_focus")) {
+        addLog(`${enemy.name} attacks ${target.name}, but Divine Focus makes them immune.`, "skill");
+        continue;
+      }
+
       // Apply tempHP absorption (e.g., from Arcane Shield buff)
       let damageToHealth = mitigated;
       const arcaneShieldBuff = getBuff(target, "arcane_shield");
