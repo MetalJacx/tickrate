@@ -1050,6 +1050,14 @@ export function hasBuff(hero, buffKey) {
   return true;
 }
 
+// Remove a buff immediately (used for one-hit runes and break-on-damage controls)
+export function removeBuff(hero, buffKey) {
+  if (!hero?.activeBuffs) return;
+  if (hero.activeBuffs[buffKey]) {
+    delete hero.activeBuffs[buffKey];
+  }
+}
+
 // Get buff data if active
 export function getBuff(hero, buffKey) {
   if (!hasBuff(hero, buffKey)) return null;
@@ -1235,6 +1243,11 @@ export function gameTick() {
         const dotDamage = flameLick.data.dotDamagePerTick;
         enemy.hp = Math.max(0, enemy.hp - dotDamage);
         addLog(`${enemy.name} burns for ${dotDamage.toFixed(1)} fire damage!`, "damage_dealt");
+
+            if (hasBuff(enemy, "mesmerize")) {
+              removeBuff(enemy, "mesmerize");
+              addLog(`${enemy.name} wakes as the flames break mesmerize!`, "skill");
+            }
         
         if (enemy.hp <= 0) {
           addLog(`${enemy.name} succumbs to the flames!`, "gold");
@@ -1349,6 +1362,7 @@ export function gameTick() {
     
     const cls = getClassDef(hero.classKey);
     if (!cls?.skills) continue;
+    const isEnchanter = cls?.key === "enchanter";
 
     // Get skills that are available and assigned to ability bar
     const abilityBarSkills = new Set(Object.values(hero.abilityBar || {}));
@@ -1421,6 +1435,31 @@ export function gameTick() {
             hasResources = false; // Hero already has Hawk Eye, don't cast
           }
         }
+        // Enchanter: Mesmerize only if an XT target exists and no current mesmerize from this caster
+        if (isEnchanter && sk.key === "mesmerize") {
+          const xtTarget = state.currentEnemies[1];
+          const alreadyMesmerized = state.currentEnemies.some(e => hasBuff(e, "mesmerize") && (getBuff(e, "mesmerize")?.sourceHeroId === hero.id));
+          if (!xtTarget || hasBuff(xtTarget, "mesmerize") || alreadyMesmerized) {
+            hasResources = false;
+            hero.skillTimers[sk.key] = 1;
+          }
+        }
+        // Enchanter: Suffocate cannot be recast while active
+        if (isEnchanter && sk.key === "suffocate") {
+          const targetEnemy = state.currentEnemies[0];
+          if (!targetEnemy || hasBuff(targetEnemy, "suffocate")) {
+            hasResources = false;
+            hero.skillTimers[sk.key] = 1;
+          }
+        }
+        // Enchanter: Lesser Rune cannot be recast while active
+        if (isEnchanter && sk.key === "lesserRune") {
+          const runeTarget = hero; // self-cast for now
+          if (!runeTarget || hasBuff(runeTarget, "lesser_rune")) {
+            hasResources = false;
+            hero.skillTimers[sk.key] = 1;
+          }
+        }
         // Prevent offensive spells after Arcane Shield cast (1 tick lockout)
         if ((sk.type === "damage" || sk.type === "debuff") && hero.arcaneShieldLockout > 0) {
           hasResources = false; // Still in lockout, don't cast
@@ -1456,6 +1495,17 @@ export function gameTick() {
           // Determine base damage for this skill
           let minDmg = sk.minDamage || sk.amount || 0;
           let maxDmg = sk.maxDamage || sk.amount || 0;
+          // Enchanter: Feedback scales 3 -> 8 from levels 1-5
+          if (isEnchanter && sk.key === "feedback") {
+            const scaled = Math.min(8, 3 + ((hero.level - 1) * 5) / 4);
+            minDmg = scaled;
+            maxDmg = scaled;
+          }
+          // Enchanter: Suffocate is fixed 13 damage
+          if (isEnchanter && sk.key === "suffocate") {
+            minDmg = sk.minDamage || 13;
+            maxDmg = sk.maxDamage || 13;
+          }
           
           // Apply Wizard damage scaling
           if (sk.key === "fireblast") {
@@ -1502,6 +1552,28 @@ export function gameTick() {
               target.hp = Math.max(0, target.hp - mitigated);
               totalDamageThisTick += mitigated;
               addLog(`${hero.name} uses ${sk.name}${damageTypeLabel} for ${mitigated.toFixed(1)} damage!`, "damage_dealt");
+
+              // Break mesmerize on any damage
+              if (hasBuff(target, "mesmerize")) {
+                removeBuff(target, "mesmerize");
+                addLog(`${target.name} is jolted awake!`, "skill");
+              }
+
+              // Enchanter: Feedback stun chance on hit (max mob level 30)
+              if (isEnchanter && sk.key === "feedback") {
+                const canStun = mitigated > 0 && target.level <= 30 && !hasBuff(target, "stun");
+                if (canStun && Math.random() < 0.25) {
+                  applyBuff(target, "stun", GAME_TICK_MS, {});
+                  addLog(`${target.name} is stunned by Feedback for 1 tick!`, "skill");
+                }
+              }
+
+              // Enchanter: Suffocate applies STR/AGI debuff for 6 ticks (single target)
+              if (isEnchanter && sk.key === "suffocate" && i === 0 && !hasBuff(target, "suffocate")) {
+                const durationMs = 6 * GAME_TICK_MS;
+                applyBuff(target, "suffocate", durationMs, { strDebuff: -2, agiDebuff: -2 });
+                addLog(`${target.name} is suffocated (-2 STR, -2 AGI for 6 ticks).`, "skill");
+              }
             }
           }
         }
@@ -1543,6 +1615,11 @@ export function gameTick() {
               applyHawkEyeBuff(hero, hero.level);
               addLog(`${hero.name} focuses with ${sk.name}, gaining +${sk.hitChanceBonus}% to hit!`, "skill");
             }
+          } else if (isEnchanter && sk.buffType === "lesser_rune") {
+            const absorb = Math.min(40, 20 + Math.max(0, hero.level - 10) * (20 / 8));
+            // Long duration; rune is removed on next hit
+            applyBuff(hero, "lesser_rune", 24 * 60 * 60 * 1000, { absorbRemaining: absorb, sourceHeroId: hero.id });
+            addLog(`${hero.name} casts ${sk.name}, absorbing up to ${absorb.toFixed(0)} damage from the next hit.`, "skill");
           } else if (sk.buffType === "arcane_shield") {
             // Check if hero already has Arcane Shield
             if (hasBuff(hero, "arcane_shield")) {
@@ -1558,7 +1635,16 @@ export function gameTick() {
           }
         }
         if (sk.type === "debuff") {
-          if (sk.debuff === "taunt") {
+          if (isEnchanter && sk.debuffType === "mesmerize") {
+            const xtTarget = state.currentEnemies[1];
+            if (!xtTarget) {
+              hero.mana += cost;
+              hero.skillTimers[sk.key] = 1;
+            } else {
+              applyBuff(xtTarget, "mesmerize", 4 * GAME_TICK_MS, { sourceHeroId: hero.id });
+              addLog(`${hero.name} mesmerizes ${xtTarget.name} for 4 ticks!`, "skill");
+            }
+          } else if (sk.debuff === "taunt") {
             const targetEnemy = state.currentEnemies[0];
             if (targetEnemy) {
               const duration = sk.durationTicks ?? 3;
@@ -1694,6 +1780,12 @@ export function gameTick() {
     totalDamageThisTick += mitigated;
     addLog(`${hero.name} hits ${mainEnemy.name} for ${mitigated.toFixed(1)}${isCrit ? " (CRIT)" : ""}!`, "damage_dealt");
 
+    // Break mesmerize on any damage taken by the enemy
+    if (hasBuff(mainEnemy, "mesmerize")) {
+      removeBuff(mainEnemy, "mesmerize");
+      addLog(`${mainEnemy.name} is jolted awake!`, "skill");
+    }
+
     // Warrior-only: Double Attack proc and skill-ups
     if (hero.classKey === "warrior" && mainEnemy.hp > 0) {
       const cap = doubleAttackCap(hero.level);
@@ -1746,6 +1838,11 @@ export function gameTick() {
   let livingMembers = state.party.filter(h => !h.isDead);
   if (livingMembers.length > 0) {
     for (const enemy of state.currentEnemies) {
+      // Mesmerized enemies do nothing
+      if (hasBuff(enemy, "mesmerize")) {
+        addLog(`${enemy.name} is mesmerized and cannot act!`, "normal");
+        continue;
+      }
       // Check if enemy is feared and skip attack
       if (hasBuff(enemy, "fear")) {
         addLog(`${enemy.name} is running for its life and cannot attack!`, "normal");
@@ -1781,6 +1878,16 @@ export function gameTick() {
         const tempHPAbsorbed = Math.min(arcaneShieldBuff.data.tempHP, damageToHealth);
         arcaneShieldBuff.data.tempHP -= tempHPAbsorbed;
         damageToHealth -= tempHPAbsorbed;
+      }
+
+      // Apply Lesser Rune (single-hit absorb, then removed)
+      const runeData = getBuff(target, "lesser_rune");
+      if (runeData) {
+        const absorbRemaining = runeData.absorbRemaining ?? 0;
+        const absorbed = Math.min(absorbRemaining, damageToHealth);
+        damageToHealth -= absorbed;
+        removeBuff(target, "lesser_rune");
+        addLog(`${target.name}'s Lesser Rune absorbs ${absorbed.toFixed(1)} damage and shatters.`, "skill");
       }
       
       target.health = Math.max(0, target.health - damageToHealth);
