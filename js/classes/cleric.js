@@ -64,6 +64,7 @@ export default {
       level: 8, 
       type: "debuff",
       debuffType: "fear",
+      durationTicks: 2,
       cost: 40, 
       cooldownTicks: 7 // 7 ticks
     },

@@ -1439,13 +1439,14 @@ export function gameTick() {
             hasResources = false; // Hero already has Hawk Eye, don't cast
           }
         }
-        // Enchanter: Mesmerize only if an XT target exists and no current mesmerize from this caster
+        // Enchanter: Mesmerize only if an XT target exists (second enemy) and no current mesmerize from this caster
         if (isEnchanter && sk.key === "mesmerize") {
-          const xtTarget = state.currentEnemies[1];
+          // XT target is the second enemy (index 1)
+          const xtTarget = state.currentEnemies.length > 1 ? state.currentEnemies[1] : null;
           const alreadyMesmerized = state.currentEnemies.some(e => hasBuff(e, "mesmerize") && (getBuff(e, "mesmerize")?.sourceHeroId === hero.id));
+          // Mesmerize requires: XT exists, XT not already mesmerized, and we don't have one active
           if (!xtTarget || hasBuff(xtTarget, "mesmerize") || alreadyMesmerized) {
             hasResources = false;
-            hero.skillTimers[sk.key] = 1;
           }
         }
         // Enchanter: Suffocate cannot be recast while active
@@ -1640,11 +1641,9 @@ export function gameTick() {
         }
         if (sk.type === "debuff") {
           if (isEnchanter && sk.debuffType === "mesmerize") {
-            const xtTarget = state.currentEnemies[1];
-            if (!xtTarget) {
-              hero.mana += cost;
-              hero.skillTimers[sk.key] = 1;
-            } else {
+            // XT target is the second enemy (index 1)
+            const xtTarget = state.currentEnemies.length > 1 ? state.currentEnemies[1] : null;
+            if (xtTarget && !hasBuff(xtTarget, "mesmerize")) {
               applyBuff(xtTarget, "mesmerize", 4 * GAME_TICK_MS, { sourceHeroId: hero.id });
               addLog(`${hero.name} mesmerizes ${xtTarget.name} for 4 ticks!`, "skill");
             }
@@ -1660,8 +1659,8 @@ export function gameTick() {
             // Fear debuff on first enemy
             const targetEnemy = state.currentEnemies[0];
             if (targetEnemy) {
-              // Fear duration: 2 ticks at level 8, 3+ at level 9+
-              const durationTicks = hero.level >= 9 ? 3 : 2;
+              // Fear duration: use skill definition if provided; otherwise 2 ticks at level 8, 3+ at level 9+
+              const durationTicks = sk.durationTicks ?? (hero.level >= 9 ? 3 : 2);
               const durationMs = durationTicks * 3000; // GAME_TICK_MS
               applyBuff(targetEnemy, "fear", durationMs, { durationTicks });
               addLog(`${hero.name} casts ${sk.name} on ${targetEnemy.name}! ${targetEnemy.name} runs in fear for ${durationTicks} ticks!`, "skill");

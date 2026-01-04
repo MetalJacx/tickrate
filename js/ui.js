@@ -497,7 +497,16 @@ export function renderEnemy() {
             white-space:nowrap;
             border:1px solid #c62828;
           `;
-          const debuffName = buffKey === "fear" ? "Fear" : buffKey;
+          // Map buff keys to display names
+          const buffDisplayNames = {
+            fear: "Fear",
+            mesmerize: "Mesmerize",
+            stun: "Stun",
+            suffocate: "Suffocate",
+            taunt: "Taunt",
+            flame_lick: "Flame Lick"
+          };
+          const debuffName = buffDisplayNames[buffKey] || buffKey;
           debuffPill.textContent = `${debuffName} (${timeLeft}s)`;
           debuffRow.appendChild(debuffPill);
         }
