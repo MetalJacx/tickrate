@@ -37,8 +37,8 @@ export default {
   ],
 
   skills: [
-    { key: "kick", name: "Kick", kind: "ability", level: 1, type: "damage", damageType: "physical", minDamage: 2, maxDamage: 7, cost: 5, cooldownTicks: 4 },
-    { key: "shield_bash", name: "Shield Bash", kind: "ability", level: 3, type: "damage", damageType: "physical", minDamage: 10, maxDamage: 14, cost: 12, cooldownTicks: 8 },
+    { key: "kick", name: "Kick", kind: "ability", level: 1, type: "damage", damageType: "physical" },
+    { key: "shield_bash", name: "Shield Bash", kind: "ability", level: 3, type: "damage", damageType: "physical" },
     {
       key: "taunt",
       name: "Taunt",
@@ -46,11 +46,7 @@ export default {
       level: 3,
       type: "debuff",
       debuff: "taunt",
-      durationTicks: 3,
-      costType: "endurance",
-      cost: 1,
-      cooldownSeconds: 10,
-      description: "Forces the main target to attack the Warrior for 3 ticks."
+      description: "Forces the main target to attack the Warrior. Mechanics live in actions.js."
     },
     {
       key: "fortify",
@@ -59,11 +55,8 @@ export default {
       level: 8,
       type: "buff",
       buffType: "fortify",
-      costType: "endurance",
-      cost: 15,
-      cooldownSeconds: 12,
-      description: "Increases AC by 10 at level 8. Bonus scales by +1 AC every 2 levels, reaching a maximum of +15 AC at level 18."
+      description: "Increases AC. Mechanics live in actions.js."
     },
-    { key: "cleave", name: "Cleave", kind: "ability", level: 10, type: "damage", damageType: "physical", usesBaseDamage: true, cleaveTargets: 3, cost: 25, cooldownTicks: 5 }
+    { key: "cleave", name: "Cleave", kind: "ability", level: 10, type: "damage", damageType: "physical", usesBaseDamage: true, cleaveTargets: 3 }
   ]
 };

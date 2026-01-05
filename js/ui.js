@@ -8,6 +8,7 @@ import { formatPGSC, saveGame, updateCurrencyDisplay } from "./state.js";
 import { MAX_PARTY_SIZE, ACCOUNT_SLOT_UNLOCKS, CONSUMABLE_SLOT_UNLOCK_LEVELS } from "./defs.js";
 import { getItemDef } from "./items.js";
 import { computeSellValue } from "./combatMath.js";
+import { ACTIONS } from "./actions.js";
 
 export function initUI({ onRecruit, onReset, onOpenRecruitModal }) {
   const travelBtn = document.getElementById("travelBtn");
@@ -1940,8 +1941,19 @@ function populateSkillsSection(hero) {
     
     const skillInfo = document.createElement("div");
     skillInfo.style.cssText = "font-size:9px;color:#aaa;margin-top:2px;";
-    const costStr = skill.cost ? `Cost: ${skill.cost}` : "No cost";
-    const cooldown = skill.cooldownSeconds ? ` | CD: ${skill.cooldownSeconds}s` : "";
+
+    const normalizedKey = (skill.key || "").replace(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase();
+    const actionDef = ACTIONS[skill.key] || ACTIONS[normalizedKey];
+
+    let costStr = "No cost";
+    if (actionDef?.cost) {
+      const parts = [];
+      if (actionDef.cost.mana) parts.push(`Mana: ${actionDef.cost.mana}`);
+      if (actionDef.cost.endurance) parts.push(`End: ${actionDef.cost.endurance}`);
+      costStr = parts.length > 0 ? parts.join(" / ") : "No cost";
+    }
+
+    const cooldown = actionDef?.cooldownTicks != null ? ` | CD: ${actionDef.cooldownTicks}t` : "";
     skillInfo.textContent = costStr + cooldown;
     
     skillDiv.appendChild(skillTitle);

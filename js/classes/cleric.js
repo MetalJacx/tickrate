@@ -43,10 +43,7 @@ export default {
       kind: "ability",
       level: 1, 
       type: "heal", 
-      minAmount: 10,
-      maxAmount: 20, 
-      cost: 10, 
-      cooldownTicks: 4 // 4 ticks
+      description: "Baseline heal. Mechanics live in actions.js."
     },
     { 
       key: "courage", 
@@ -55,10 +52,8 @@ export default {
       level: 3, 
       type: "buff",
       buffType: "courage",
-      cost: 12, 
-      cooldownTicks: 1, // Minimum 1-tick cooldown to prevent spam; cast cycle manages who gets buffed
       targetMode: "individual", // Cast on one party member at a time
-      notes: "Grants AC and HP bonus. Long-duration buff. Scales with cleric level."
+      notes: "Grants AC and HP bonus. Mechanics live in actions.js."
     },
     { 
       key: "fear", 
@@ -74,10 +69,7 @@ export default {
       level: 7, 
       type: "buff",
       buffType: "divine_focus",
-      durationTicks: 4,
-      cost: 25,
-      cooldownTicks: 12,
-      description: "Self-only. 4t immunity to all damage; only healing allowed while active."
+      description: "Self-only immunity window. Mechanics live in actions.js."
     },
     { 
       key: "healing", 
@@ -85,10 +77,7 @@ export default {
       kind: "ability",
       level: 10, 
       type: "heal", 
-      minAmount: 95,
-      maxAmount: 175, 
-      cost: 65, 
-      cooldownTicks: 12 // 12 ticks
+      description: "Big heal. Mechanics live in actions.js."
     }
   ]
 };

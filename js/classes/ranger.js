@@ -36,13 +36,7 @@ export default {
       kind: "ability",
       level: 1,
       type: "damage",
-      damageType: "physical",
-      minDamage: 2,
-      maxDamage: 2,
-      cost: 1,
-      costType: "endurance",
-      cooldownTicks: 1,
-      description: "Ranged bow attack. Damage scales to 5 at level 8."
+      description: "Ranged bow attack. Mechanics live in actions.js."
     },
     {
       key: "flame_lick",
@@ -58,12 +52,7 @@ export default {
       kind: "ability",
       level: 5,
       type: "heal",
-      minAmount: 5,
-      maxAmount: 9,
-      cost: 8,
-      costType: "endurance",
-      cooldownTicks: 5,
-      description: "Minor healing ability targeting the most injured ally."
+      description: "Minor healing ability targeting the most injured ally. Mechanics live in actions.js."
     },
     {
       key: "woodskin",
@@ -72,13 +61,8 @@ export default {
       level: 8,
       type: "buff",
       buffType: "woodskin",
-      acBonus: 3, // Scales to 7 at level 18
-      conBonus: 2,
-      cost: 10,
-      costType: "mana",
-      cooldownTicks: 1,
       targetMode: "individual",
-      description: "Defensive barkskin buff. Single target (self or ally). Duration: 3 min @ L8 → 25 min @ L18."
+      description: "Defensive barkskin buff. Single target. Mechanics live in actions.js."
     },
     {
       key: "hawk_eye",
@@ -87,12 +71,8 @@ export default {
       level: 10,
       type: "buff",
       buffType: "hawk_eye",
-      hitChanceBonus: 2, // +2% to hit
-      cost: 45,
-      costType: "mana",
-      cooldownTicks: 1,
       targetMode: "self",
-      description: "Improves ranged accuracy. Self-only. Duration: 33.3 min @ L11 → 70 min @ L24."
+      description: "Improves ranged accuracy. Mechanics live in actions.js."
     }
   ]
 };

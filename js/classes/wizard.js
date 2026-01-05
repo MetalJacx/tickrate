@@ -43,7 +43,7 @@ export default {
       kind: "spell",
       level: 1,
       type: "damage",
-      description: "Starter nuke. Mechanics live in spells.js."
+      description: "Starter nuke. Mechanics live in actions.js."
     },
     {
       key: "gather_mana",
@@ -51,10 +51,7 @@ export default {
       kind: "ability",
       level: 3,
       type: "utility",
-      cost: 0,
-      cooldownTicks: 12,
-      manaRestoration: null, // Calculated as floor(level * 1.5) in handler
-      description: "Restore mana out of combat. Restores floor(Level × 1.5) mana, capping at level 12 (18 max)."
+      description: "Restore mana out of combat. Mechanics live in actions.js."
     },
     {
       key: "iceblast",
@@ -62,7 +59,7 @@ export default {
       kind: "spell",
       level: 7,
       type: "damage",
-      description: "Higher burst nuke. Mechanics live in spells.js."
+      description: "Higher burst nuke. Mechanics live in actions.js."
     },
     {
       key: "rain_of_fire",
@@ -70,14 +67,7 @@ export default {
       kind: "ability",
       level: 8,
       type: "damage",
-      damageType: "fire",
-      minDamage: 10,
-      maxDamage: 16,
-      cost: 30,
-      cooldownTicks: 8,
-      cleaveTargets: 99, // Affects all targets
-      aoeDiminishing: true, // Flag for AOE diminishing logic
-      description: "AOE nuke. Full damage to first 3 targets, then -20% per additional target (min 40%)."
+      description: "AOE nuke. Mechanics live in actions.js."
     },
     {
       key: "arcane_shield",
@@ -86,11 +76,7 @@ export default {
       level: 10,
       type: "buff",
       buffType: "arcane_shield",
-      cost: 25,
-      cooldownTicks: 15,
-      tempHP: 50,
-      castLockoutTicks: 1,
-      description: "Grant self 50 Temp HP. Cannot cast offensive spells for 1 tick after."
+      description: "Grant self temp HP; see actions.js for mechanics."
     }
   ]
 };
