@@ -20,7 +20,18 @@ export const MOBS = {
   orc_centurion: { id: "orc_centurion", name: "Orc Centurion", baseHP: 60, baseDPS: 7, stats: { str: 16, con: 16, dex: 13, agi: 12, ac: 13, wis: 9, int: 9, cha: 8 } },
   dark_wolf: { id: "dark_wolf", name: "Dark Wolf", baseHP: 50, baseDPS: 7, stats: { str: 13, con: 14, dex: 14, agi: 14, ac: 12, wis: 9, int: 9, cha: 8 } },
   bloodsaber_acolyte: { id: "bloodsaber_acolyte", name: "Bloodsaber Acolyte", baseHP: 45, baseDPS: 8, stats: { str: 12, con: 13, dex: 13, agi: 13, ac: 12, wis: 12, int: 12, cha: 10 } },
-  castle_specter: { id: "castle_specter", name: "Castle Specter", baseHP: 48, baseDPS: 9, stats: { str: 12, con: 13, dex: 14, agi: 15, ac: 13, wis: 13, int: 13, cha: 11 } }
+  castle_specter: { id: "castle_specter", name: "Castle Specter", baseHP: 48, baseDPS: 9, stats: { str: 12, con: 13, dex: 14, agi: 15, ac: 13, wis: 13, int: 13, cha: 11 } },
+
+  // Zone 4
+  plains_rat: { id: "plains_rat", name: "Plainstrider Rat", baseHP: 18, baseDPS: 2, stats: { str: 6, con: 6, dex: 9, agi: 9, ac: 6 } },
+  grassland_beetle: { id: "grassland_beetle", name: "Grassland Beetle", baseHP: 26, baseDPS: 2, stats: { str: 6, con: 10, dex: 6, agi: 6, ac: 10 } },
+  plains_snake: { id: "plains_snake", name: "Timid Plains Snake", baseHP: 20, baseDPS: 3, stats: { str: 7, con: 7, dex: 10, agi: 9, ac: 7 } },
+  plains_wolf: { id: "plains_wolf", name: "Mundane Plains Wolf", baseHP: 24, baseDPS: 3, stats: { str: 8, con: 8, dex: 9, agi: 9, ac: 7 } },
+  scavenger_crow: { id: "scavenger_crow", name: "Scavenger Crow", baseHP: 19, baseDPS: 3, stats: { str: 6, con: 6, dex: 11, agi: 11, ac: 7 } },
+  field_gnawer: { id: "field_gnawer", name: "Field Gnawer", baseHP: 23, baseDPS: 4, stats: { str: 9, con: 7, dex: 8, agi: 8, ac: 7 } },
+  plains_marauder: { id: "plains_marauder", name: "Plains Marauder", baseHP: 28, baseDPS: 4, stats: { str: 10, con: 9, dex: 8, agi: 7, ac: 9 } },
+  dusthorn_calf: { id: "dusthorn_calf", name: "Dusthorn Calf", baseHP: 34, baseDPS: 3, stats: { str: 9, con: 12, dex: 6, agi: 6, ac: 10 } },
+  field_spirit: { id: "field_spirit", name: "Restless Field Spirit", baseHP: 25, baseDPS: 5, stats: { str: 7, con: 8, dex: 9, agi: 10, ac: 9 } }
 };
 
 export function getMobDef(id) {
