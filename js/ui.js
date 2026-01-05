@@ -1601,7 +1601,17 @@ function populateInventoryGrid(hero) {
     
     if (item && !isLocked) {
       const itemDef = getItemDef(item.id);
-      if (itemDef) {
+      if (!itemDef) {
+        // Missing item definition - show placeholder
+        const icon = document.createElement("div");
+        icon.style.cssText = "font-size: 20px; color: #ef4444;";
+        icon.textContent = "⚠";
+        slot.appendChild(icon);
+        const name = document.createElement("div");
+        name.style.cssText = "font-size: 9px; text-align: center; color: #ef4444;";
+        name.textContent = `[${item.id}]`;
+        slot.appendChild(name);
+      } else {
         // Icon
         const icon = document.createElement("div");
         icon.style.cssText = "font-size: 20px;";
@@ -1767,7 +1777,14 @@ function populateEquipmentSection(hero) {
     const equippedItem = hero.equipment[slotKey];
     const itemDef = equippedItem ? getItemDef(equippedItem.id) : null;
     
-    if (itemDef) {
+    if (equippedItem && !itemDef) {
+      // Missing item definition - show placeholder
+      slotDiv.innerHTML = `
+        <div style="font-size:18px;color:#ef4444;">⚠</div>
+        <div style="font-size:10px;color:#ef4444;">[${equippedItem.id}]</div>
+      `;
+      slotDiv.style.cursor = "not-allowed";
+    } else if (itemDef) {
       slotDiv.innerHTML = `
         <div style="font-size:18px;">${itemDef.icon}</div>
         <div style="font-size:10px;color:#4ade80;">${itemDef.name}</div>
@@ -1831,7 +1848,11 @@ function populateEquipmentSection(hero) {
       if (!fromInventory) return;
       const itemDef = getItemDef(itemId);
       
-      if (!itemDef?.stats) return; // Only gear can be equipped
+      if (!itemDef) {
+        addLog(`Cannot equip unknown item [${itemId}].`, "normal");
+        return;
+      }
+      if (!itemDef.stats) return; // Only gear can be equipped
       
       // Consume one from shared inventory
       const source = state.sharedInventory[slotIndex];
