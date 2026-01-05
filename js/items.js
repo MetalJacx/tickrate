@@ -49,7 +49,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 10,
     icon: "🗡️",
-    stats: { dps: 2, dex: 1 }
+    stats: { dps: 2}
   },
   iron_sword: {
     id: "iron_sword",
@@ -87,15 +87,33 @@ export const ITEMS = {
     icon: "🌿",
     stats: { dps: 4, wis: 2, int: 2 }
   },
-  steel_mace: {
+  iron_mace: {
     id: "steel_mace",
     name: "Steel Mace",
     rarity: "uncommon",
     maxStack: 1,
     baseValue: 26,
     icon: "🔨",
-    stats: { dps: 4, str: 2 }
-  }
+    stats: { dps: 4, str: 1 }
+  },
+  rusty_sword: {
+    id: "rusty_sword",
+    name: "Rusty Sword",
+    rarity: "uncommon",
+    maxStack: 1,
+    baseValue: 20,
+    icon: "⚔️",
+    stats: { dps: 3 }
+  },
+    rusty_mace: {
+    id: "rusty_mace",
+    name: "Rusty Mace",
+    rarity: "uncommon",
+    maxStack: 1,
+    baseValue: 20,
+    icon: "🔨",
+    stats: { dps: 3 }
+  },
 };
 
 export function getItemDef(itemId) {
