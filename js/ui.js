@@ -1364,9 +1364,10 @@ function addItemToStash(itemId, quantity) {
 }
 
 function showItemTooltip(itemDef, event) {
-  // Remove any existing tooltip
+  // Remove any existing tooltip and context menu
   const existing = document.getElementById("itemTooltip");
   if (existing) existing.remove();
+  hideItemContextMenu();
 
   if (!itemDef) return;
 
@@ -1436,6 +1437,86 @@ function showItemTooltip(itemDef, event) {
 function hideItemTooltip() {
   const tooltip = document.getElementById("itemTooltip");
   if (tooltip) tooltip.remove();
+}
+
+function showItemContextMenu(x, y, slotIndex, item, itemDef) {
+  // Remove any existing context menu
+  hideItemContextMenu();
+  
+  const menu = document.createElement("div");
+  menu.id = "itemContextMenu";
+  menu.style.cssText = `
+    position: fixed;
+    left: ${x}px;
+    top: ${y}px;
+    background: #1a1a1a;
+    border: 2px solid #4ade80;
+    border-radius: 6px;
+    padding: 4px;
+    z-index: 10001;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    min-width: 120px;
+  `;
+  
+  const itemName = itemDef ? itemDef.name : `[${item.id}]`;
+  const itemQty = item.quantity || 1;
+  
+  const destroyOption = document.createElement("div");
+  destroyOption.style.cssText = `
+    padding: 8px 12px;
+    cursor: pointer;
+    color: #ef4444;
+    font-size: 12px;
+    border-radius: 4px;
+    transition: background 0.2s;
+  `;
+  destroyOption.textContent = `Destroy ${itemName}${itemQty > 1 ? ` (x${itemQty})` : ''}`;
+  destroyOption.addEventListener("mouseenter", () => {
+    destroyOption.style.background = "#2a2a2a";
+  });
+  destroyOption.addEventListener("mouseleave", () => {
+    destroyOption.style.background = "transparent";
+  });
+  destroyOption.addEventListener("click", () => {
+    // Confirm destruction
+    if (confirm(`Are you sure you want to destroy ${itemName}${itemQty > 1 ? ` (x${itemQty})` : ''}?`)) {
+      state.sharedInventory[slotIndex] = null;
+      addLog(`Destroyed ${itemName}${itemQty > 1 ? ` x${itemQty}` : ''}.`, "normal");
+      
+      // Refresh UI
+      const hero = state.party[0];
+      if (hero) {
+        populateInventoryGrid(hero);
+        populateInventoryStats(hero);
+      }
+      saveGame();
+    }
+    hideItemContextMenu();
+  });
+  
+  menu.appendChild(destroyOption);
+  document.body.appendChild(menu);
+  
+  // Keep menu in viewport
+  setTimeout(() => {
+    const rect = menu.getBoundingClientRect();
+    if (rect.right > window.innerWidth) {
+      menu.style.left = (window.innerWidth - rect.width - 10) + "px";
+    }
+    if (rect.bottom > window.innerHeight) {
+      menu.style.top = (window.innerHeight - rect.height - 10) + "px";
+    }
+  }, 0);
+  
+  // Close menu on any click outside
+  setTimeout(() => {
+    document.addEventListener("click", hideItemContextMenu, { once: true });
+  }, 0);
+}
+
+function hideItemContextMenu() {
+  const menu = document.getElementById("itemContextMenu");
+  if (menu) menu.remove();
 }
 
 function renderConsumableStrip(hero) {
@@ -1657,6 +1738,13 @@ function populateInventoryGrid(hero) {
           slot.style.opacity = item ? "1" : "0.4";
         });
       }
+      
+      // Add right-click context menu for destroying items
+      slot.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        showItemContextMenu(e.clientX, e.clientY, i, item, itemDef);
+      });
     } else if (!isLocked) {
       // Empty slot - accept drops from equipment
       slot.addEventListener("dragover", (e) => {
