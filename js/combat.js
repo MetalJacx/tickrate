@@ -1158,7 +1158,7 @@ export function applyHawkEyeBuff(hero, rangerLevel) {
   applyBuff(hero, "hawk_eye", durationMs, { hitChanceBonus });
 }
 
-function getSpellTimerStore(caster) {
+function getActionTimerStore(caster) {
   if (!caster) return null;
   if (caster.type === "player") {
     caster.skillTimers = caster.skillTimers || {};
@@ -1235,17 +1235,17 @@ function deductSpellResources(caster, cost) {
   }
 }
 
-function setSpellCooldown(caster, spellId, cooldownTicks) {
-  const timers = getSpellTimerStore(caster);
+function setActionCooldown(actor, actionId, cooldownTicks) {
+  const timers = getActionTimerStore(actor);
   if (!timers) return;
-  timers[spellId] = Math.max(0, cooldownTicks || 0);
+  timers[actionId] = Math.max(0, cooldownTicks || 0);
 }
 
-function tickSpellCooldown(caster, spellId) {
-  const timers = getSpellTimerStore(caster);
+function tickActionCooldown(actor, actionId) {
+  const timers = getActionTimerStore(actor);
   if (!timers) return;
-  if (timers[spellId] == null) timers[spellId] = 0;
-  timers[spellId] = Math.max(0, timers[spellId] - 1);
+  if (timers[actionId] == null) timers[actionId] = 0;
+  timers[actionId] = Math.max(0, timers[actionId] - 1);
 }
 
 function breakMesmerizeOnDamage(target) {
@@ -1261,7 +1261,7 @@ export function resolveSpellCast({ caster, spellId, target = null, context = {} 
   if (!canCastSpell(caster, spellDef)) return { cast: false, reason: "not_allowed" };
 
   // Cooldown gate
-  const timers = getSpellTimerStore(caster);
+  const timers = getActionTimerStore(caster);
   if (timers && timers[spellId] > 0) {
     return { cast: false, reason: "cooldown" };
   }
@@ -1368,7 +1368,7 @@ export function resolveSpellCast({ caster, spellId, target = null, context = {} 
   }
 
   if (castAttempted) {
-    setSpellCooldown(caster, spellId, spellDef.cooldownTicks);
+    setActionCooldown(caster, spellId, spellDef.cooldownTicks);
   }
 
   return { cast: castSuccessful, damageDealt, target: resolvedTarget, attempted: castAttempted };
@@ -1387,7 +1387,7 @@ function tryEnemySpellCasts() {
 
     // Tick down all spell cooldowns
     for (const spellId of spellbook) {
-      tickSpellCooldown(enemy, spellId);
+      tickActionCooldown(enemy, spellId);
     }
 
     const castChance = enemy.castChancePerTick ?? 0;
@@ -1401,7 +1401,7 @@ function tryEnemySpellCasts() {
     while (readySpells.length > 0 && castsThisTick < maxCasts) {
       const pickIndex = randInt(readySpells.length);
       const spellId = readySpells.splice(pickIndex, 1)[0];
-      const timers = getSpellTimerStore(enemy);
+      const timers = getActionTimerStore(enemy);
       if (timers && timers[spellId] > 0) continue;
 
       const result = resolveSpellCast({
@@ -1650,11 +1650,11 @@ export function gameTick() {
     const skills = cls.skills.filter(s => hero.level >= s.level && abilityBarSkills.has(s.key));
 
     for (const sk of skills) {
-      const timers = getSpellTimerStore(hero);
+      const timers = getActionTimerStore(hero);
       if (timers[sk.key] == null) timers[sk.key] = 0;
 
       // Tick cooldown down
-      tickSpellCooldown(hero, sk.key);
+      tickActionCooldown(hero, sk.key);
 
       // Fire if ready
       if (timers[sk.key] === 0) {
