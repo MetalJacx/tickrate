@@ -6,6 +6,7 @@ import { ACCOUNT_SLOT_UNLOCKS, GAME_TICK_MS, MEDITATE_UNLOCK_LEVEL, MEDITATE_SKI
 import { updateStatsModalSkills } from "./ui.js";
 import { getItemDef } from "./items.js";
 import { getRaceDef, DEFAULT_RACE_KEY } from "./races.js";
+import { SPELLS } from "./spells.js";
 import {
   applyACMitigation,
   computeCritChance,
@@ -271,6 +272,7 @@ function buildEnemyFromTemplate(enemyDef, level) {
   const maxHP = Math.floor(computeMaxHP(baseHP, stats.con || 0));
 
   return {
+    type: "mob",
     name: enemyDef.name,
     level,
     baseHP,
@@ -285,7 +287,8 @@ function buildEnemyFromTemplate(enemyDef, level) {
     resourceType: enemyDef.resourceType || null,
     primaryStat,
     maxMana,
-    mana: maxMana
+    mana: maxMana,
+    spellTimers: {}
   };
 }
 
@@ -296,6 +299,7 @@ export function createHero(classKey, customName = null, raceKey = DEFAULT_RACE_K
 
   const baseDmg = cls.baseDamage ?? cls.baseDPS ?? cls.baseHealing ?? 5;
   const hero = {
+    type: "player",
     id: nextHeroId(),
     classKey: cls.key,
     name: customName || cls.name,
@@ -1154,11 +1158,271 @@ export function applyHawkEyeBuff(hero, rangerLevel) {
   applyBuff(hero, "hawk_eye", durationMs, { hitChanceBonus });
 }
 
+function getSpellTimerStore(caster) {
+  if (!caster) return null;
+  if (caster.type === "player") {
+    caster.skillTimers = caster.skillTimers || {};
+    return caster.skillTimers;
+  }
+  if (caster.type === "mob") {
+    caster.spellTimers = caster.spellTimers || {};
+    return caster.spellTimers;
+  }
+  return null;
+}
+
+export function canCastSpell(caster, spellDef) {
+  if (!caster || !spellDef) return false;
+  const allowed = spellDef.allowedCasters || {};
+  if (caster.type === "player") {
+    const classKey = caster.classKey || caster.className || caster.class;
+    return !!allowed.players?.includes(classKey);
+  }
+  if (caster.type === "mob") {
+    return allowed.mobs === true;
+  }
+  return false;
+}
+
+function resolveSpellTarget(spellDef, caster, context, explicitTarget) {
+  if (explicitTarget) return explicitTarget;
+  const enemies = context?.enemies || [];
+  const party = context?.party || [];
+  switch (spellDef.target) {
+    case "enemy":
+      return enemies.find(e => {
+        if (!e || e.isDead) return false;
+        const currentHP = e.hp ?? e.health;
+        return currentHP > 0;
+      }) || null;
+    case "xt_enemy":
+      if (enemies.length > 1) {
+        const candidate = enemies[1];
+        const currentHP = candidate?.hp ?? candidate?.health;
+        return candidate && !candidate.isDead && currentHP > 0 ? candidate : null;
+      }
+      return null;
+    case "self":
+      return caster;
+    case "ally":
+      return party.find(h => !h.isDead) || null;
+    default:
+      return explicitTarget || null;
+  }
+}
+
+function hasSpellResources(caster, cost) {
+  if (!cost) return { ok: true };
+  const manaCost = cost.mana || 0;
+  const endCost = cost.endurance || 0;
+  if (caster.type === "player") {
+    if (manaCost > 0 && (caster.mana ?? 0) < manaCost) return { ok: false, reason: "no_mana" };
+    if (endCost > 0 && (caster.endurance ?? 0) < endCost) return { ok: false, reason: "no_endurance" };
+  } else if (caster.type === "mob") {
+    // Mobs may not have pools defined; if present, respect them
+    if (manaCost > 0 && caster.mana != null && caster.mana < manaCost) return { ok: false, reason: "no_mana" };
+  }
+  return { ok: true };
+}
+
+function deductSpellResources(caster, cost) {
+  if (!cost) return;
+  if (caster.type === "player") {
+    if (cost.mana) caster.mana = Math.max(0, (caster.mana ?? 0) - cost.mana);
+    if (cost.endurance) caster.endurance = Math.max(0, (caster.endurance ?? 0) - cost.endurance);
+  } else if (caster.type === "mob") {
+    if (cost.mana && caster.mana != null) caster.mana = Math.max(0, caster.mana - cost.mana);
+  }
+}
+
+function setSpellCooldown(caster, spellId, cooldownTicks) {
+  const timers = getSpellTimerStore(caster);
+  if (!timers) return;
+  timers[spellId] = Math.max(0, cooldownTicks || 0);
+}
+
+function tickSpellCooldown(caster, spellId) {
+  const timers = getSpellTimerStore(caster);
+  if (!timers) return;
+  if (timers[spellId] == null) timers[spellId] = 0;
+  timers[spellId] = Math.max(0, timers[spellId] - 1);
+}
+
+function breakMesmerizeOnDamage(target) {
+  if (hasBuff(target, "mesmerize")) {
+    removeBuff(target, "mesmerize");
+    addLog(`${target.name} is jolted awake!`, "skill");
+  }
+}
+
+export function resolveSpellCast({ caster, spellId, target = null, context = {} }) {
+  const spellDef = SPELLS[spellId];
+  if (!spellDef) return { cast: false, reason: "no_def" };
+  if (!canCastSpell(caster, spellDef)) return { cast: false, reason: "not_allowed" };
+
+  // Cooldown gate
+  const timers = getSpellTimerStore(caster);
+  if (timers && timers[spellId] > 0) {
+    return { cast: false, reason: "cooldown" };
+  }
+
+  const resolvedTarget = resolveSpellTarget(spellDef, caster, context, target);
+  if (!resolvedTarget) return { cast: false, reason: "no_target" };
+
+  const resourceCheck = hasSpellResources(caster, spellDef.cost);
+  if (!resourceCheck.ok) {
+    return { cast: false, reason: resourceCheck.reason || "no_resources", attempted: false };
+  }
+
+  // Deduct resources up front to mirror prior behavior
+  deductSpellResources(caster, spellDef.cost);
+
+  const casterLevel = caster.spellLevel ?? caster.level ?? 1;
+  let damageDealt = 0;
+  let castSuccessful = false;
+  let castAttempted = true;
+
+  switch (spellId) {
+    case "fireblast": {
+      const scale = spellDef.scaling;
+      const bonusSteps = Math.max(0, Math.floor((casterLevel - 1) / (scale.maxDamageBonusIntervalLevels || 1)));
+      const maxBonus = Math.min(scale.maxDamageBonusCap || 0, bonusSteps);
+      const minDmg = scale.minDamage || 0;
+      const maxDmg = (scale.maxDamageBase || 0) + maxBonus;
+      const raw = minDmg + Math.random() * (maxDmg - minDmg);
+      const mitigated = applyACMitigation(raw, resolvedTarget);
+      resolvedTarget.hp = Math.max(0, resolvedTarget.hp - mitigated);
+      damageDealt += mitigated;
+      castSuccessful = true;
+      addLog(`${caster.name} uses ${spellDef.name} (${scale.damageType}) for ${mitigated.toFixed(1)} damage!`, "damage_dealt");
+      breakMesmerizeOnDamage(resolvedTarget);
+      break;
+    }
+    case "iceblast": {
+      const scale = spellDef.scaling;
+      const bonusSteps = Math.max(0, Math.floor((casterLevel - 7) / (scale.maxDamageBonusIntervalLevels || 1)));
+      const maxBonus = Math.min(scale.maxDamageBonusCap || 0, bonusSteps);
+      const minDmg = scale.minDamage || 0;
+      const maxDmg = (scale.maxDamageBase || 0) + maxBonus;
+      const raw = minDmg + Math.random() * (maxDmg - minDmg);
+      const mitigated = applyACMitigation(raw, resolvedTarget);
+      resolvedTarget.hp = Math.max(0, resolvedTarget.hp - mitigated);
+      damageDealt += mitigated;
+      castSuccessful = true;
+      addLog(`${caster.name} uses ${spellDef.name} (${scale.damageType}) for ${mitigated.toFixed(1)} damage!`, "damage_dealt");
+      breakMesmerizeOnDamage(resolvedTarget);
+      break;
+    }
+    case "mesmerize": {
+      const durationTicks = spellDef.scaling?.durationTicks ?? 4;
+      if (!hasBuff(resolvedTarget, "mesmerize")) {
+        applyBuff(resolvedTarget, "mesmerize", durationTicks * GAME_TICK_MS, { sourceHeroId: caster.id });
+        addLog(`${caster.name} mesmerizes ${resolvedTarget.name} for ${durationTicks} ticks!`, "skill");
+        castSuccessful = true;
+      }
+      break;
+    }
+    case "fear": {
+      const scale = spellDef.scaling || {};
+      if (resolvedTarget.level > (scale.levelCap ?? 52)) {
+        addLog(`${caster.name} attempts ${spellDef.name}, but ${resolvedTarget.name} is too powerful.`, "normal");
+        castSuccessful = false;
+        break;
+      }
+      const drCount = resolvedTarget.fearDRCount || 0;
+      const baseDuration = scale.baseDurationTicks ?? 2;
+      const bonusDuration = casterLevel >= (scale.bonusDurationAtLevel ?? 9) ? 1 : 0;
+      const effectiveDuration = Math.max(scale.minDurationTicks ?? 1, baseDuration + bonusDuration - drCount);
+      const durationMs = effectiveDuration * GAME_TICK_MS;
+      let fearAggroMultiplier = scale.fearAggroMultiplier ?? 1.4;
+      if (hasBuff(resolvedTarget, "root")) {
+        fearAggroMultiplier = 1.0;
+      } else if (hasBuff(resolvedTarget, "snare")) {
+        const bonusPortion = fearAggroMultiplier - 1;
+        fearAggroMultiplier = 1 + Math.max(0, bonusPortion * 0.5);
+      }
+      applyBuff(resolvedTarget, "fear", durationMs, { durationTicks: effectiveDuration, fleeing: true, fearAggroMultiplier });
+      resolvedTarget.fearDRCount = drCount + 1;
+      addLog(`${caster.name} casts ${spellDef.name} on ${resolvedTarget.name}! ${resolvedTarget.name} flees for ${effectiveDuration} ticks.`, "skill");
+      castSuccessful = true;
+      break;
+    }
+    case "flame_lick": {
+      const scale = spellDef.scaling || {};
+      const durationTicks = scale.durationTicks ?? 6;
+      const durationMs = durationTicks * GAME_TICK_MS;
+      const steps = Math.max(0, Math.floor(Math.max(0, casterLevel - (scale.dotScaleFromLevel ?? 3)) * 2 / 3));
+      const dotDamage = Math.min(scale.dotMax ?? 3, (scale.dotBase ?? 1) + steps);
+      applyBuff(resolvedTarget, "flame_lick", durationMs, {
+        durationTicks,
+        dotDamagePerTick: dotDamage,
+        acReduction: scale.acReduction || 3,
+        sourceHero: caster.name
+      });
+      addLog(`${caster.name} casts ${spellDef.name} on ${resolvedTarget.name}! Fire burns for ${durationTicks} ticks (${dotDamage} dmg/tick, -${scale.acReduction || 3} AC)!`, "skill");
+      castSuccessful = true;
+      break;
+    }
+    default:
+      break;
+  }
+
+  if (castAttempted) {
+    setSpellCooldown(caster, spellId, spellDef.cooldownTicks);
+  }
+
+  return { cast: castSuccessful, damageDealt, target: resolvedTarget, attempted: castAttempted };
+}
+
+function tryEnemySpellCasts() {
+  if (!state.currentEnemies || state.currentEnemies.length === 0) return;
+
+  for (const enemy of state.currentEnemies) {
+    if (!enemy || enemy.hp <= 0) continue;
+    enemy.type = enemy.type || "mob";
+    enemy.spellTimers = enemy.spellTimers || {};
+
+    const spellbook = Array.isArray(enemy.spellbook) ? enemy.spellbook : [];
+    if (spellbook.length === 0) continue;
+
+    // Tick down all spell cooldowns
+    for (const spellId of spellbook) {
+      tickSpellCooldown(enemy, spellId);
+    }
+
+    const castChance = enemy.castChancePerTick ?? 0;
+    const maxCasts = enemy.maxCastsPerTick ?? 1;
+    if (castChance <= 0) continue;
+    if (Math.random() > castChance) continue;
+
+    let castsThisTick = 0;
+    // Randomize selection among ready spells
+    const readySpells = spellbook.filter(id => (enemy.spellTimers?.[id] ?? 0) === 0);
+    while (readySpells.length > 0 && castsThisTick < maxCasts) {
+      const pickIndex = randInt(readySpells.length);
+      const spellId = readySpells.splice(pickIndex, 1)[0];
+      const timers = getSpellTimerStore(enemy);
+      if (timers && timers[spellId] > 0) continue;
+
+      const result = resolveSpellCast({
+        caster: enemy,
+        spellId,
+        context: { enemies: state.party.filter(h => !h.isDead), party: state.currentEnemies }
+      });
+
+      if (result.cast) {
+        castsThisTick += 1;
+      }
+    }
+  }
+}
+
 
 export function gameTick() {
   // Handle auto-revival for dead members (60 second timer)
   const now = Date.now();
   for (const hero of state.party) {
+    if (!hero.type) hero.type = "player";
     // Ensure temp AC buff fields exist for older saves
     if (hero.tempACBuffTicks == null) hero.tempACBuffTicks = 0;
     if (hero.tempACBuffAmount == null) hero.tempACBuffAmount = 0;
@@ -1386,21 +1650,57 @@ export function gameTick() {
     const skills = cls.skills.filter(s => hero.level >= s.level && abilityBarSkills.has(s.key));
 
     for (const sk of skills) {
-      if (hero.skillTimers[sk.key] == null) hero.skillTimers[sk.key] = 0;
+      const timers = getSpellTimerStore(hero);
+      if (timers[sk.key] == null) timers[sk.key] = 0;
 
       // Tick cooldown down
-      hero.skillTimers[sk.key] = Math.max(0, hero.skillTimers[sk.key] - 1);
+      tickSpellCooldown(hero, sk.key);
 
       // Fire if ready
-      if (hero.skillTimers[sk.key] === 0) {
-        // If this is a damage skill but no enemies are present, hold fire until combat starts
-        if (sk.type === "damage" && state.currentEnemies.length === 0) {
+      if (timers[sk.key] === 0) {
+        const isSpell = sk.kind === "spell";
+        const hasEnemies = state.currentEnemies.length > 0;
+
+        // If this is a damage/debuff skill but no enemies are present, hold fire until combat starts
+        if ((sk.type === "damage" || sk.type === "debuff") && !hasEnemies) {
           continue;
         }
-        // Debuffs (e.g., taunt) require an enemy present
-        if (sk.type === "debuff" && state.currentEnemies.length === 0) {
+
+        // Cleric: While Divine Focus is active, only healing spells are allowed; block all others without ending the buff
+        if (hero.classKey === "cleric" && hasBuff(hero, "divine_focus") && sk.type !== "heal") {
           continue;
         }
+
+        // Spell path: route through centralized resolver
+        if (isSpell) {
+          if ((sk.type === "damage" || sk.type === "debuff") && hero.arcaneShieldLockout > 0) {
+            continue; // Arcane Shield offensive lockout
+          }
+          if (sk.key === "mesmerize") {
+            const xtTarget = state.currentEnemies.length > 1 ? state.currentEnemies[1] : null;
+            const alreadyMesmerized = state.currentEnemies.some(e => hasBuff(e, "mesmerize") && (getBuff(e, "mesmerize")?.sourceHeroId === hero.id));
+            if (!xtTarget || hasBuff(xtTarget, "mesmerize") || alreadyMesmerized) {
+              continue;
+            }
+          }
+
+          const result = resolveSpellCast({ caster: hero, spellId: sk.key, context: { enemies: state.currentEnemies, party: state.party } });
+
+          if (result.attempted) {
+            const abilityXP = 2;
+            hero.xp = (hero.xp || 0) + abilityXP;
+            state.accountLevelXP += abilityXP * accountXPMult(state.accountLevel);
+            checkAccountLevelUp();
+          }
+
+          if (result.cast) {
+            totalDamageThisTick += result.damageDealt || 0;
+          }
+
+          continue; // Spells handled via resolver
+        }
+
+        // Ability path (legacy handling)
         // Check resource availability
         const costType = sk.costType || (hero.resourceType === "mana" ? "mana" : (hero.resourceType === "endurance" ? "endurance" : "mana"));
         const cost = sk.cost || 0;
@@ -1452,29 +1752,12 @@ export function gameTick() {
             hasResources = false; // Hero already has Hawk Eye, don't cast
           }
         }
-        // Enchanter: Mesmerize only if an XT target exists (second enemy) and no current mesmerize from this caster
-        if (isEnchanter && sk.key === "mesmerize") {
-          // XT target is the second enemy (index 1)
-          const xtTarget = state.currentEnemies.length > 1 ? state.currentEnemies[1] : null;
-          const alreadyMesmerized = state.currentEnemies.some(e => hasBuff(e, "mesmerize") && (getBuff(e, "mesmerize")?.sourceHeroId === hero.id));
-          // Mesmerize requires: XT exists, XT not already mesmerized, and we don't have one active
-          if (!xtTarget || hasBuff(xtTarget, "mesmerize") || alreadyMesmerized) {
-            hasResources = false;
-          }
-        }
-        // Cleric: While Divine Focus is active, only healing spells are allowed; block all others without ending the buff
-        if (hero.classKey === "cleric" && hasBuff(hero, "divine_focus")) {
-          const allowed = sk.type === "heal";
-          if (!allowed) {
-            hasResources = false;
-          }
-        }
         // Enchanter: Suffocate cannot be recast while active
         if (isEnchanter && sk.key === "suffocate") {
           const targetEnemy = state.currentEnemies[0];
           if (!targetEnemy || hasBuff(targetEnemy, "suffocate")) {
             hasResources = false;
-            hero.skillTimers[sk.key] = 1;
+            timers[sk.key] = 1;
           }
         }
         // Enchanter: Lesser Rune cannot be recast while active
@@ -1482,10 +1765,10 @@ export function gameTick() {
           const runeTarget = hero; // self-cast for now
           if (!runeTarget || hasBuff(runeTarget, "lesser_rune")) {
             hasResources = false;
-            hero.skillTimers[sk.key] = 1;
+            timers[sk.key] = 1;
           }
         }
-        // Prevent offensive spells after Arcane Shield cast (1 tick lockout)
+        // Prevent offensive abilities after Arcane Shield cast (1 tick lockout)
         if ((sk.type === "damage" || sk.type === "debuff") && hero.arcaneShieldLockout > 0) {
           hasResources = false; // Still in lockout, don't cast
         }
@@ -1496,7 +1779,7 @@ export function gameTick() {
 
         // Skip recasting AC buff if it's still running; recheck in 1 tick
         if (sk.type === "buff" && sk.buff === "ac" && hero.tempACBuffTicks > 1) {
-          hero.skillTimers[sk.key] = 1;
+          timers[sk.key] = 1;
           continue;
         }
         
@@ -1533,15 +1816,7 @@ export function gameTick() {
           }
           
           // Apply Wizard damage scaling
-          if (sk.key === "fireblast") {
-            // Fireblast: +1 max damage per 2 levels, caps at level 10
-            const levelScaling = Math.min(5, Math.floor((hero.level - 1) / 2)); // 0-5 scaling
-            maxDmg = 20 + levelScaling;
-          } else if (sk.key === "iceblast") {
-            // Iceblast: +1 max damage per 2 levels, caps at level 18
-            const levelScaling = Math.min(9, Math.floor((hero.level - 7) / 2)); // 0-9 scaling
-            maxDmg = 30 + levelScaling;
-          } else if (sk.key === "shot") {
+          if (sk.key === "shot") {
             // Ranger Shot: damage scales from 2 @ L1 to 5 @ L8
             const scaledDamage = Math.min(5, 2 + Math.floor((hero.level - 1) * 3 / 7));
             minDmg = scaledDamage;
@@ -1670,63 +1945,13 @@ export function gameTick() {
           }
         }
         if (sk.type === "debuff") {
-          if (isEnchanter && sk.debuffType === "mesmerize") {
-            // XT target is the second enemy (index 1)
-            const xtTarget = state.currentEnemies.length > 1 ? state.currentEnemies[1] : null;
-            if (xtTarget && !hasBuff(xtTarget, "mesmerize")) {
-              applyBuff(xtTarget, "mesmerize", 4 * GAME_TICK_MS, { sourceHeroId: hero.id });
-              addLog(`${hero.name} mesmerizes ${xtTarget.name} for 4 ticks!`, "skill");
-            }
-          } else if (sk.debuff === "taunt") {
+          if (sk.debuff === "taunt") {
             const targetEnemy = state.currentEnemies[0];
             if (targetEnemy) {
               const duration = sk.durationTicks ?? 3;
               targetEnemy.forcedTargetId = hero.id;
               targetEnemy.forcedTargetTicks = duration;
               addLog(`${hero.name} taunts ${targetEnemy.name}, forcing attacks for ${duration} ticks!`, "skill");
-            }
-          } else if (sk.debuffType === "fear") {
-            // Fear debuff on first enemy
-            const targetEnemy = state.currentEnemies[0];
-            if (targetEnemy) {
-              // Level cap: Fear affects mobs up to level 52
-              if (targetEnemy.level > 52) {
-                addLog(`${hero.name} attempts Fear, but ${targetEnemy.name} is too powerful.`, "normal");
-              } else {
-                // Per-mob diminishing returns: reduce duration by DR count, floor at 1 tick
-                const drCount = targetEnemy.fearDRCount || 0;
-                const baseDuration = sk.durationTicks ?? (hero.level >= 9 ? 3 : 2);
-                const effectiveDuration = Math.max(1, baseDuration - drCount);
-                const durationMs = effectiveDuration * GAME_TICK_MS;
-                let fearAggroMultiplier = sk.fearAggroMultiplier ?? 1.4; // default 40% increase
-                // Synergy: Root nullifies aggro boost; Snare halves the bonus portion
-                if (hasBuff(targetEnemy, "root")) {
-                  fearAggroMultiplier = 1.0;
-                } else if (hasBuff(targetEnemy, "snare")) {
-                  const bonusPortion = fearAggroMultiplier - 1;
-                  fearAggroMultiplier = 1 + Math.max(0, bonusPortion * 0.5);
-                }
-
-                applyBuff(targetEnemy, "fear", durationMs, { durationTicks: effectiveDuration, fleeing: true, fearAggroMultiplier });
-                targetEnemy.fearDRCount = drCount + 1;
-                addLog(`${hero.name} casts ${sk.name} on ${targetEnemy.name}! ${targetEnemy.name} flees for ${effectiveDuration} ticks.`, "skill");
-              }
-            }
-          } else if (sk.debuffType === "flame_lick") {
-            // Flame Lick: DOT + AC reduction
-            const targetEnemy = state.currentEnemies[0];
-            if (targetEnemy) {
-              const durationTicks = sk.durationTicks || 6;
-              const durationMs = durationTicks * 3000; // GAME_TICK_MS
-              // DOT damage scales: 1 @ L3 → 3 @ L6+
-              const dotDamage = Math.min(3, 1 + Math.floor((hero.level - 3) * 2 / 3));
-              applyBuff(targetEnemy, "flame_lick", durationMs, {
-                durationTicks,
-                dotDamagePerTick: dotDamage,
-                acReduction: sk.acReduction || 3,
-                sourceHero: hero.name
-              });
-              addLog(`${hero.name} casts ${sk.name} on ${targetEnemy.name}! Fire burns for ${durationTicks} ticks (${dotDamage} dmg/tick, -${sk.acReduction || 3} AC)!`, "skill");
             }
           }
         }
@@ -1783,7 +2008,7 @@ export function gameTick() {
           }
           // If no one was dead, skill is skipped earlier; no log needed here
         }
-        hero.skillTimers[sk.key] = sk.cooldownTicks;
+        timers[sk.key] = sk.cooldownTicks;
       }
     }
   }
@@ -1883,6 +2108,9 @@ export function gameTick() {
       return;
     }
   }
+
+  // Enemy spellcasting occurs before their melee swings
+  tryEnemySpellCasts();
 
   // 4) All living enemies attack party
   let livingMembers = state.party.filter(h => !h.isDead);

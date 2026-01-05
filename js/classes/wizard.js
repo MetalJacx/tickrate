@@ -40,18 +40,15 @@ export default {
     {
       key: "fireblast",
       name: "Fireblast",
+      kind: "spell",
       level: 1,
       type: "damage",
-      damageType: "fire",
-      minDamage: 12,
-      maxDamage: 20,
-      cost: 10,
-      cooldownTicks: 3,
-      description: "Starter nuke. Damage scales +1 max per 2 levels, capping at level 10 (12–25)."
+      description: "Starter nuke. Mechanics live in spells.js."
     },
     {
       key: "gather_mana",
       name: "Gather Mana",
+      kind: "ability",
       level: 3,
       type: "utility",
       cost: 0,
@@ -62,18 +59,15 @@ export default {
     {
       key: "iceblast",
       name: "Iceblast",
+      kind: "spell",
       level: 7,
       type: "damage",
-      damageType: "frost",
-      minDamage: 18,
-      maxDamage: 30,
-      cost: 18,
-      cooldownTicks: 4,
-      description: "Higher burst nuke. Damage scales +1 max per 2 levels, capping at level 18 (18–39)."
+      description: "Higher burst nuke. Mechanics live in spells.js."
     },
     {
       key: "rain_of_fire",
       name: "Rain of Fire",
+      kind: "ability",
       level: 8,
       type: "damage",
       damageType: "fire",
@@ -88,6 +82,7 @@ export default {
     {
       key: "arcane_shield",
       name: "Arcane Shield",
+      kind: "ability",
       level: 10,
       type: "buff",
       buffType: "arcane_shield",

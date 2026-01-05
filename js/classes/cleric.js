@@ -40,6 +40,7 @@ export default {
     { 
       key: "minor_heal", 
       name: "Minor Heal", 
+      kind: "ability",
       level: 1, 
       type: "heal", 
       minAmount: 10,
@@ -50,6 +51,7 @@ export default {
     { 
       key: "courage", 
       name: "Courage", 
+      kind: "ability",
       level: 3, 
       type: "buff",
       buffType: "courage",
@@ -61,17 +63,14 @@ export default {
     { 
       key: "fear", 
       name: "Fear", 
+      kind: "spell",
       level: 8, 
-      type: "debuff",
-      debuffType: "fear",
-      durationTicks: 2,
-      fearAggroMultiplier: 1.4, // Increases reinforcement chance by 40% while this fear is active
-      cost: 40, 
-      cooldownTicks: 7 // 7 ticks
+      type: "debuff"
     },
     { 
       key: "divine_focus", 
       name: "Divine Focus", 
+      kind: "ability",
       level: 7, 
       type: "buff",
       buffType: "divine_focus",
@@ -83,6 +82,7 @@ export default {
     { 
       key: "healing", 
       name: "Healing", 
+      kind: "ability",
       level: 10, 
       type: "heal", 
       minAmount: 95,

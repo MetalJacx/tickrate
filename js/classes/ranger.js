@@ -33,6 +33,7 @@ export default {
     {
       key: "shot",
       name: "Shot",
+      kind: "ability",
       level: 1,
       type: "damage",
       damageType: "physical",
@@ -46,21 +47,15 @@ export default {
     {
       key: "flame_lick",
       name: "Flame Lick",
+      kind: "spell",
       level: 3,
       type: "debuff",
-      debuffType: "flame_lick",
-      damageType: "fire",
-      dotDamagePerTick: 1, // Scales to 3 at level 6
-      durationTicks: 6,
-      acReduction: 3,
-      cost: 12,
-      costType: "mana",
-      cooldownTicks: 6,
-      description: "Fire DOT that reduces target AC by 3 for 6 ticks. Damage scales to 3/tick at level 6."
+      debuffType: "flame_lick"
     },
     {
       key: "salve",
       name: "Salve",
+      kind: "ability",
       level: 5,
       type: "heal",
       minAmount: 5,
@@ -73,6 +68,7 @@ export default {
     {
       key: "woodskin",
       name: "WoodSkin",
+      kind: "ability",
       level: 8,
       type: "buff",
       buffType: "woodskin",
@@ -87,6 +83,7 @@ export default {
     {
       key: "hawk_eye",
       name: "Hawk Eye",
+      kind: "ability",
       level: 10,
       type: "buff",
       buffType: "hawk_eye",
