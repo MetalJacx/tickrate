@@ -1952,6 +1952,7 @@ function populateEquipmentSection(hero) {
       
       // Equip the item
       const oldEquipped = hero.equipment[slotKey];
+      const isWeaponSlot = slotKey === "main" || slotKey === "off";
       hero.equipment[slotKey] = { id: itemId, quantity: 1 };
       
       // If there was an old equipped item, return it to inventory
@@ -1966,6 +1967,13 @@ function populateEquipmentSection(hero) {
       
       // Recalculate hero stats
       refreshHeroDerived(hero);
+      
+      // Log weapon swap in combat (non-spammy: only at equip time, not on refresh ticks)
+      if (isWeaponSlot && hero.inCombat && state.currentEnemies.length > 0) {
+        const newItemDef = getItemDef(itemId);
+        const newItemName = newItemDef ? newItemDef.name : itemId;
+        addLog(`${hero.name} swaps to ${newItemName} and resets their swing timer!`, "normal");
+      }
       
       // Update display
       populateEquipmentSection(hero);

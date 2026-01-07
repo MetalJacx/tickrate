@@ -157,8 +157,8 @@ function getTotalHastePct(actor) {
 
 /**
  * Compute swing ticks from base delay and total haste
- * Internally clamps haste to [-0.75, +3.00] and uses ceiling division
- * swingTicks = max(1, ceil((baseDelayTenths / (1 + clampedHaste)) / 30))
+ * Internally clamps haste to [-0.75, +3.00] and uses standard rounding
+ * swingTicks = max(1, round((baseDelayTenths / (1 + clampedHaste)) / 30))
  */
 function computeSwingTicks(baseDelayTenths, totalHastePct) {
   const clampedHaste = clamp(totalHastePct, -0.75, 3.0);
@@ -344,23 +344,27 @@ export function refreshHeroDerived(hero) {
     }
   }
 
-  // === WEAPON SWAP RESET (if in combat) ===
-  // If delay or haste values changed and hero is in active combat,
-  // reset swing cooldown to prevent exploit where weapon swaps grant free hits
+  // === WEAPON SWAP HANDLING (in combat only) ===
+  // Only reset swing timer on actual weapon swap (delay change), not on haste/slow buffs
   if (hero.inCombat && state.currentEnemies.length > 0 && oldBaseDelayTenths !== null) {
     const newBaseDelayTenths = getBaseDelayTenths(hero);
     const newTotalHastePct = getTotalHastePct(hero);
     
-    // Detect if delay or haste changed (weapon swap or haste buff/debuff applied)
     const delayChanged = Math.abs(newBaseDelayTenths - oldBaseDelayTenths) > 0.01;
     const hasteChanged = Math.abs(newTotalHastePct - oldTotalHastePct) > 0.01;
     
-    if (delayChanged || hasteChanged) {
-      // Recompute swing ticks with new weapon/haste
+    // WEAPON SWAP: hard reset swing timer (no free swing exploit)
+    if (delayChanged) {
       const newSwingTicks = computeSwingTicks(newBaseDelayTenths, newTotalHastePct);
       hero.swingTicks = newSwingTicks;
-      hero.swingCd = newSwingTicks; // Reset cooldown (no free swing from weapon swap)
-      addLog(`${hero.name} swaps weapons and resets their swing timer!`, "normal");
+      hero.swingCd = newSwingTicks; // Hard reset to prevent free swing from swap
+    }
+    // HASTE/SLOW BUFF: update swing ticks but preserve swing progress
+    else if (hasteChanged) {
+      const newSwingTicks = computeSwingTicks(newBaseDelayTenths, newTotalHastePct);
+      hero.swingTicks = newSwingTicks;
+      // Clamp cooldown to new tick value but don't reset it (preserve progress)
+      hero.swingCd = Math.min(hero.swingCd, newSwingTicks);
     }
   }
 
