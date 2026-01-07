@@ -157,11 +157,13 @@ function getTotalHastePct(actor) {
 
 /**
  * Compute swing ticks from base delay and total haste
- * swingTicks = max(1, round((baseDelayTenths / (1 + totalHastePct)) / 30))
+ * Internally clamps haste to [-0.75, +3.00] and uses ceiling division
+ * swingTicks = max(1, ceil((baseDelayTenths / (1 + clampedHaste)) / 30))
  */
 function computeSwingTicks(baseDelayTenths, totalHastePct) {
-  const effectiveDelayTenths = baseDelayTenths / (1 + totalHastePct);
-  return Math.max(1, Math.round(effectiveDelayTenths / 30));
+  const clampedHaste = clamp(totalHastePct, -0.75, 3.0);
+  const effectiveDelayTenths = baseDelayTenths / (1 + clampedHaste);
+  return Math.max(1, Math.ceil(effectiveDelayTenths / 30));
 }
 
 /**

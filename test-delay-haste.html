@@ -131,8 +131,10 @@
         }
 
         function computeSwingTicks(baseDelayTenths, totalHastePct) {
-            const effectiveDelayTenths = baseDelayTenths / (1 + totalHastePct);
-            return Math.max(1, Math.round(effectiveDelayTenths / 30));
+            // Clamp haste to [-0.75, +3.00]
+            const clampedHaste = Math.max(-0.75, Math.min(3.0, totalHastePct));
+            const effectiveDelayTenths = baseDelayTenths / (1 + clampedHaste);
+            return Math.max(1, Math.ceil(effectiveDelayTenths / 30));
         }
 
         function computeOverflowBonuses(baseDelayTenths, totalHastePct) {
@@ -195,7 +197,7 @@
             if (assert(computeSwingTicks(60, 0) === 2, "Slow weapon (delay 60) = 2 ticks")) passed++;
 
             total++;
-            if (assert(computeSwingTicks(100, 0) === 3, "Very slow weapon (delay 100) = 3 ticks")) passed++;
+            if (assert(computeSwingTicks(100, 0) === 4, "Very slow weapon (delay 100) = 4 ticks")) passed++;
 
             return { passed, total };
         }
@@ -237,7 +239,7 @@
             let passed = 0, total = 0;
 
             total++;
-            if (assert(computeSwingTicks(30, -0.25) === 1, "Sword (30) with -25% slow = 1 tick")) passed++;
+            if (assert(computeSwingTicks(30, -0.25) === 2, "Sword (30) with -25% slow = 2 ticks")) passed++;
 
             total++;
             if (assert(computeSwingTicks(40, -0.5) === 3, "Mace (40) with -50% slow = 3 ticks (from 2)")) passed++;

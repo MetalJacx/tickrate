@@ -8,7 +8,7 @@ The delay & haste system converts EQ-style weapon delays into a tick-based auto-
 ### Swing Ticks Calculation
 ```javascript
 effectiveDelayTenths = baseDelayTenths / (1 + totalHastePct)
-swingTicks = max(1, round(effectiveDelayTenths / 30))
+swingTicks = max(1, ceil(effectiveDelayTenths / 30))
 ```
 
 ### Overflow Bonuses (when swingTicks == 1)
@@ -66,7 +66,7 @@ totalHastePct = clamp(totalHastePct, -0.75, +3.00)
 baseDelayTenths = 15
 hastePct = +0.30
 effectiveDelayTenths = 15 / 1.30 ≈ 11.54
-swingTicks = round(11.54 / 30) = round(0.38) = max(1, 1) = 1
+swingTicks = ceil(11.54 / 30) = ceil(0.38) = max(1, 1) = 1
 
 overflowPct = (30 - 11.54) / 30 ≈ 0.615
 extraSwingChance = clamp(0.615, 0, 0.50) = 0.50
@@ -82,7 +82,7 @@ Result: Attack every tick (1 tick), 50% chance for extra swing
 baseDelayTenths = 40
 hastePct = +0.50
 effectiveDelayTenths = 40 / 1.50 ≈ 26.67
-swingTicks = round(26.67 / 30) = round(0.889) = max(1, 1) = 1
+swingTicks = ceil(26.67 / 30) = ceil(0.889) = max(1, 1) = 1
 
 overflowPct = (30 - 26.67) / 30 ≈ 0.111
 extraSwingChance = 0.111 (no overflow2)
@@ -97,7 +97,7 @@ Result: Attack every tick (vs 2 ticks without haste), 11% chance for extra swing
 baseDelayTenths = 40
 hastePct = 0
 effectiveDelayTenths = 40
-swingTicks = round(40 / 30) = round(1.33) = max(1, 2) = 2
+swingTicks = ceil(40 / 30) = ceil(1.33) = max(1, 2) = 2
 
 Result: Attack every 2 ticks (6 seconds between swings)
 ```
@@ -107,7 +107,7 @@ Result: Attack every 2 ticks (6 seconds between swings)
 baseDelayTenths = 40
 hastePct = -0.50 (clamped to -0.50)
 effectiveDelayTenths = 40 / (1 - 0.50) = 40 / 0.50 = 80
-swingTicks = round(80 / 30) = round(2.67) = max(1, 3) = 3
+swingTicks = ceil(80 / 30) = ceil(2.67) = max(1, 3) = 3
 
 Result: Attack every 3 ticks (9 seconds between swings)
 ```
