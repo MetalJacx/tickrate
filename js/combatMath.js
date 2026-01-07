@@ -1,3 +1,4 @@
+import { isExpiredEffect } from "./util.js";
 // Centralized combat math and tuning knobs
 // Constants and helper functions to keep combat tuning in one place.
 export const COMBAT_CONSTANTS = {
@@ -51,7 +52,7 @@ function getStats(entity) {
   // Fortify buff
   if (entity?.activeBuffs?.fortify) {
     const fortifyBuff = entity.activeBuffs.fortify;
-    if (now <= fortifyBuff.expiresAt && fortifyBuff.data?.acBonus) {
+    if (!isExpiredEffect(fortifyBuff, now) && fortifyBuff.data?.acBonus) {
       acBonus += fortifyBuff.data.acBonus;
     }
   }
@@ -59,7 +60,7 @@ function getStats(entity) {
   // Courage buff
   if (entity?.activeBuffs?.courage) {
     const courageBuff = entity.activeBuffs.courage;
-    if (now <= courageBuff.expiresAt && courageBuff.data?.acBonus) {
+    if (!isExpiredEffect(courageBuff, now) && courageBuff.data?.acBonus) {
       acBonus += courageBuff.data.acBonus;
     }
   }
@@ -67,7 +68,7 @@ function getStats(entity) {
   // WoodSkin buff
   if (entity?.activeBuffs?.woodskin) {
     const woodskinBuff = entity.activeBuffs.woodskin;
-    if (now <= woodskinBuff.expiresAt && woodskinBuff.data?.acBonus) {
+    if (!isExpiredEffect(woodskinBuff, now) && woodskinBuff.data?.acBonus) {
       acBonus += woodskinBuff.data.acBonus;
     }
   }
@@ -75,7 +76,7 @@ function getStats(entity) {
   // Flame Lick debuff (reduces AC)
   if (entity?.activeBuffs?.flame_lick) {
     const flameLickBuff = entity.activeBuffs.flame_lick;
-    if (now <= flameLickBuff.expiresAt && flameLickBuff.data?.acReduction) {
+    if (!isExpiredEffect(flameLickBuff, now) && flameLickBuff.data?.acReduction) {
       acBonus -= flameLickBuff.data.acReduction;
     }
   }

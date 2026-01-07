@@ -1281,7 +1281,7 @@ export function hasBuff(hero, buffKey) {
   const buff = hero.activeBuffs[buffKey];
   if (!buff) return false;
   // Check if buff has expired
-  if (Date.now() > buff.expiresAt) {
+  if (isExpiredEffect(buff, Date.now())) {
     delete hero.activeBuffs[buffKey];
     return false;
   }
@@ -1307,7 +1307,7 @@ function cleanupExpiredBuffs(hero) {
   if (!hero.activeBuffs) return;
   const now = Date.now();
   for (const key of Object.keys(hero.activeBuffs)) {
-    if (now > hero.activeBuffs[key].expiresAt) {
+    if (isExpiredEffect(hero.activeBuffs[key], now)) {
       delete hero.activeBuffs[key];
     }
   }
@@ -2179,7 +2179,7 @@ export function gameTick() {
     if (enemy.activeBuffs?.flame_lick) {
       const flameLick = enemy.activeBuffs.flame_lick;
       const now = Date.now();
-      if (now <= flameLick.expiresAt && flameLick.data?.dotDamagePerTick) {
+      if (!isExpiredEffect(flameLick, now) && flameLick.data?.dotDamagePerTick) {
         const dotDamage = flameLick.data.dotDamagePerTick;
         enemy.hp = Math.max(0, enemy.hp - dotDamage);
         addLog(`${enemy.name} burns for ${dotDamage.toFixed(1)} fire damage!`, "dot_fire");
