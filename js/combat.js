@@ -200,13 +200,13 @@ function rescaleSwingCd(oldSwingTicks, oldSwingCd, newSwingTicks) {
   if (!Number.isFinite(oldSwingTicks) || !Number.isFinite(oldSwingCd) || oldSwingTicks <= 0) {
     return Math.min(Number.isFinite(newSwingTicks) ? newSwingTicks : 1, newSwingTicks || 1);
   }
+  // If already ready to swing, remain ready regardless of haste/slow
+  if (oldSwingCd === 0) return 0;
+
   const progress = clamp(1 - (oldSwingCd / oldSwingTicks), 0, 1);
   let newSwingCd = Math.round((1 - progress) * newSwingTicks);
-  if (oldSwingCd !== 0) {
-    newSwingCd = Math.max(1, newSwingCd);
-  } else {
-    newSwingCd = 0;
-  }
+  // Prevent immediate swing on non-ready rescale (both haste and slow)
+  newSwingCd = Math.max(1, newSwingCd);
   return newSwingCd;
 }
 
