@@ -31,5 +31,5 @@ export function unwrapEffect(entry) {
 export function isExpiredEffect(entry, nowMs) {
   if (!entry || typeof entry !== "object") return false;
   if (entry.expiresAt == null) return false;
-  return nowMs > entry.expiresAt;
+  return nowMs >= entry.expiresAt;
 }

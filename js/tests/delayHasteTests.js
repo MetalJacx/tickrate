@@ -74,7 +74,7 @@ function getBuffListTest(actor, nowMs = Date.now()) {
     const list = [];
     for (const entry of Object.values(active)) {
       if (entry && typeof entry === "object") {
-        if (entry.expiresAt != null && nowMs > entry.expiresAt) continue;
+        if (entry.expiresAt != null && nowMs >= entry.expiresAt) continue;
         const payload = entry.data ?? entry;
         list.push(payload);
       }
@@ -91,7 +91,7 @@ function getDebuffListTest(actor, nowMs = Date.now()) {
     const list = [];
     for (const entry of Object.values(active)) {
       if (entry && typeof entry === "object") {
-        if (entry.expiresAt != null && nowMs > entry.expiresAt) continue;
+        if (entry.expiresAt != null && nowMs >= entry.expiresAt) continue;
         const payload = entry.data ?? entry;
         list.push(payload);
       }
@@ -699,6 +699,11 @@ function testHasteBuffNormalization() {
   total++;
   const actorExpiredDebuff = { activeDebuffs: { s: { expiresAt: nowMs - 1000, data: { slowPct: 0.25 } } } };
   if (assert(getTotalHastePctTest(actorExpiredDebuff, nowMs) === 0.0, "expired activeDebuffs wrapper ignored")) passed++;
+
+  // 10.10: equality boundary - expiresAt == nowMs is considered expired
+  total++;
+  const actorBoundaryBuff = { activeBuffs: { h: { expiresAt: nowMs, data: { hastePct: 0.40 } } } };
+  if (assert(getTotalHastePctTest(actorBoundaryBuff, nowMs) === 0.0, "boundary: expiresAt == nowMs is expired (no contribution)")) passed++;
 
   console.log(`\n📊 Suite 10: ${passed}/${total} passed\n`);
   return { passed, total };
