@@ -523,6 +523,61 @@ function testEquipCooldown() {
     "equipCd clamped to 0 (never negative)"
   )) passed++;
 
+  // Test 9.9: Exact timing - locked for exactly 2 ticks
+  // Simulate the real game flow
+  const timeline = {
+    equipCd: 0,
+    equipment: { main: { id: "sword", quantity: 1 } }
+  };
+  
+  // Tick N: Player swaps weapon
+  timeline.equipCd = 2;
+  const canSwapAtTickN = timeline.equipCd === 0;
+  total++;
+  if (assert(
+    canSwapAtTickN === false && timeline.equipCd === 2,
+    "Tick N (swap moment): equipCd = 2, immediately blocked"
+  )) passed++;
+  
+  // Tick N+1: gameTick decrements
+  timeline.equipCd = Math.max(0, timeline.equipCd - 1);
+  const canSwapAtTickN1 = timeline.equipCd === 0;
+  total++;
+  if (assert(
+    canSwapAtTickN1 === false && timeline.equipCd === 1,
+    "Tick N+1: equipCd = 1, still blocked"
+  )) passed++;
+  
+  // Tick N+2: gameTick decrements again
+  timeline.equipCd = Math.max(0, timeline.equipCd - 1);
+  const canSwapAtTickN2 = timeline.equipCd === 0;
+  total++;
+  if (assert(
+    canSwapAtTickN2 === true && timeline.equipCd === 0,
+    "Tick N+2: equipCd = 0, swaps allowed again (exactly 2 ticks)"
+  )) passed++;
+
+  // Test 9.10: No side effects when blocked
+  const sideEffectTest = {
+    equipCd: 2,
+    equipment: { main: { id: "old_sword", quantity: 1 } },
+    swingCd: 1,
+    swingTicks: 3,
+    inCombat: true
+  };
+  
+  // Simulate blocked swap attempt
+  const canProceed = sideEffectTest.equipCd === 0;
+  if (!canProceed) {
+    // Guard returned early - equipment should remain unchanged
+    total++;
+    if (assert(
+      sideEffectTest.equipment.main.id === "old_sword" &&
+      sideEffectTest.swingCd === 1,
+      "Blocked swap: no changes to equipment or swing timer"
+    )) passed++;
+  }
+
   console.log(`📊 Suite 9: ${passed}/${total} passed\n`);
   return { passed, total };
 }

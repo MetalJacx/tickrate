@@ -1865,6 +1865,10 @@ function populateEquipmentSection(hero) {
     const equippedItem = hero.equipment[slotKey];
     const itemDef = equippedItem ? getItemDef(equippedItem.id) : null;
     
+    // Check if this weapon slot is on cooldown
+    const isWeaponSlot = slotKey === "main" || slotKey === "off";
+    const hasCooldown = isWeaponSlot && hero.equipCd > 0;
+    
     if (equippedItem && !itemDef) {
       // Missing item definition - show placeholder
       slotDiv.innerHTML = `
@@ -1873,10 +1877,26 @@ function populateEquipmentSection(hero) {
       `;
       slotDiv.style.cursor = "not-allowed";
     } else if (itemDef) {
+      // Check for cooldown overlay
+      const cooldownBadge = hasCooldown 
+        ? `<div style="position:absolute;top:4px;right:4px;background:#ef4444;color:#fff;border-radius:4px;padding:2px 6px;font-size:10px;font-weight:bold;line-height:1;">🔒 ${hero.equipCd}</div>`
+        : '';
+      
       slotDiv.innerHTML = `
-        <div style="font-size:18px;">${itemDef.icon}</div>
-        <div style="font-size:10px;color:#4ade80;">${itemDef.name}</div>
+        <div style="position:relative;width:100%;">
+          ${cooldownBadge}
+          <div style="font-size:18px;${hasCooldown ? 'opacity:0.4;' : ''}">${itemDef.icon}</div>
+          <div style="font-size:10px;color:${hasCooldown ? '#888' : '#4ade80'};">${itemDef.name}</div>
+        </div>
       `;
+      
+      // Gray out the slot if on cooldown
+      if (hasCooldown) {
+        slotDiv.style.opacity = "0.6";
+        slotDiv.style.cursor = "not-allowed";
+        slotDiv.style.borderColor = "#ef4444";
+      }
+      
       // Add tooltip on hover
       slotDiv.addEventListener("mouseenter", (e) => {
         showItemTooltip(itemDef, e);
@@ -1884,9 +1904,11 @@ function populateEquipmentSection(hero) {
       slotDiv.addEventListener("mouseleave", () => {
         hideItemTooltip();
       });
-      // Make equipped items draggable so they can be removed
-      slotDiv.draggable = true;
-      slotDiv.style.cursor = "grab";
+      // Make equipped items draggable so they can be removed (unless on cooldown)
+      slotDiv.draggable = !hasCooldown;
+      if (!hasCooldown) {
+        slotDiv.style.cursor = "grab";
+      }
       slotDiv.addEventListener("dragstart", (e) => {
         e.dataTransfer.effectAllowed = "move";
         e.dataTransfer.setData("application/json", JSON.stringify({
@@ -1942,21 +1964,21 @@ function populateEquipmentSection(hero) {
       }
       if (!itemDef.stats) return; // Only gear can be equipped
       
-      // Consume one from shared inventory
-      const source = state.sharedInventory[slotIndex];
-      if (!source || source.id !== itemId) return;
-      source.quantity = (source.quantity || 1) - 1;
-      if (source.quantity <= 0) {
-        state.sharedInventory[slotIndex] = null;
-      }
-      
-      // Check equip cooldown for weapon swaps during combat
+      // Check equip cooldown for weapon swaps during combat (BEFORE consuming item)
       const isWeaponSlot = slotKey === "main" || slotKey === "off";
       const inCombat = hero.inCombat && state.currentEnemies.length > 0;
       
       if (isWeaponSlot && inCombat && hero.equipCd > 0) {
         addLog(`Cannot swap weapons yet (${hero.equipCd} tick${hero.equipCd > 1 ? 's' : ''}).`, "error");
         return;
+      }
+      
+      // Consume one from shared inventory
+      const source = state.sharedInventory[slotIndex];
+      if (!source || source.id !== itemId) return;
+      source.quantity = (source.quantity || 1) - 1;
+      if (source.quantity <= 0) {
+        state.sharedInventory[slotIndex] = null;
       }
       
       // Equip the item
