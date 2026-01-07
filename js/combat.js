@@ -556,6 +556,7 @@ export function createHero(classKey, customName = null, raceKey = DEFAULT_RACE_K
   refreshHeroDerived(hero);
   hero.health = hero.maxHP;
   hero.mana = hero.maxMana;
+  if (hero.equipCd == null) hero.equipCd = 0;
   if (cls.key === "warrior" && hero.level >= 5 && hero.doubleAttackSkill < 1) {
     hero.doubleAttackSkill = 1;
   }
@@ -2117,8 +2118,10 @@ export function gameTick() {
     }
     
     // Tick down equip cooldown
-    if (hero.equipCd && hero.equipCd > 0) {
-      hero.equipCd -= 1;
+    // Tick down equip cooldown and clamp
+    if (hero.equipCd == null) hero.equipCd = 0;
+    if (hero.equipCd > 0) {
+      hero.equipCd = Math.max(0, hero.equipCd - 1);
     }
 
     // Clean up expired buffs

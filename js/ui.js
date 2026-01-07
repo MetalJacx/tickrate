@@ -74,12 +74,14 @@ export function initUI({ onRecruit, onReset, onOpenRecruitModal }) {
   if (inventoryModalCloseBtn) {
     inventoryModalCloseBtn.addEventListener("click", () => {
       inventoryModal.style.display = "none";
+      currentInventoryHeroId = null;
     });
   }
   if (inventoryModal) {
     inventoryModal.addEventListener("click", (e) => {
       if (e.target === inventoryModal) {
         inventoryModal.style.display = "none";
+        currentInventoryHeroId = null;
       }
     });
   }
@@ -224,6 +226,15 @@ export function renderAll() {
   renderMeta();
   renderBattleFooter();
   renderZones();
+
+  // Live-refresh equipment UI if inventory modal is open (for equip cooldown badge)
+  const inventoryModal = document.getElementById("inventoryModal");
+  if (inventoryModal && inventoryModal.style.display !== "none" && currentInventoryHeroId != null) {
+    const hero = state.party.find(h => h.id === currentInventoryHeroId);
+    if (hero) {
+      populateEquipmentSection(hero);
+    }
+  }
 }
 
 export function updateStatsModalSkills(hero) {
@@ -1132,6 +1143,9 @@ export function renderMeta() {
 let selectedZoneForTravel = null;
 let selectedSubAreaForTravel = null;
 
+// Track which hero's inventory modal is open (for live refresh)
+let currentInventoryHeroId = null;
+
 function zoneKey(zone) {
   return zone?.id || `zone_${zone?.zoneNumber ?? ""}`;
 }
@@ -1291,6 +1305,7 @@ function openInventoryModal(hero) {
   const modal = document.getElementById("inventoryModal");
   const title = document.getElementById("inventoryModalTitle");
   const cls = getClassDef(hero.classKey);
+  currentInventoryHeroId = hero.id;
   
   title.textContent = `${hero.name} (${cls?.name || 'Unknown'}) - Lv ${hero.level}`;
   renderConsumableStrip(hero);
@@ -1867,7 +1882,8 @@ function populateEquipmentSection(hero) {
     
     // Check if this weapon slot is on cooldown
     const isWeaponSlot = slotKey === "main" || slotKey === "off";
-    const hasCooldown = isWeaponSlot && hero.equipCd > 0;
+    const equipCd = hero.equipCd || 0;
+    const hasCooldown = isWeaponSlot && equipCd > 0;
     
     if (equippedItem && !itemDef) {
       // Missing item definition - show placeholder
@@ -1879,7 +1895,7 @@ function populateEquipmentSection(hero) {
     } else if (itemDef) {
       // Check for cooldown overlay
       const cooldownBadge = hasCooldown 
-        ? `<div style="position:absolute;top:4px;right:4px;background:#ef4444;color:#fff;border-radius:4px;padding:2px 6px;font-size:10px;font-weight:bold;line-height:1;">🔒 ${hero.equipCd}</div>`
+        ? `<div style="position:absolute;top:4px;right:4px;background:#ef4444;color:#fff;border-radius:4px;padding:2px 6px;font-size:10px;font-weight:bold;line-height:1;">🔒 ${equipCd}</div>`
         : '';
       
       slotDiv.innerHTML = `
@@ -1967,9 +1983,10 @@ function populateEquipmentSection(hero) {
       // Check equip cooldown for weapon swaps during combat (BEFORE consuming item)
       const isWeaponSlot = slotKey === "main" || slotKey === "off";
       const inCombat = hero.inCombat && state.currentEnemies.length > 0;
+      const equipCd = hero.equipCd || 0;
       
-      if (isWeaponSlot && inCombat && hero.equipCd > 0) {
-        addLog(`Cannot swap weapons yet (${hero.equipCd} tick${hero.equipCd > 1 ? 's' : ''}).`, "error");
+      if (isWeaponSlot && inCombat && equipCd > 0) {
+        addLog(`Cannot swap weapons yet (${equipCd} tick${equipCd > 1 ? 's' : ''}).`, "error");
         return;
       }
       
