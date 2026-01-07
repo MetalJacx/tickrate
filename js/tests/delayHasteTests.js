@@ -67,6 +67,46 @@ function computeOverflowBonuses(baseDelayTenths, totalHastePct) {
   return { extraSwingChance, autoDmgMult, procMult };
 }
 
+// Active-first normalization helpers (mirrors combat.js behavior)
+function getBuffListTest(actor) {
+  const active = actor?.activeBuffs;
+  if (active && Object.keys(active).length > 0) return Object.values(active);
+  if (Array.isArray(actor?.buffs)) return actor.buffs;
+  return [];
+}
+
+function getDebuffListTest(actor) {
+  const active = actor?.activeDebuffs;
+  if (active && Object.keys(active).length > 0) return Object.values(active);
+  if (Array.isArray(actor?.debuffs)) return actor.debuffs;
+  return [];
+}
+
+function getTotalHastePctTest(actor) {
+  let hastePct = 0;
+
+  // Equipment haste (test-friendly: allow slot.stats.hastePct)
+  if (actor.equipment) {
+    for (const slot of Object.values(actor.equipment)) {
+      if (slot?.stats?.hastePct) {
+        hastePct += slot.stats.hastePct;
+      }
+    }
+  }
+
+  // Buff haste (active-first)
+  for (const buff of getBuffListTest(actor)) {
+    if (buff?.hastePct) hastePct += buff.hastePct;
+  }
+
+  // Debuff slow (active-first)
+  for (const debuff of getDebuffListTest(actor)) {
+    if (debuff?.slowPct) hastePct -= debuff.slowPct;
+  }
+
+  return clamp(hastePct, -0.75, 3.0);
+}
+
 // Test Suite 1: Basic Swing Tick Calculations
 function testBasicSwingTicks() {
   console.log("\n=== Test Suite 1: Basic Swing Tick Calculations ===\n");
@@ -581,6 +621,47 @@ function testEquipCooldown() {
   console.log(`📊 Suite 9: ${passed}/${total} passed\n`);
   return { passed, total };
 }
+
+// === SUITE 10: Active-First Haste/Slow Normalization ===
+function testHasteBuffNormalization() {
+  console.log("\n=== Test Suite 10: Active-First Haste/Slow Normalization ===\n");
+
+  let passed = 0, total = 0;
+
+  // 10.1: activeBuffs-only haste applies
+  total++;
+  const actorActiveBuff = { activeBuffs: { a: { hastePct: 0.20 } } };
+  if (assert(getTotalHastePctTest(actorActiveBuff) === 0.20, "activeBuffs-only: hastePct contributes")) passed++;
+
+  // 10.2: legacy buffs array haste applies
+  total++;
+  const actorLegacyBuff = { buffs: [{ hastePct: 0.15 }] };
+  if (assert(getTotalHastePctTest(actorLegacyBuff) === 0.15, "legacy buffs array: hastePct contributes")) passed++;
+
+  // 10.3: activeDebuffs-only slow applies
+  total++;
+  const actorActiveDebuff = { activeDebuffs: { d: { slowPct: 0.30 } } };
+  if (assert(getTotalHastePctTest(actorActiveDebuff) === -0.30, "activeDebuffs-only: slowPct subtracts")) passed++;
+
+  // 10.4: active buffs override legacy buffs (no double-count)
+  total++;
+  const actorBothBuffs = {
+    activeBuffs: { a: { hastePct: 0.25 } },
+    buffs: [{ hastePct: 0.10 }]
+  };
+  if (assert(getTotalHastePctTest(actorBothBuffs) === 0.25, "activeBuffs override legacy buffs (no double-count)")) passed++;
+
+  // 10.5: active debuffs override legacy debuffs (no double-count)
+  total++;
+  const actorBothDebuffs = {
+    activeDebuffs: { a: { slowPct: 0.20 } },
+    debuffs: [{ slowPct: 0.15 }]
+  };
+  if (assert(getTotalHastePctTest(actorBothDebuffs) === -0.20, "activeDebuffs override legacy debuffs (no double-count)")) passed++;
+
+  console.log(`\n📊 Suite 10: ${passed}/${total} passed\n`);
+  return { passed, total };
+}
 // Master test runner
 function runTests() {
   console.log("\n");
@@ -599,7 +680,8 @@ function runTests() {
     testSwingCooldownProgression(),
     testSwingRescale(),
     testWeaponDelayAndSwap(),
-    testEquipCooldown()
+    testEquipCooldown(),
+    testHasteBuffNormalization()
   ];
 
   results.forEach(r => {

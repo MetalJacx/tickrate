@@ -114,9 +114,33 @@ export function getBaseDelayTenths(actor) {
   }
 }
 
+// Normalize buff storage: prefer activeBuffs, fallback to legacy buffs array
+function getBuffList(actor) {
+  const active = actor?.activeBuffs;
+  if (active && Object.keys(active).length > 0) {
+    return Object.values(active);
+  }
+  if (Array.isArray(actor?.buffs)) {
+    return actor.buffs;
+  }
+  return [];
+}
+
+// Normalize debuff storage: prefer activeDebuffs, fallback to legacy debuffs array
+function getDebuffList(actor) {
+  const active = actor?.activeDebuffs;
+  if (active && Object.keys(active).length > 0) {
+    return Object.values(active);
+  }
+  if (Array.isArray(actor?.debuffs)) {
+    return actor.debuffs;
+  }
+  return [];
+}
+
 /**
  * Get total haste percentage for an actor (clamped to [-0.75, +3.00])
- * Includes equipment bonuses, buffs, debuffs
+ * Includes equipment bonuses, buffs, debuffs (active-first)
  */
 export function getTotalHastePct(actor) {
   let hastePct = 0;
@@ -133,21 +157,19 @@ export function getTotalHastePct(actor) {
     }
   }
 
-  // Buff haste
-  if (actor.buffs) {
-    for (const buff of actor.buffs) {
-      if (buff.hastePct) {
-        hastePct += buff.hastePct;
-      }
+  // Buff haste (active-first)
+  const buffs = getBuffList(actor);
+  for (const buff of buffs) {
+    if (buff?.hastePct) {
+      hastePct += buff.hastePct;
     }
   }
 
-  // Debuff slow
-  if (actor.debuffs) {
-    for (const debuff of actor.debuffs) {
-      if (debuff.slowPct) {
-        hastePct -= debuff.slowPct;
-      }
+  // Debuff slow (active-first)
+  const debuffs = getDebuffList(actor);
+  for (const debuff of debuffs) {
+    if (debuff?.slowPct) {
+      hastePct -= debuff.slowPct;
     }
   }
 
