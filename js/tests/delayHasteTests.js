@@ -327,6 +327,49 @@ function testSwingCooldownProgression() {
   return { passed, total };
 }
 
+// Test Suite 7: Proportional Rescale on Haste/Slow (no free swings)
+function testSwingRescale() {
+  console.log("\n=== Test Suite 7: Swing Rescale on Haste/Slow ===\n");
+  
+  let passed = 0, total = 0;
+
+  function clamp(val, min, max) { return Math.min(max, Math.max(min, val)); }
+  function rescaleSwingCd(oldSwingTicks, oldSwingCd, newSwingTicks) {
+    const progress = clamp(1 - (oldSwingCd / oldSwingTicks), 0, 1);
+    let newSwingCd = Math.round((1 - progress) * newSwingTicks);
+    if (oldSwingCd !== 0) newSwingCd = Math.max(1, newSwingCd); else newSwingCd = 0;
+    return newSwingCd;
+  }
+
+  // 7.1: 50% progressed swing; haste reduces remaining time proportionally
+  total++;
+  const cd_haste = rescaleSwingCd(4, 2, 2); // progress=0.5, newCd=round(0.5*2)=1
+  if (assert(cd_haste === 1, "50% progress; haste to 2 ticks -> new swingCd = 1")) passed++;
+
+  // 7.2: 50% progressed swing; slow increases remaining time proportionally
+  total++;
+  const cd_slow = rescaleSwingCd(4, 2, 6); // progress=0.5, newCd=round(0.5*6)=3
+  if (assert(cd_slow === 3, "50% progress; slow to 6 ticks -> new swingCd = 3")) passed++;
+
+  // 7.3: Already ready to swing; remains ready regardless of haste/slow
+  total++;
+  const cd_ready = rescaleSwingCd(4, 0, 8); // oldCd=0 -> stays 0
+  if (assert(cd_ready === 0, "Ready to swing (cd=0); remains 0 after change")) passed++;
+
+  // 7.4: Near-zero cd cannot be locked-in by repeated slow; minimum 1 if not already zero
+  total++;
+  const cd_lock = rescaleSwingCd(4, 1, 8); // progress=0.75, new=round(0.25*8)=2 (>=1)
+  if (assert(cd_lock === 2, "Near-zero cd + slow -> new swingCd >= 1 (here 2)")) passed++;
+
+  // 7.5: Haste on near-finished swing does not grant instant swing unless cd was already 0
+  total++;
+  const cd_haste_near = rescaleSwingCd(4, 1, 2); // progress=0.75, new=round(0.25*2)=1 (not 0)
+  if (assert(cd_haste_near === 1, "Near-finished swing + haste -> new swingCd = 1 (no free swing)")) passed++;
+
+  console.log(`\n📊 Suite 7: ${passed}/${total} passed\n`);
+  return { passed, total };
+}
+
 // Master test runner
 function runTests() {
   console.log("\n");
@@ -342,7 +385,8 @@ function runTests() {
     testSlowCalculations(),
     testOverflowBonuses(),
     testHasteClamping(),
-    testSwingCooldownProgression()
+    testSwingCooldownProgression(),
+    testSwingRescale()
   ];
 
   results.forEach(r => {

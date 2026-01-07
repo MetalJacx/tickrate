@@ -191,6 +191,26 @@ function computeOverflowBonuses(baseDelayTenths, totalHastePct) {
 }
 
 /**
+ * Rescale remaining swing cooldown when tick window changes due to haste/slow
+ * Preserves progress through the current swing window without granting free swings.
+ * - If oldSwingCd was 0 (already ready), remains 0
+ * - Otherwise, clamps to at least 1 tick to avoid immediate swings
+ */
+function rescaleSwingCd(oldSwingTicks, oldSwingCd, newSwingTicks) {
+  if (!Number.isFinite(oldSwingTicks) || !Number.isFinite(oldSwingCd) || oldSwingTicks <= 0) {
+    return Math.min(Number.isFinite(newSwingTicks) ? newSwingTicks : 1, newSwingTicks || 1);
+  }
+  const progress = clamp(1 - (oldSwingCd / oldSwingTicks), 0, 1);
+  let newSwingCd = Math.round((1 - progress) * newSwingTicks);
+  if (oldSwingCd !== 0) {
+    newSwingCd = Math.max(1, newSwingCd);
+  } else {
+    newSwingCd = 0;
+  }
+  return newSwingCd;
+}
+
+/**
  * Initialize or refresh swing timer for an actor
  * Sets swingTicks and swingCd (with random stagger)
  */
@@ -288,6 +308,10 @@ export function refreshHeroDerived(hero) {
   // Store old delay/haste info for weapon swap detection during refreshHeroDerived
   const oldBaseDelayTenths = hero.swingTicks ? getBaseDelayTenths(hero) : null;
   const oldTotalHastePct = hero.swingTicks ? getTotalHastePct(hero) : null;
+  // Capture current swing window to enable proportional rescale on haste/slow
+  const hadSwingWindow = Number.isFinite(hero.swingTicks) && Number.isFinite(hero.swingCd);
+  const oldSwingTicks = hadSwingWindow ? hero.swingTicks : null;
+  const oldSwingCd = hadSwingWindow ? hero.swingCd : null;
 
   // Reset stats to class base first (don't accumulate) then apply race modifiers
   const baseStats = fillStats({ ...cls.stats });
@@ -359,12 +383,18 @@ export function refreshHeroDerived(hero) {
       hero.swingTicks = newSwingTicks;
       hero.swingCd = newSwingTicks; // Hard reset to prevent free swing from swap
     }
-    // HASTE/SLOW BUFF: update swing ticks but preserve swing progress
+    // HASTE/SLOW BUFF: update swing ticks and proportionally rescale remaining time
     else if (hasteChanged) {
       const newSwingTicks = computeSwingTicks(newBaseDelayTenths, newTotalHastePct);
-      hero.swingTicks = newSwingTicks;
-      // Clamp cooldown to new tick value but don't reset it (preserve progress)
-      hero.swingCd = Math.min(hero.swingCd, newSwingTicks);
+      if (oldSwingTicks && oldSwingCd != null && oldSwingTicks > 0) {
+        const newSwingCd = rescaleSwingCd(oldSwingTicks, oldSwingCd, newSwingTicks);
+        hero.swingTicks = newSwingTicks;
+        hero.swingCd = newSwingCd;
+      } else {
+        // Fallback if prior window unknown: update and clamp
+        hero.swingTicks = newSwingTicks;
+        hero.swingCd = Math.min(hero.swingCd ?? newSwingTicks, newSwingTicks);
+      }
     }
   }
 
