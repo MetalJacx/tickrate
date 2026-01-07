@@ -547,7 +547,10 @@ export function createHero(classKey, customName = null, raceKey = DEFAULT_RACE_K
     
     // Swing timer for auto-attacks
     swingTicks: 0,
-    swingCd: 0
+    swingCd: 0,
+    
+    // Equip cooldown (2 ticks after weapon swap in combat)
+    equipCd: 0
   };
 
   refreshHeroDerived(hero);
@@ -2111,6 +2114,11 @@ export function gameTick() {
     // Tick down Arcane Shield lockout (prevents offensive spells for 1 tick)
     if (hero.arcaneShieldLockout && hero.arcaneShieldLockout > 0) {
       hero.arcaneShieldLockout -= 1;
+    }
+    
+    // Tick down equip cooldown
+    if (hero.equipCd && hero.equipCd > 0) {
+      hero.equipCd -= 1;
     }
 
     // Clean up expired buffs

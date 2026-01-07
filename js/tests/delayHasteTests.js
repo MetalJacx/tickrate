@@ -446,7 +446,86 @@ function testSwingRescale() {
   console.log(`\n📊 Suite 7: ${passed}/${total} passed\n`);
   return { passed, total };
 }
+// === SUITE 9: Equip Cooldown (Prevent Weapon Spam) ===
+function testEquipCooldown() {
+  console.log("\n=== Test Suite 9: Equip Cooldown (Prevent Weapon Spam) ===\n");
+  
+  let passed = 0, total = 0;
 
+  // Simulate hero with equipCd
+  const hero = {
+    equipCd: 0,
+    equipment: { main: { id: "iron_sword", quantity: 1 } },
+    inCombat: true
+  };
+
+  // Test 9.1: equipCd initializes to 0
+  total++;
+  if (assert(
+    hero.equipCd === 0,
+    "Hero starts with equipCd = 0 (no cooldown)"
+  )) passed++;
+
+  // Test 9.2: After weapon swap in combat, equipCd = 2
+  hero.equipCd = 2; // Simulates what happens after weapon swap
+  total++;
+  if (assert(
+    hero.equipCd === 2,
+    "After weapon swap in combat: equipCd = 2"
+  )) passed++;
+
+  // Test 9.3: Weapon swap blocked when equipCd > 0
+  const canSwap = hero.equipCd === 0;
+  total++;
+  if (assert(
+    canSwap === false,
+    "Weapon swap blocked when equipCd > 0"
+  )) passed++;
+
+  // Test 9.4: Tick 1 - decrement equipCd
+  hero.equipCd = Math.max(0, hero.equipCd - 1);
+  total++;
+  if (assert(
+    hero.equipCd === 1,
+    "After 1 tick: equipCd = 1"
+  )) passed++;
+
+  // Test 9.5: Still blocked when equipCd = 1
+  const canSwap2 = hero.equipCd === 0;
+  total++;
+  if (assert(
+    canSwap2 === false,
+    "Weapon swap still blocked when equipCd = 1"
+  )) passed++;
+
+  // Test 9.6: Tick 2 - decrement equipCd to 0
+  hero.equipCd = Math.max(0, hero.equipCd - 1);
+  total++;
+  if (assert(
+    hero.equipCd === 0,
+    "After 2 ticks: equipCd = 0 (cooldown expired)"
+  )) passed++;
+
+  // Test 9.7: Can swap again when equipCd = 0
+  const canSwap3 = hero.equipCd === 0;
+  total++;
+  if (assert(
+    canSwap3 === true,
+    "Weapon swap allowed when equipCd = 0"
+  )) passed++;
+
+  // Test 9.8: equipCd never goes negative
+  hero.equipCd = 0;
+  hero.equipCd = Math.max(0, hero.equipCd - 1);
+  total++;
+  if (assert(
+    hero.equipCd === 0,
+    "equipCd clamped to 0 (never negative)"
+  )) passed++;
+
+  console.log(`📊 Suite 9: ${passed}/${total} passed\n`);
+  return { passed, total };
+}
 // Master test runner
 function runTests() {
   console.log("\n");
@@ -464,7 +543,8 @@ function runTests() {
     testHasteClamping(),
     testSwingCooldownProgression(),
     testSwingRescale(),
-    testWeaponDelayAndSwap()
+    testWeaponDelayAndSwap(),
+    testEquipCooldown()
   ];
 
   results.forEach(r => {

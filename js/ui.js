@@ -1950,9 +1950,17 @@ function populateEquipmentSection(hero) {
         state.sharedInventory[slotIndex] = null;
       }
       
+      // Check equip cooldown for weapon swaps during combat
+      const isWeaponSlot = slotKey === "main" || slotKey === "off";
+      const inCombat = hero.inCombat && state.currentEnemies.length > 0;
+      
+      if (isWeaponSlot && inCombat && hero.equipCd > 0) {
+        addLog(`Cannot swap weapons yet (${hero.equipCd} tick${hero.equipCd > 1 ? 's' : ''}).`, "error");
+        return;
+      }
+      
       // Equip the item
       const oldEquipped = hero.equipment[slotKey];
-      const isWeaponSlot = slotKey === "main" || slotKey === "off";
       hero.equipment[slotKey] = { id: itemId, quantity: 1 };
       
       // If there was an old equipped item, return it to inventory
@@ -1969,12 +1977,15 @@ function populateEquipmentSection(hero) {
       refreshHeroDerived(hero);
 
       // If weapon slot changed while in combat, hard reset swing timer immediately
-      if (isWeaponSlot && hero.inCombat && state.currentEnemies.length > 0) {
+      if (isWeaponSlot && inCombat) {
         const baseDelay = getBaseDelayTenths(hero);
         const hastePct = getTotalHastePct(hero);
         const newSwingTicks = computeSwingTicks(baseDelay, hastePct);
         hero.swingTicks = newSwingTicks;
         hero.swingCd = newSwingTicks; // Hard reset on swap
+        
+        // Set equip cooldown to prevent spam
+        hero.equipCd = 2;
 
         const newItemDef = getItemDef(itemId);
         const newItemName = newItemDef ? newItemDef.name : itemId;
