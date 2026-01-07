@@ -1,5 +1,5 @@
 import { state } from "./state.js";
-import { heroLevelUpCost, applyHeroLevelUp, canTravelForward, travelToNextZone, travelToPreviousZone, recalcPartyTotals, killsRequiredForZone, spawnEnemy, doubleAttackCap, doubleAttackProcChance, refreshHeroDerived, getMeditateCap, hasBuff, toggleTargetDummy } from "./combat.js";
+import { heroLevelUpCost, applyHeroLevelUp, canTravelForward, travelToNextZone, travelToPreviousZone, recalcPartyTotals, killsRequiredForZone, spawnEnemy, doubleAttackCap, doubleAttackProcChance, refreshHeroDerived, getMeditateCap, hasBuff, toggleTargetDummy, getTotalHastePct, getBaseDelayTenths, computeSwingTicks } from "./combat.js";
 import { spawnEnemyToList } from "./combat.js";
 import { CLASSES, getClassDef } from "./classes/index.js";
 import { getZoneDef, listZones, ensureZoneDiscovery, getActiveSubArea } from "./zones/index.js";
@@ -1965,11 +1965,17 @@ function populateEquipmentSection(hero) {
         }
       }
       
-      // Recalculate hero stats
+      // Recalculate hero stats (applies item stats etc.)
       refreshHeroDerived(hero);
-      
-      // Log weapon swap in combat (non-spammy: only at equip time, not on refresh ticks)
+
+      // If weapon slot changed while in combat, hard reset swing timer immediately
       if (isWeaponSlot && hero.inCombat && state.currentEnemies.length > 0) {
+        const baseDelay = getBaseDelayTenths(hero);
+        const hastePct = getTotalHastePct(hero);
+        const newSwingTicks = computeSwingTicks(baseDelay, hastePct);
+        hero.swingTicks = newSwingTicks;
+        hero.swingCd = newSwingTicks; // Hard reset on swap
+
         const newItemDef = getItemDef(itemId);
         const newItemName = newItemDef ? newItemDef.name : itemId;
         addLog(`${hero.name} swaps to ${newItemName} and resets their swing timer!`, "normal");

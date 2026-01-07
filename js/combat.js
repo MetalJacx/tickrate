@@ -97,10 +97,10 @@ function clamp(val, min, max) {
  * Heroes: use equipped weapon delay, or 30 if unarmed
  * Mobs: use naturalDelayTenths, or 30 as default
  */
-function getBaseDelayTenths(actor) {
+export function getBaseDelayTenths(actor) {
   if (actor.heroId) {
     // Hero: check equipped weapon
-    const equippedWeaponSlot = actor.equipment?.["main_hand"];
+    const equippedWeaponSlot = actor.equipment?.["main"] ?? actor.equipment?.["main_hand"];
     if (equippedWeaponSlot) {
       const itemDef = getItemDef(equippedWeaponSlot.id);
       if (itemDef?.delayTenths) {
@@ -118,7 +118,7 @@ function getBaseDelayTenths(actor) {
  * Get total haste percentage for an actor (clamped to [-0.75, +3.00])
  * Includes equipment bonuses, buffs, debuffs
  */
-function getTotalHastePct(actor) {
+export function getTotalHastePct(actor) {
   let hastePct = 0;
 
   // Equipment haste (if any)
@@ -160,7 +160,7 @@ function getTotalHastePct(actor) {
  * Internally clamps haste to [-0.75, +3.00] and uses standard rounding
  * swingTicks = max(1, round((baseDelayTenths / (1 + clampedHaste)) / 30))
  */
-function computeSwingTicks(baseDelayTenths, totalHastePct) {
+export function computeSwingTicks(baseDelayTenths, totalHastePct) {
   const clampedHaste = clamp(totalHastePct, -0.75, 3.0);
   const effectiveDelayTenths = baseDelayTenths / (1 + clampedHaste);
   return Math.max(1, Math.round(effectiveDelayTenths / 30));
@@ -368,8 +368,8 @@ export function refreshHeroDerived(hero) {
     }
   }
 
-  // === WEAPON SWAP HANDLING (in combat only) ===
-  // Only reset swing timer on actual weapon swap (delay change), not on haste/slow buffs
+  // === HASTE/SLOW HANDLING (in combat only) ===
+  // Do NOT hard reset here; weapon swap reset is handled in the equip handler.
   if (hero.inCombat && state.currentEnemies.length > 0 && oldBaseDelayTenths !== null) {
     const newBaseDelayTenths = getBaseDelayTenths(hero);
     const newTotalHastePct = getTotalHastePct(hero);
@@ -377,14 +377,8 @@ export function refreshHeroDerived(hero) {
     const delayChanged = Math.abs(newBaseDelayTenths - oldBaseDelayTenths) > 0.01;
     const hasteChanged = Math.abs(newTotalHastePct - oldTotalHastePct) > 0.01;
     
-    // WEAPON SWAP: hard reset swing timer (no free swing exploit)
-    if (delayChanged) {
-      const newSwingTicks = computeSwingTicks(newBaseDelayTenths, newTotalHastePct);
-      hero.swingTicks = newSwingTicks;
-      hero.swingCd = newSwingTicks; // Hard reset to prevent free swing from swap
-    }
     // HASTE/SLOW BUFF: update swing ticks and proportionally rescale remaining time
-    else if (hasteChanged) {
+    if (!delayChanged && hasteChanged) {
       const newSwingTicks = computeSwingTicks(newBaseDelayTenths, newTotalHastePct);
       if (oldSwingTicks && oldSwingCd != null && oldSwingTicks > 0) {
         const newSwingCd = rescaleSwingCd(oldSwingTicks, oldSwingCd, newSwingTicks);
