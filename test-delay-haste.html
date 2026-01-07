@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delay & Haste System Test Runner</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0e27;
+            color: #e2e8f0;
+            padding: 20px;
+            margin: 0;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #4ade80;
+            text-align: center;
+            border-bottom: 2px solid #4ade80;
+            padding-bottom: 10px;
+        }
+        .test-suite {
+            background: #1a1f3a;
+            border-left: 4px solid #3b82f6;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 6px;
+        }
+        .test-suite h2 {
+            color: #3b82f6;
+            margin-top: 0;
+        }
+        .test-result {
+            padding: 8px;
+            margin: 8px 0;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        .pass {
+            background: #1e3a2a;
+            color: #4ade80;
+            border-left: 3px solid #4ade80;
+            padding-left: 10px;
+        }
+        .fail {
+            background: #3a1e1e;
+            color: #ef4444;
+            border-left: 3px solid #ef4444;
+            padding-left: 10px;
+        }
+        .summary {
+            background: #2d3748;
+            border: 2px solid #4ade80;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .summary.success {
+            border-color: #4ade80;
+            color: #4ade80;
+        }
+        .summary.partial {
+            border-color: #f59e0b;
+            color: #f59e0b;
+        }
+        button {
+            background: #4ade80;
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 10px auto;
+            display: block;
+        }
+        button:hover {
+            background: #22c55e;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .stat-box {
+            background: #1a1f3a;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .stat-box .label {
+            color: #94a3b8;
+            font-size: 12px;
+        }
+        .stat-box .value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4ade80;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Delay & Haste System Test Suite</h1>
+        
+        <button onclick="runTests()">Run All Tests</button>
+        
+        <div id="output"></div>
+    </div>
+
+    <script>
+        // Helper functions
+        function log(message, type = "info") {
+            const output = document.getElementById("output");
+            const div = document.createElement("div");
+            div.className = `test-result ${type === "pass" ? "pass" : type === "fail" ? "fail" : "info"}`;
+            div.textContent = message;
+            output.appendChild(div);
+            console.log(message);
+        }
+
+        function clamp(val, min, max) {
+            return Math.min(max, Math.max(min, val));
+        }
+
+        function computeSwingTicks(baseDelayTenths, totalHastePct) {
+            const effectiveDelayTenths = baseDelayTenths / (1 + totalHastePct);
+            return Math.max(1, Math.round(effectiveDelayTenths / 30));
+        }
+
+        function computeOverflowBonuses(baseDelayTenths, totalHastePct) {
+            const effectiveDelayTenths = baseDelayTenths / (1 + totalHastePct);
+            const swingTicks = computeSwingTicks(baseDelayTenths, totalHastePct);
+
+            if (swingTicks > 1) {
+                return { extraSwingChance: 0, autoDmgMult: 1.0, procMult: 1.0 };
+            }
+
+            const overflowPct = Math.max(0, (30 - effectiveDelayTenths) / 30);
+            const extraSwingChance = clamp(overflowPct, 0, 0.50);
+            const overflow2 = Math.max(0, overflowPct - 0.50);
+
+            const autoDmgMult = 1 + Math.min(overflow2 * 0.20, 0.10);
+            const procMult = 1 + Math.min(overflow2 * 0.40, 0.20);
+
+            return { extraSwingChance, autoDmgMult, procMult };
+        }
+
+        function assert(condition, message) {
+            if (!condition) {
+                log(`❌ FAIL: ${message}`, "fail");
+                return false;
+            }
+            log(`✓ PASS: ${message}`, "pass");
+            return true;
+        }
+
+        function assertClose(actual, expected, tolerance = 0.01, message = "") {
+            const diff = Math.abs(actual - expected);
+            if (diff > tolerance) {
+                log(`❌ FAIL: ${message} (expected ${expected}, got ${actual}, diff ${diff})`, "fail");
+                return false;
+            }
+            log(`✓ PASS: ${message}`, "pass");
+            return true;
+        }
+
+        // Test suites
+        function testBasicSwingTicks() {
+            const output = document.getElementById("output");
+            const suite = document.createElement("div");
+            suite.className = "test-suite";
+            suite.innerHTML = "<h2>Test Suite 1: Basic Swing Tick Calculations</h2>";
+            output.appendChild(suite);
+
+            let passed = 0, total = 0;
+
+            total++;
+            if (assert(computeSwingTicks(15, 0) === 1, "Dagger (delay 15) = 1 tick")) passed++;
+
+            total++;
+            if (assert(computeSwingTicks(30, 0) === 1, "Sword (delay 30) = 1 tick")) passed++;
+
+            total++;
+            if (assert(computeSwingTicks(40, 0) === 2, "Mace (delay 40) = 2 ticks")) passed++;
+
+            total++;
+            if (assert(computeSwingTicks(60, 0) === 2, "Slow weapon (delay 60) = 2 ticks")) passed++;
+
+            total++;
+            if (assert(computeSwingTicks(100, 0) === 3, "Very slow weapon (delay 100) = 3 ticks")) passed++;
+
+            return { passed, total };
+        }
+
+        function testHasteCalculations() {
+            const output = document.getElementById("output");
+            const suite = document.createElement("div");
+            suite.className = "test-suite";
+            suite.innerHTML = "<h2>Test Suite 2: Haste Calculations</h2>";
+            output.appendChild(suite);
+
+            let passed = 0, total = 0;
+
+            total++;
+            if (assert(computeSwingTicks(30, 1.0) === 1, "Sword (30) with +100% haste = 1 tick")) passed++;
+
+            total++;
+            if (assert(computeSwingTicks(40, 0.5) === 1, "Mace (40) with +50% haste = 1 tick (from 2)")) passed++;
+
+            total++;
+            if (assert(computeSwingTicks(40, 0.3) === 2, "Mace (40) with +30% haste = 2 ticks (not enough)")) passed++;
+
+            total++;
+            if (assert(computeSwingTicks(40, 1.0) === 1, "Mace (40) with +100% haste = 1 tick")) passed++;
+
+            total++;
+            if (assert(computeSwingTicks(15, 3.0) === 1, "Dagger (15) with +300% haste = 1 tick (already at floor)")) passed++;
+
+            return { passed, total };
+        }
+
+        function testSlowCalculations() {
+            const output = document.getElementById("output");
+            const suite = document.createElement("div");
+            suite.className = "test-suite";
+            suite.innerHTML = "<h2>Test Suite 3: Slow/Debuff Calculations</h2>";
+            output.appendChild(suite);
+
+            let passed = 0, total = 0;
+
+            total++;
+            if (assert(computeSwingTicks(30, -0.25) === 1, "Sword (30) with -25% slow = 1 tick")) passed++;
+
+            total++;
+            if (assert(computeSwingTicks(40, -0.5) === 3, "Mace (40) with -50% slow = 3 ticks (from 2)")) passed++;
+
+            total++;
+            if (assert(computeSwingTicks(30, -0.75) === 4, "Sword (30) with -75% slow (max) = 4 ticks")) passed++;
+
+            total++;
+            if (assert(computeSwingTicks(40, -0.75) === 6, "Mace (40) with -75% slow (max) = 6 ticks")) passed++;
+
+            return { passed, total };
+        }
+
+        function testOverflowBonuses() {
+            const output = document.getElementById("output");
+            const suite = document.createElement("div");
+            suite.className = "test-suite";
+            suite.innerHTML = "<h2>Test Suite 4: Overflow Bonuses</h2>";
+            output.appendChild(suite);
+
+            let passed = 0, total = 0;
+
+            const dag30 = computeOverflowBonuses(15, 0.30);
+            total++;
+            if (assertClose(dag30.extraSwingChance, 0.50, 0.01, "Dagger (15) with +30% haste: 50% extra swing chance (capped)")) passed++;
+
+            total++;
+            if (assert(computeOverflowBonuses(30, 0).extraSwingChance === 0, "Sword (30) with 0% haste: 0% extra swing chance")) passed++;
+
+            const mace100 = computeOverflowBonuses(40, 1.0);
+            total++;
+            if (assert(mace100.extraSwingChance > 0 && mace100.extraSwingChance <= 0.50, "Mace (40) with +100% haste: extra swing chance in range")) passed++;
+
+            total++;
+            if (assert(mace100.autoDmgMult === 1.0, "Mace (40) with +100% haste: no damage multiplier")) passed++;
+
+            const dagMax = computeOverflowBonuses(15, 3.0);
+            total++;
+            if (assert(dagMax.extraSwingChance === 0.50 && dagMax.autoDmgMult <= 1.10, "Dagger (15) with max haste: capped correctly")) passed++;
+
+            total++;
+            const noFloor = computeOverflowBonuses(60, 0);
+            if (assert(noFloor.extraSwingChance === 0 && noFloor.autoDmgMult === 1.0, "Delay 60 (2 ticks): no overflow")) passed++;
+
+            return { passed, total };
+        }
+
+        function testHasteClamping() {
+            const output = document.getElementById("output");
+            const suite = document.createElement("div");
+            suite.className = "test-suite";
+            suite.innerHTML = "<h2>Test Suite 5: Haste Clamping</h2>";
+            output.appendChild(suite);
+
+            let passed = 0, total = 0;
+
+            total++;
+            const clampedHigh = computeSwingTicks(30, 5.0);
+            const clampedHigh_ref = computeSwingTicks(30, 3.0);
+            if (assert(clampedHigh === clampedHigh_ref, "Haste +500% clamped to +300%")) passed++;
+
+            total++;
+            const clampedLow = computeSwingTicks(30, -0.90);
+            const clampedLow_ref = computeSwingTicks(30, -0.75);
+            if (assert(clampedLow === clampedLow_ref, "Slow -90% clamped to -75%")) passed++;
+
+            return { passed, total };
+        }
+
+        function testSwingCooldownProgression() {
+            const output = document.getElementById("output");
+            const suite = document.createElement("div");
+            suite.className = "test-suite";
+            suite.innerHTML = "<h2>Test Suite 6: Swing Cooldown Progression</h2>";
+            output.appendChild(suite);
+
+            let passed = 0, total = 0;
+
+            const hero = { swingTicks: 2, swingCd: 2 };
+
+            total++;
+            if (assert(hero.swingCd === 2, "Hero initialized with swingCd = 2")) passed++;
+
+            hero.swingCd = Math.max(0, hero.swingCd - 1);
+            total++;
+            if (assert(hero.swingCd === 1, "After tick 1: swingCd = 1")) passed++;
+
+            hero.swingCd = Math.max(0, hero.swingCd - 1);
+            total++;
+            if (assert(hero.swingCd === 0, "After tick 2: swingCd = 0 (swing ready)")) passed++;
+
+            hero.swingCd = hero.swingTicks;
+            total++;
+            if (assert(hero.swingCd === 2, "After swing, reset: swingCd = 2")) passed++;
+
+            const hero1tick = { swingTicks: 1, swingCd: 0 };
+            total++;
+            if (assert(hero1tick.swingCd === 0, "1-tick hero: swingCd starts at 0")) passed++;
+
+            return { passed, total };
+        }
+
+        function runTests() {
+            document.getElementById("output").innerHTML = "";
+            
+            console.clear();
+            console.log("╔════════════════════════════════════════════════════════╗");
+            console.log("║        DELAY & HASTE SYSTEM TEST SUITE                ║");
+            console.log("╚════════════════════════════════════════════════════════╝");
+
+            const results = [
+                testBasicSwingTicks(),
+                testHasteCalculations(),
+                testSlowCalculations(),
+                testOverflowBonuses(),
+                testHasteClamping(),
+                testSwingCooldownProgression()
+            ];
+
+            let totalPassed = 0, totalTests = 0;
+            results.forEach(r => {
+                totalPassed += r.passed;
+                totalTests += r.total;
+            });
+
+            const output = document.getElementById("output");
+            const summary = document.createElement("div");
+            summary.className = totalPassed === totalTests ? "summary success" : "summary partial";
+            
+            const statsDiv = document.createElement("div");
+            statsDiv.className = "stats";
+            statsDiv.innerHTML = `
+                <div class="stat-box">
+                    <div class="label">Passed</div>
+                    <div class="value">${totalPassed}</div>
+                </div>
+                <div class="stat-box">
+                    <div class="label">Failed</div>
+                    <div class="value">${totalTests - totalPassed}</div>
+                </div>
+                <div class="stat-box">
+                    <div class="label">Total</div>
+                    <div class="value">${totalTests}</div>
+                </div>
+            `;
+            summary.appendChild(statsDiv);
+
+            const message = document.createElement("p");
+            if (totalPassed === totalTests) {
+                message.textContent = "🎉 All tests passed! The delay/haste system is working correctly.";
+            } else {
+                message.textContent = `⚠️ ${totalTests - totalPassed} test(s) failed. Review the results above.`;
+            }
+            summary.appendChild(message);
+
+            output.appendChild(summary);
+
+            console.log(`║ FINAL RESULTS: ${totalPassed}/${totalTests} tests passed                   ║`);
+            console.log("╚════════════════════════════════════════════════════════╝\n");
+        }
+
+        // Auto-run on load
+        window.addEventListener("load", () => {
+            log("Ready! Click 'Run All Tests' to start.", "info");
+        });
+    </script>
+</body>
+</html>

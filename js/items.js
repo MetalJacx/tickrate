@@ -49,6 +49,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 10,
     icon: "🗡️",
+    delayTenths: 15,
     stats: { dps: 2}
   },
   iron_sword: {
@@ -58,6 +59,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 20,
     icon: "⚔️",
+    delayTenths: 30,
     stats: { str: 2, dps: 3 }
   },
   wooden_shield: {
@@ -76,6 +78,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 2,
     icon: "🪵",
+    delayTenths: 30,
     stats: { dps: 1 }
   },
   enchanted_branch: {
@@ -85,6 +88,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 40,
     icon: "🌿",
+    delayTenths: 28,
     stats: { dps: 4, wis: 2, int: 2 }
   },
   iron_mace: {
@@ -94,6 +98,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 26,
     icon: "🔨",
+    delayTenths: 40,
     stats: { dps: 4, str: 1 }
   },
   rusty_sword: {
@@ -103,6 +108,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 20,
     icon: "⚔️",
+    delayTenths: 30,
     stats: { dps: 3 }
   },
     rusty_mace: {
@@ -112,6 +118,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 20,
     icon: "🔨",
+    delayTenths: 40,
     stats: { dps: 3 }
   },
 };

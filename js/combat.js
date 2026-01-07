@@ -88,6 +88,120 @@ function clamp(val, min, max) {
   return Math.min(max, Math.max(min, val));
 }
 
+// ===========================
+// DELAY & HASTE SYSTEM
+// ===========================
+
+/**
+ * Get base delay in tenths of a second for an actor
+ * Heroes: use equipped weapon delay, or 30 if unarmed
+ * Mobs: use naturalDelayTenths, or 30 as default
+ */
+function getBaseDelayTenths(actor) {
+  if (actor.heroId) {
+    // Hero: check equipped weapon
+    const equippedWeaponSlot = actor.equipment?.["main_hand"];
+    if (equippedWeaponSlot) {
+      const itemDef = getItemDef(equippedWeaponSlot.id);
+      if (itemDef?.delayTenths) {
+        return itemDef.delayTenths;
+      }
+    }
+    return 30; // Unarmed default
+  } else {
+    // Mob: use naturalDelayTenths or 30
+    return actor.naturalDelayTenths || 30;
+  }
+}
+
+/**
+ * Get total haste percentage for an actor (clamped to [-0.75, +3.00])
+ * Includes equipment bonuses, buffs, debuffs
+ */
+function getTotalHastePct(actor) {
+  let hastePct = 0;
+
+  // Equipment haste (if any)
+  if (actor.equipment) {
+    for (const slot of Object.values(actor.equipment)) {
+      if (slot) {
+        const itemDef = getItemDef(slot.id);
+        if (itemDef?.stats?.hastePct) {
+          hastePct += itemDef.stats.hastePct;
+        }
+      }
+    }
+  }
+
+  // Buff haste
+  if (actor.buffs) {
+    for (const buff of actor.buffs) {
+      if (buff.hastePct) {
+        hastePct += buff.hastePct;
+      }
+    }
+  }
+
+  // Debuff slow
+  if (actor.debuffs) {
+    for (const debuff of actor.debuffs) {
+      if (debuff.slowPct) {
+        hastePct -= debuff.slowPct;
+      }
+    }
+  }
+
+  // Clamp to [-0.75, +3.00]
+  return clamp(hastePct, -0.75, 3.0);
+}
+
+/**
+ * Compute swing ticks from base delay and total haste
+ * swingTicks = max(1, round((baseDelayTenths / (1 + totalHastePct)) / 30))
+ */
+function computeSwingTicks(baseDelayTenths, totalHastePct) {
+  const effectiveDelayTenths = baseDelayTenths / (1 + totalHastePct);
+  return Math.max(1, Math.round(effectiveDelayTenths / 30));
+}
+
+/**
+ * Compute extra swing chance and overflow bonuses when at 1-tick floor
+ * Returns { extraSwingChance, autoDmgMult, procMult }
+ */
+function computeOverflowBonuses(baseDelayTenths, totalHastePct) {
+  const effectiveDelayTenths = baseDelayTenths / (1 + totalHastePct);
+  const swingTicks = computeSwingTicks(baseDelayTenths, totalHastePct);
+
+  if (swingTicks > 1) {
+    // Not at floor, no overflow
+    return { extraSwingChance: 0, autoDmgMult: 1.0, procMult: 1.0 };
+  }
+
+  // At 1-tick floor, compute overflow
+  const overflowPct = Math.max(0, (30 - effectiveDelayTenths) / 30);
+  const extraSwingChance = clamp(overflowPct, 0, 0.50);
+  const overflow2 = Math.max(0, overflowPct - 0.50);
+
+  const autoDmgMult = 1 + Math.min(overflow2 * 0.20, 0.10); // cap at +10%
+  const procMult = 1 + Math.min(overflow2 * 0.40, 0.20); // cap at +20%
+
+  return { extraSwingChance, autoDmgMult, procMult };
+}
+
+/**
+ * Initialize or refresh swing timer for an actor
+ * Sets swingTicks and swingCd (with random stagger)
+ */
+function initializeSwingTimer(actor) {
+  const baseDelay = getBaseDelayTenths(actor);
+  const hastePct = getTotalHastePct(actor);
+  const swingTicks = computeSwingTicks(baseDelay, hastePct);
+
+  actor.swingTicks = swingTicks;
+  actor.swingCd = randInt(swingTicks + 1); // Random between 0 and swingTicks (inclusive)
+  actor.lastSwingTicks = swingTicks; // Track for comparisons
+}
+
 export function doubleAttackCap(level) {
   if (level < 5) return 0;
   const growth = level - 4; // Level 5 -> 1, Level 60 -> 56
@@ -375,7 +489,11 @@ export function createHero(classKey, customName = null, raceKey = DEFAULT_RACE_K
     skillTimers: {},
 
     // Quick consumables (assigned from shared inventory)
-    consumableSlots: Array(4).fill(null)
+    consumableSlots: Array(4).fill(null),
+    
+    // Swing timer for auto-attacks
+    swingTicks: 0,
+    swingCd: 0
   };
 
   refreshHeroDerived(hero);
@@ -384,6 +502,9 @@ export function createHero(classKey, customName = null, raceKey = DEFAULT_RACE_K
   if (cls.key === "warrior" && hero.level >= 5 && hero.doubleAttackSkill < 1) {
     hero.doubleAttackSkill = 1;
   }
+  
+  // Initialize swing timer
+  initializeSwingTimer(hero);
   return hero;
 }
 
@@ -613,6 +734,9 @@ export function spawnEnemy() {
   enemy.drops = rollLoot(enemyDef, getZoneDef(z));
   applyEnemyEquipmentBonuses(enemy, enemy.drops);
   enemy.hp = enemy.maxHP;
+  
+  // Initialize swing timer
+  initializeSwingTimer(enemy);
 
   state.currentEnemies = [enemy];
   state.waitingToRespawn = false;
@@ -638,6 +762,9 @@ function spawnEnemyToList() {
   enemy.drops = rollLoot(enemyDef, getZoneDef(z));
   applyEnemyEquipmentBonuses(enemy, enemy.drops);
   enemy.hp = enemy.maxHP;
+  
+  // Initialize swing timer
+  initializeSwingTimer(enemy);
 
   state.currentEnemies.push(enemy);
   addLog(`Oh no! Your luck is not on your side - another ${enemyDef.name} takes notice of your presence!`, "damage_taken");
@@ -1715,6 +1842,143 @@ function tryEnemyActionUses() {
   }
 }
 
+/**
+ * Perform a single hero auto-attack against a target enemy
+ */
+function performAutoAttack(hero, enemy) {
+  if (!enemy || enemy.hp <= 0) return;
+  
+  const debuff = hero.tempDamageDebuffTicks > 0 ? hero.tempDamageDebuffAmount || 0 : 0;
+  const attackBaseDamage = Math.max(0, (hero.baseDamage ?? hero.dps ?? 0) - debuff);
+  const hitChance = computeHitChance(hero, enemy);
+  if (Math.random() > hitChance) {
+    addLog(`${hero.name} misses ${enemy.name}.`, "damage_dealt");
+    return;
+  }
+
+  const isCrit = Math.random() < computeCritChance(hero);
+  const rawDamage = computeRawDamage({ ...hero, baseDamage: attackBaseDamage }, isCrit);
+  const mitigated = applyACMitigation(rawDamage, enemy);
+  enemy.hp = Math.max(0, enemy.hp - mitigated);
+  addLog(`${hero.name} hits ${enemy.name} for ${mitigated.toFixed(1)}${isCrit ? " (CRIT)" : ""}!`, "damage_dealt");
+
+  // Break mesmerize on any damage taken by the enemy
+  if (hasBuff(enemy, "mesmerize")) {
+    removeBuff(enemy, "mesmerize");
+    addLog(`${enemy.name} is jolted awake!`, "skill");
+  }
+
+  // Warrior-only: Double Attack proc and skill-ups
+  if (hero.classKey === "warrior" && enemy.hp > 0) {
+    const cap = doubleAttackCap(hero.level);
+    const skill = hero.doubleAttackSkill || 0;
+    const procChance = doubleAttackProcChance(skill);
+    if (cap > 0 && procChance > 0 && Math.random() < procChance) {
+      const daHitChance = computeHitChance(hero, enemy);
+      if (Math.random() <= daHitChance) {
+        const daCrit = Math.random() < computeCritChance(hero);
+        const daRaw = computeRawDamage({ ...hero, baseDamage: attackBaseDamage }, daCrit);
+        const daMitigated = applyACMitigation(daRaw, enemy);
+        enemy.hp = Math.max(0, enemy.hp - daMitigated);
+        addLog(`${hero.name} strikes again (Double Attack) for ${daMitigated.toFixed(1)}${daCrit ? " (CRIT)" : ""}!`, "skill");
+      } else {
+        addLog(`${hero.name}'s double attack misses ${enemy.name}.`, "damage_dealt");
+      }
+
+      // Skill-up roll only when double attack procs
+      if (skill < cap) {
+        const skillChance = doubleAttackSkillUpChance(hero, cap);
+        if (skillChance > 0 && Math.random() < skillChance) {
+          hero.doubleAttackSkill = Math.min(cap, skill + 1);
+          addLog(`${hero.name}'s Double Attack skill increases to ${hero.doubleAttackSkill}!`, "skill");
+          updateStatsModalSkills(hero);
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Perform a single enemy auto-attack against a random party member
+ */
+function performEnemyAutoAttack(enemy, livingMembers) {
+  if (!livingMembers || livingMembers.length === 0) return;
+  
+  // Single-target damage: pick one living member to take the hit
+  let target = null;
+  if (enemy.forcedTargetId && enemy.forcedTargetTicks > 0) {
+    target = livingMembers.find(h => h.id === enemy.forcedTargetId);
+    if (!target) {
+      enemy.forcedTargetId = null;
+      enemy.forcedTargetTicks = 0;
+    }
+  }
+  if (!target) {
+    target = livingMembers[randInt(livingMembers.length)];
+  }
+  
+  const hitChance = computeHitChance(enemy, target);
+  if (Math.random() > hitChance) {
+    addLog(`${enemy.name} misses ${target.name}.`, "damage_taken");
+    return;
+  }
+
+  const isCrit = Math.random() < computeCritChance(enemy);
+  const rawDamage = computeRawDamage(enemy, isCrit);
+  const mitigated = applyACMitigation(rawDamage, target);
+  
+  // Divine Focus: complete immunity to incoming damage
+  if (hasBuff(target, "divine_focus")) {
+    addLog(`${enemy.name} attacks ${target.name}, but Divine Focus makes them immune.`, "skill");
+    return;
+  }
+
+  // Apply tempHP absorption (e.g., from Arcane Shield buff)
+  let damageToHealth = mitigated;
+  const arcaneShieldBuff = getBuff(target, "arcane_shield");
+  if (arcaneShieldBuff && arcaneShieldBuff.data && arcaneShieldBuff.data.tempHP > 0) {
+    const tempHPAbsorbed = Math.min(arcaneShieldBuff.data.tempHP, damageToHealth);
+    arcaneShieldBuff.data.tempHP -= tempHPAbsorbed;
+    damageToHealth -= tempHPAbsorbed;
+  }
+
+  // Apply Lesser Rune (single-hit absorb, then removed)
+  const runeData = getBuff(target, "lesser_rune");
+  if (runeData) {
+    const absorbRemaining = runeData.absorbRemaining ?? 0;
+    const absorbed = Math.min(absorbRemaining, damageToHealth);
+    damageToHealth -= absorbed;
+    removeBuff(target, "lesser_rune");
+    addLog(`${target.name}'s Lesser Rune absorbs ${absorbed.toFixed(1)} damage and shatters.`, "skill");
+  }
+  
+  target.health = Math.max(0, target.health - damageToHealth);
+  if (damageToHealth > 0) {
+    addLog(`${enemy.name} attacks ${target.name} for ${damageToHealth.toFixed(1)} damage${isCrit ? " (CRIT)" : ""}!`, "damage_taken");
+  }
+
+  // Apply any enemy-sourced debuffs defined on the enemy
+  if (enemy.debuffs && enemy.debuffs.length) {
+    for (const debuff of enemy.debuffs) {
+      if (debuff.type === "weaken_damage") {
+        const chance = debuff.chance ?? 1;
+        if (Math.random() < chance) {
+          const duration = debuff.durationTicks ?? 5;
+          const amount = debuff.amount ?? 1;
+          target.tempDamageDebuffTicks = duration;
+          target.tempDamageDebuffAmount = amount;
+          addLog(`${target.name} is weakened! -${amount} damage for ${duration} ticks.`, "damage_taken");
+        }
+      }
+    }
+  }
+
+  if (target.health <= 0) {
+    target.isDead = true;
+    target.deathTime = Date.now();
+    addLog(`${target.name} has been defeated.`, "damage_taken");
+  }
+}
 
 export function gameTick() {
   // Handle auto-revival for dead members (60 second timer)
@@ -2068,72 +2332,45 @@ export function gameTick() {
     }
   }
 
-  // 3) Apply damage to main enemy (first in list)
+  // 3) Hero auto-attacks (swing timer based)
   const mainEnemy = state.currentEnemies[0];
-  if (!mainEnemy) {
-    checkSlotUnlocks();
-    return;
-  }
-  const livingAttackers = state.party.filter(h => !h.isDead);
-  for (const hero of livingAttackers) {
-    const debuff = hero.tempDamageDebuffTicks > 0 ? hero.tempDamageDebuffAmount || 0 : 0;
-    const attackBaseDamage = Math.max(0, (hero.baseDamage ?? hero.dps ?? 0) - debuff);
-    const hitChance = computeHitChance(hero, mainEnemy);
-    if (Math.random() > hitChance) {
-      addLog(`${hero.name} misses ${mainEnemy.name}.`, "damage_dealt");
-      continue;
-    }
-
-    const isCrit = Math.random() < computeCritChance(hero);
-    const rawDamage = computeRawDamage({ ...hero, baseDamage: attackBaseDamage }, isCrit);
-    const mitigated = applyACMitigation(rawDamage, mainEnemy);
-    mainEnemy.hp = Math.max(0, mainEnemy.hp - mitigated);
-    totalDamageThisTick += mitigated;
-    addLog(`${hero.name} hits ${mainEnemy.name} for ${mitigated.toFixed(1)}${isCrit ? " (CRIT)" : ""}!`, "damage_dealt");
-
-    // Break mesmerize on any damage taken by the enemy
-    if (hasBuff(mainEnemy, "mesmerize")) {
-      removeBuff(mainEnemy, "mesmerize");
-      addLog(`${mainEnemy.name} is jolted awake!`, "skill");
-    }
-
-    // Warrior-only: Double Attack proc and skill-ups
-    if (hero.classKey === "warrior" && mainEnemy.hp > 0) {
-      const cap = doubleAttackCap(hero.level);
-      const skill = hero.doubleAttackSkill || 0;
-      const procChance = doubleAttackProcChance(skill);
-      if (cap > 0 && procChance > 0 && Math.random() < procChance) {
-        const daHitChance = computeHitChance(hero, mainEnemy);
-        if (Math.random() <= daHitChance) {
-          const daCrit = Math.random() < computeCritChance(hero);
-          const daRaw = computeRawDamage({ ...hero, baseDamage: attackBaseDamage }, daCrit);
-          const daMitigated = applyACMitigation(daRaw, mainEnemy);
-          mainEnemy.hp = Math.max(0, mainEnemy.hp - daMitigated);
-          totalDamageThisTick += daMitigated;
-          addLog(`${hero.name} strikes again (Double Attack) for ${daMitigated.toFixed(1)}${daCrit ? " (CRIT)" : ""}!`, "skill");
-        } else {
-          addLog(`${hero.name}'s double attack misses ${mainEnemy.name}.`, "damage_dealt");
+  if (mainEnemy) {
+    const livingAttackers = state.party.filter(h => !h.isDead);
+    for (const hero of livingAttackers) {
+      // Tick down swing cooldown
+      hero.swingCd = Math.max(0, hero.swingCd - 1);
+      
+      // Check if swing is ready
+      if (hero.swingCd === 0) {
+        // Perform auto-attack
+        performAutoAttack(hero, mainEnemy);
+        
+        // Check if hero's weapon changed (delay/haste changed) and recompute swing ticks
+        const baseDelay = getBaseDelayTenths(hero);
+        const hastePct = getTotalHastePct(hero);
+        const newSwingTicks = computeSwingTicks(baseDelay, hastePct);
+        if (newSwingTicks !== hero.swingTicks) {
+          hero.swingTicks = newSwingTicks;
         }
-
-        // Skill-up roll only when double attack procs
-        if (skill < cap) {
-          const skillChance = doubleAttackSkillUpChance(hero, cap);
-          if (skillChance > 0 && Math.random() < skillChance) {
-            hero.doubleAttackSkill = Math.min(cap, skill + 1);
-            addLog(`${hero.name}'s Double Attack skill increases to ${hero.doubleAttackSkill}!`, "skill");
-            updateStatsModalSkills(hero);
-          }
+        
+        // Reset swing cooldown
+        hero.swingCd = hero.swingTicks;
+        
+        // Check overflow for extra swing chance
+        const overflow = computeOverflowBonuses(baseDelay, hastePct);
+        if (overflow.extraSwingChance > 0 && Math.random() < overflow.extraSwingChance) {
+          performAutoAttack(hero, mainEnemy);
+        }
+        
+        if (mainEnemy.hp <= 0) {
+          break;
         }
       }
-    }
-
-    if (mainEnemy.hp <= 0) {
-      break;
     }
   }
 
   // Check if main enemy is killed
-  if (mainEnemy.hp <= 0) {
+  if (mainEnemy && mainEnemy.hp <= 0) {
     onEnemyKilled(mainEnemy, Math.max(1, totalDamageThisTick));
     totalDamageThisTick = 0;
     state.currentEnemies.shift(); // Remove main enemy from list
@@ -2148,101 +2385,35 @@ export function gameTick() {
   // Enemy actions (spells/abilities) occur before their melee swings
   tryEnemyActionUses();
 
-  // 4) All living enemies attack party
+  // 4) Enemy auto-attacks (swing timer based)
   let livingMembers = state.party.filter(h => !h.isDead);
   if (livingMembers.length > 0) {
     for (const enemy of state.currentEnemies) {
-      // Mesmerized enemies do nothing
-      if (hasBuff(enemy, "mesmerize")) {
-        addLog(`${enemy.name} is mesmerized and cannot act!`, "normal");
-        continue;
-      }
-      // Check if enemy is feared and skip attack
-      if (hasBuff(enemy, "fear")) {
-        addLog(`${enemy.name} is running for its life and cannot attack!`, "normal");
-        continue;
-      }
+      // Tick down swing cooldown
+      enemy.swingCd = Math.max(0, enemy.swingCd - 1);
       
-      // Single-target damage: pick one living member to take the hit
-      let target = null;
-      if (enemy.forcedTargetId && enemy.forcedTargetTicks > 0) {
-        target = livingMembers.find(h => h.id === enemy.forcedTargetId);
-        if (!target) {
-          enemy.forcedTargetId = null;
-          enemy.forcedTargetTicks = 0;
+      // Check if swing is ready
+      if (enemy.swingCd === 0) {
+        // Mesmerized enemies do nothing
+        if (hasBuff(enemy, "mesmerize")) {
+          addLog(`${enemy.name} is mesmerized and cannot act!`, "normal");
+        } else if (hasBuff(enemy, "fear")) {
+          // Feared enemies do nothing
+          addLog(`${enemy.name} is running for its life and cannot attack!`, "normal");
+        } else {
+          // Perform auto-attack
+          performEnemyAutoAttack(enemy, livingMembers);
         }
-      }
-      if (!target) {
-        target = livingMembers[randInt(livingMembers.length)];
-      }
-      const hitChance = computeHitChance(enemy, target);
-      if (Math.random() > hitChance) {
-        addLog(`${enemy.name} misses ${target.name}.`, "damage_taken");
-        continue;
-      }
-
-      const isCrit = Math.random() < computeCritChance(enemy);
-      const rawDamage = computeRawDamage(enemy, isCrit);
-      const mitigated = applyACMitigation(rawDamage, target);
-      
-      // Divine Focus: complete immunity to incoming damage
-      if (hasBuff(target, "divine_focus")) {
-        addLog(`${enemy.name} attacks ${target.name}, but Divine Focus makes them immune.`, "skill");
-        continue;
-      }
-
-      // Apply tempHP absorption (e.g., from Arcane Shield buff)
-      let damageToHealth = mitigated;
-      const arcaneShieldBuff = getBuff(target, "arcane_shield");
-      if (arcaneShieldBuff && arcaneShieldBuff.data && arcaneShieldBuff.data.tempHP > 0) {
-        const tempHPAbsorbed = Math.min(arcaneShieldBuff.data.tempHP, damageToHealth);
-        arcaneShieldBuff.data.tempHP -= tempHPAbsorbed;
-        damageToHealth -= tempHPAbsorbed;
-      }
-
-      // Apply Lesser Rune (single-hit absorb, then removed)
-      const runeData = getBuff(target, "lesser_rune");
-      if (runeData) {
-        const absorbRemaining = runeData.absorbRemaining ?? 0;
-        const absorbed = Math.min(absorbRemaining, damageToHealth);
-        damageToHealth -= absorbed;
-        removeBuff(target, "lesser_rune");
-        addLog(`${target.name}'s Lesser Rune absorbs ${absorbed.toFixed(1)} damage and shatters.`, "skill");
-      }
-      
-      target.health = Math.max(0, target.health - damageToHealth);
-      addLog(`${enemy.name} hits ${target.name} for ${mitigated.toFixed(1)}${isCrit ? " (CRIT)" : ""}!`, "damage_taken");
-
-      // Apply any enemy-sourced debuffs defined on the enemy
-      if (enemy.debuffs && enemy.debuffs.length) {
-        for (const debuff of enemy.debuffs) {
-          if (debuff.type === "weaken_damage") {
-            const chance = debuff.chance ?? 1;
-            if (Math.random() < chance) {
-              const duration = debuff.durationTicks ?? 5;
-              const amount = debuff.amount ?? 1;
-              target.tempDamageDebuffTicks = duration;
-              target.tempDamageDebuffAmount = amount;
-              addLog(`${target.name} is weakened! -${amount} damage for ${duration} ticks.`, "damage_taken");
-            }
-          }
-        }
-      }
-
-      // Check for death on the target
-      if (target.health <= 0 && !target.isDead) {
-        target.isDead = true;
-        target.deathTime = Date.now();
-        addLog(`${target.name} has been defeated!`, "damage_taken");
+        
+        // Reset swing cooldown (recompute in case of equipment changes, though unlikely for mobs)
+        enemy.swingCd = enemy.swingTicks;
       }
     }
-    // Re-evaluate living members after attacks; if none left, wipe ends combat
-    livingMembers = state.party.filter(h => !h.isDead);
-    if (livingMembers.length === 0) {
-      onPartyWipe();
-      return;
-    }
-  } else if (state.currentEnemies.length > 0) {
+  }
+
+  // Re-evaluate living members after attacks; if none left, wipe ends combat
+  let updatedLivingMembers = state.party.filter(h => !h.isDead);
+  if (updatedLivingMembers.length === 0) {
     onPartyWipe();
     return;
   }
