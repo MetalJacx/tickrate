@@ -68,14 +68,13 @@ function computeOverflowBonuses(baseDelayTenths, totalHastePct) {
 }
 
 // Active-first normalization helpers (mirrors combat.js behavior)
-function getBuffListTest(actor) {
+function getBuffListTest(actor, nowMs = Date.now()) {
   const active = actor?.activeBuffs;
   if (active && Object.keys(active).length > 0) {
-    const now = Date.now();
     const list = [];
     for (const entry of Object.values(active)) {
       if (entry && typeof entry === "object") {
-        if (entry.expiresAt != null && now > entry.expiresAt) continue;
+        if (entry.expiresAt != null && nowMs > entry.expiresAt) continue;
         const payload = entry.data ?? entry;
         list.push(payload);
       }
@@ -86,14 +85,13 @@ function getBuffListTest(actor) {
   return [];
 }
 
-function getDebuffListTest(actor) {
+function getDebuffListTest(actor, nowMs = Date.now()) {
   const active = actor?.activeDebuffs;
   if (active && Object.keys(active).length > 0) {
-    const now = Date.now();
     const list = [];
     for (const entry of Object.values(active)) {
       if (entry && typeof entry === "object") {
-        if (entry.expiresAt != null && now > entry.expiresAt) continue;
+        if (entry.expiresAt != null && nowMs > entry.expiresAt) continue;
         const payload = entry.data ?? entry;
         list.push(payload);
       }
@@ -104,7 +102,7 @@ function getDebuffListTest(actor) {
   return [];
 }
 
-function getTotalHastePctTest(actor) {
+function getTotalHastePctTest(actor, nowMs = Date.now()) {
   let hastePct = 0;
 
   // Equipment haste (test-friendly: allow slot.stats.hastePct)
@@ -117,12 +115,12 @@ function getTotalHastePctTest(actor) {
   }
 
   // Buff haste (active-first)
-  for (const buff of getBuffListTest(actor)) {
+  for (const buff of getBuffListTest(actor, nowMs)) {
     if (buff?.hastePct) hastePct += buff.hastePct;
   }
 
   // Debuff slow (active-first)
-  for (const debuff of getDebuffListTest(actor)) {
+  for (const debuff of getDebuffListTest(actor, nowMs)) {
     if (debuff?.slowPct) hastePct -= debuff.slowPct;
   }
 
@@ -652,18 +650,19 @@ function testHasteBuffNormalization() {
 
   // 10.1: activeBuffs-only haste applies
   total++;
+  const nowMs = 1_000_000;
   const actorActiveBuff = { activeBuffs: { a: { hastePct: 0.20 } } };
-  if (assert(getTotalHastePctTest(actorActiveBuff) === 0.20, "activeBuffs-only: hastePct contributes")) passed++;
+  if (assert(getTotalHastePctTest(actorActiveBuff, nowMs) === 0.20, "activeBuffs-only: hastePct contributes")) passed++;
 
   // 10.2: legacy buffs array haste applies
   total++;
   const actorLegacyBuff = { buffs: [{ hastePct: 0.15 }] };
-  if (assert(getTotalHastePctTest(actorLegacyBuff) === 0.15, "legacy buffs array: hastePct contributes")) passed++;
+  if (assert(getTotalHastePctTest(actorLegacyBuff, nowMs) === 0.15, "legacy buffs array: hastePct contributes")) passed++;
 
   // 10.3: activeDebuffs-only slow applies
   total++;
   const actorActiveDebuff = { activeDebuffs: { d: { slowPct: 0.30 } } };
-  if (assert(getTotalHastePctTest(actorActiveDebuff) === -0.30, "activeDebuffs-only: slowPct subtracts")) passed++;
+  if (assert(getTotalHastePctTest(actorActiveDebuff, nowMs) === -0.30, "activeDebuffs-only: slowPct subtracts")) passed++;
 
   // 10.4: active buffs override legacy buffs (no double-count)
   total++;
@@ -671,7 +670,7 @@ function testHasteBuffNormalization() {
     activeBuffs: { a: { hastePct: 0.25 } },
     buffs: [{ hastePct: 0.10 }]
   };
-  if (assert(getTotalHastePctTest(actorBothBuffs) === 0.25, "activeBuffs override legacy buffs (no double-count)")) passed++;
+  if (assert(getTotalHastePctTest(actorBothBuffs, nowMs) === 0.25, "activeBuffs override legacy buffs (no double-count)")) passed++;
 
   // 10.5: active debuffs override legacy debuffs (no double-count)
   total++;
@@ -679,31 +678,27 @@ function testHasteBuffNormalization() {
     activeDebuffs: { a: { slowPct: 0.20 } },
     debuffs: [{ slowPct: 0.15 }]
   };
-  if (assert(getTotalHastePctTest(actorBothDebuffs) === -0.20, "activeDebuffs override legacy debuffs (no double-count)")) passed++;
+  if (assert(getTotalHastePctTest(actorBothDebuffs, nowMs) === -0.20, "activeDebuffs override legacy debuffs (no double-count)")) passed++;
 
   // 10.6: activeBuffs wrapper {expiresAt, data:{hastePct}} contributes when not expired
   total++;
-  const realNow = Date.now;
-  const baseNow = realNow();
-  Date.now = () => baseNow;
-  const actorWrappedBuff = { activeBuffs: { h: { expiresAt: baseNow + 5000, data: { hastePct: 0.30 } } } };
-  if (assert(getTotalHastePctTest(actorWrappedBuff) === 0.30, "activeBuffs wrapper with data applies when unexpired")) passed++;
+  const actorWrappedBuff = { activeBuffs: { h: { expiresAt: nowMs + 5000, data: { hastePct: 0.30 } } } };
+  if (assert(getTotalHastePctTest(actorWrappedBuff, nowMs) === 0.30, "activeBuffs wrapper with data applies when unexpired")) passed++;
 
   // 10.7: expired activeBuffs wrapper does not contribute
   total++;
-  const actorExpiredBuff = { activeBuffs: { h: { expiresAt: baseNow - 1000, data: { hastePct: 0.30 } } } };
-  if (assert(getTotalHastePctTest(actorExpiredBuff) === 0.0, "expired activeBuffs wrapper ignored")) passed++;
+  const actorExpiredBuff = { activeBuffs: { h: { expiresAt: nowMs - 1000, data: { hastePct: 0.30 } } } };
+  if (assert(getTotalHastePctTest(actorExpiredBuff, nowMs) === 0.0, "expired activeBuffs wrapper ignored")) passed++;
 
   // 10.8: activeDebuffs wrapper {expiresAt, data:{slowPct}} subtracts when not expired
   total++;
-  const actorWrappedDebuff = { activeDebuffs: { s: { expiresAt: baseNow + 5000, data: { slowPct: 0.25 } } } };
-  if (assert(getTotalHastePctTest(actorWrappedDebuff) === -0.25, "activeDebuffs wrapper with data applies when unexpired")) passed++;
+  const actorWrappedDebuff = { activeDebuffs: { s: { expiresAt: nowMs + 5000, data: { slowPct: 0.25 } } } };
+  if (assert(getTotalHastePctTest(actorWrappedDebuff, nowMs) === -0.25, "activeDebuffs wrapper with data applies when unexpired")) passed++;
 
   // 10.9: expired activeDebuffs wrapper does not subtract
   total++;
-  const actorExpiredDebuff = { activeDebuffs: { s: { expiresAt: baseNow - 1000, data: { slowPct: 0.25 } } } };
-  if (assert(getTotalHastePctTest(actorExpiredDebuff) === 0.0, "expired activeDebuffs wrapper ignored")) passed++;
-  Date.now = realNow; // restore
+  const actorExpiredDebuff = { activeDebuffs: { s: { expiresAt: nowMs - 1000, data: { slowPct: 0.25 } } } };
+  if (assert(getTotalHastePctTest(actorExpiredDebuff, nowMs) === 0.0, "expired activeDebuffs wrapper ignored")) passed++;
 
   console.log(`\n📊 Suite 10: ${passed}/${total} passed\n`);
   return { passed, total };

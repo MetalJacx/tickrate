@@ -22,3 +22,14 @@ export function serializeState() {
 export function loadState(json) {
   Object.assign(state, JSON.parse(json));
 }
+
+// Effect helpers (centralized)
+export function unwrapEffect(entry) {
+  return entry && typeof entry === "object" && entry.data != null ? entry.data : entry;
+}
+
+export function isExpiredEffect(entry, nowMs) {
+  if (!entry || typeof entry !== "object") return false;
+  if (entry.expiresAt == null) return false;
+  return nowMs > entry.expiresAt;
+}

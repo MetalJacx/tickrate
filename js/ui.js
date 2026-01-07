@@ -3,7 +3,7 @@ import { heroLevelUpCost, applyHeroLevelUp, canTravelForward, travelToNextZone, 
 import { spawnEnemyToList } from "./combat.js";
 import { CLASSES, getClassDef } from "./classes/index.js";
 import { getZoneDef, listZones, ensureZoneDiscovery, getActiveSubArea } from "./zones/index.js";
-import { addLog } from "./util.js";
+import { addLog, isExpiredEffect } from "./util.js";
 import { formatPGSC, saveGame, updateCurrencyDisplay } from "./state.js";
 import { MAX_PARTY_SIZE, ACCOUNT_SLOT_UNLOCKS, CONSUMABLE_SLOT_UNLOCK_LEVELS } from "./defs.js";
 import { getItemDef } from "./items.js";
@@ -500,7 +500,7 @@ export function renderEnemy() {
     if (e.activeBuffs) {
       const now = Date.now();
       for (const [buffKey, buffData] of Object.entries(e.activeBuffs)) {
-        if (now <= buffData.expiresAt) {
+        if (!isExpiredEffect(buffData, now)) {
           const debuffPill = document.createElement("div");
           const timeLeft = ((buffData.expiresAt - now) / 1000).toFixed(0);
           debuffPill.style.cssText = `
@@ -795,7 +795,7 @@ export function renderParty() {
       if (hero.activeBuffs) {
         const now = Date.now();
         for (const [buffKey, buffData] of Object.entries(hero.activeBuffs)) {
-          if (now <= buffData.expiresAt) {
+          if (!isExpiredEffect(buffData, now)) {
             const buffPill = document.createElement("div");
             const timeLeft = ((buffData.expiresAt - now) / 1000).toFixed(0);
             buffPill.style.cssText = `

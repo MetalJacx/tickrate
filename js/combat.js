@@ -1,7 +1,7 @@
 import { state, nextHeroId, updateCurrencyDisplay, formatPGSC } from "./state.js";
 import { getClassDef, CLASS_DEFS } from "./classes/index.js";
 import { getZoneDef, getEnemyForZone, MAX_ZONE, rollSubAreaDiscoveries, ensureZoneDiscovery, getZoneById, getActiveSubArea } from "./zones/index.js";
-import { addLog, randInt } from "./util.js";
+import { addLog, randInt, isExpiredEffect, unwrapEffect } from "./util.js";
 import { ACCOUNT_SLOT_UNLOCKS, GAME_TICK_MS, MEDITATE_UNLOCK_LEVEL, MEDITATE_SKILL_HARD_CAP, MEDITATE_BASE_REGEN_FACTOR, COMBAT_REGEN_MULT, OOC_REGEN_MULT, XP_TEST_REDUCTION_PERCENT } from "./defs.js";
 import { updateStatsModalSkills } from "./ui.js";
 import { getItemDef } from "./items.js";
@@ -115,18 +115,13 @@ export function getBaseDelayTenths(actor) {
 }
 
 // Normalize buff storage: prefer activeBuffs, fallback to legacy buffs array
-function getBuffList(actor) {
+function getBuffList(actor, nowMs = Date.now()) {
   const active = actor?.activeBuffs;
   if (active && Object.keys(active).length > 0) {
-    const now = Date.now();
     const list = [];
     for (const entry of Object.values(active)) {
-      if (entry && typeof entry === "object") {
-        // Skip expired entries if expiresAt provided
-        if (entry.expiresAt != null && now > entry.expiresAt) continue;
-        const payload = entry.data ?? entry;
-        list.push(payload);
-      }
+      if (isExpiredEffect(entry, nowMs)) continue;
+      list.push(unwrapEffect(entry));
     }
     return list;
   }
@@ -137,17 +132,13 @@ function getBuffList(actor) {
 }
 
 // Normalize debuff storage: prefer activeDebuffs, fallback to legacy debuffs array
-function getDebuffList(actor) {
+function getDebuffList(actor, nowMs = Date.now()) {
   const active = actor?.activeDebuffs;
   if (active && Object.keys(active).length > 0) {
-    const now = Date.now();
     const list = [];
     for (const entry of Object.values(active)) {
-      if (entry && typeof entry === "object") {
-        if (entry.expiresAt != null && now > entry.expiresAt) continue;
-        const payload = entry.data ?? entry;
-        list.push(payload);
-      }
+      if (isExpiredEffect(entry, nowMs)) continue;
+      list.push(unwrapEffect(entry));
     }
     return list;
   }
@@ -161,7 +152,7 @@ function getDebuffList(actor) {
  * Get total haste percentage for an actor (clamped to [-0.75, +3.00])
  * Includes equipment bonuses, buffs, debuffs (active-first)
  */
-export function getTotalHastePct(actor) {
+export function getTotalHastePct(actor, nowMs = Date.now()) {
   let hastePct = 0;
 
   // Equipment haste (if any)
@@ -177,7 +168,7 @@ export function getTotalHastePct(actor) {
   }
 
   // Buff haste (active-first)
-  const buffs = getBuffList(actor);
+  const buffs = getBuffList(actor, nowMs);
   for (const buff of buffs) {
     if (buff?.hastePct) {
       hastePct += buff.hastePct;
@@ -185,7 +176,7 @@ export function getTotalHastePct(actor) {
   }
 
   // Debuff slow (active-first)
-  const debuffs = getDebuffList(actor);
+  const debuffs = getDebuffList(actor, nowMs);
   for (const debuff of debuffs) {
     if (debuff?.slowPct) {
       hastePct -= debuff.slowPct;
