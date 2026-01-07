@@ -33,7 +33,7 @@ function computeSwingTicks(baseDelayTenths, totalHastePct) {
   // Clamp haste to [-0.75, +3.00]
   const clampedHaste = Math.max(-0.75, Math.min(3.0, totalHastePct));
   const effectiveDelayTenths = baseDelayTenths / (1 + clampedHaste);
-  return Math.max(1, Math.ceil(effectiveDelayTenths / 30));
+  return Math.max(1, Math.round(effectiveDelayTenths / 30));
 }
 
 function computeOverflowBonuses(baseDelayTenths, totalHastePct) {
@@ -74,11 +74,11 @@ function testBasicSwingTicks() {
     "Sword (delay 30) = 1 tick"
   )) passed++;
 
-  // Test 1.3: Mace at delay 40 (should be 2 ticks)
+  // Test 1.3: Mace at delay 40 (should be 1 tick, round(1.33) = 1)
   total++;
   if (assert(
-    computeSwingTicks(40, 0) === 2,
-    "Mace (delay 40) = 2 ticks"
+    computeSwingTicks(40, 0) === 1,
+    "Mace (delay 40) = 1 tick (round(1.33))"
   )) passed++;
 
   // Test 1.4: Slow weapon at delay 60 (should be 2 ticks)
@@ -88,11 +88,11 @@ function testBasicSwingTicks() {
     "Slow weapon (delay 60) = 2 ticks"
   )) passed++;
 
-  // Test 1.5: Very slow at delay 100 (should be 4 ticks)
+  // Test 1.5: Very slow at delay 100 (should be 3 ticks, round(3.33) = 3)
   total++;
   if (assert(
-    computeSwingTicks(100, 0) === 4,
-    "Very slow weapon (delay 100) = 4 ticks"
+    computeSwingTicks(100, 0) === 3,
+    "Very slow weapon (delay 100) = 3 ticks (round(3.33))"
   )) passed++;
 
   console.log(`\n📊 Suite 1: ${passed}/${total} passed\n`);
@@ -112,18 +112,18 @@ function testHasteCalculations() {
     "Sword (delay 30) with +100% haste = 1 tick"
   )) passed++;
 
-  // Test 2.2: Mace (40) with +50% haste → 1 tick (normally 2)
+  // Test 2.2: Mace (40) with +50% haste → 1 tick (40/1.5 = 26.67, round = 1)
   total++;
   if (assert(
     computeSwingTicks(40, 0.5) === 1,
-    "Mace (delay 40) with +50% haste = 1 tick (from 2)"
+    "Mace (delay 40) with +50% haste = 1 tick"
   )) passed++;
 
-  // Test 2.3: Mace (40) with +30% haste → still 2 ticks (not enough)
+  // Test 2.3: Mace (40) with +30% haste → 1 tick (40/1.3 = 30.77, round = 1)
   total++;
   if (assert(
-    computeSwingTicks(40, 0.3) === 2,
-    "Mace (delay 40) with +30% haste = 2 ticks (not enough to hit floor)"
+    computeSwingTicks(40, 0.3) === 1,
+    "Mace (delay 40) with +30% haste = 1 tick (30.77 rounds to 1)"
   )) passed++;
 
   // Test 2.4: Mace (40) with +100% haste → 1 tick
@@ -150,11 +150,11 @@ function testSlowCalculations() {
   
   let passed = 0, total = 0;
 
-  // Test 3.1: Sword (30) with -25% slow → still 2 ticks
+  // Test 3.1: Sword (30) with -25% slow → 1 tick (30/0.75 = 40, round(40/30) = round(1.33) = 1)
   total++;
   if (assert(
-    computeSwingTicks(30, -0.25) === 2,
-    "Sword (delay 30) with -25% slow = 2 ticks"
+    computeSwingTicks(30, -0.25) === 1,
+    "Sword (delay 30) with -25% slow = 1 tick (rounds to 1)"
   )) passed++;
 
   // Test 3.2: Mace (40) with -50% slow → 3 ticks (from 2)
@@ -171,11 +171,11 @@ function testSlowCalculations() {
     "Sword (delay 30) with -75% slow (max) = 4 ticks"
   )) passed++;
 
-  // Test 3.4: Mace (40) with -75% slow → 6 ticks
+  // Test 3.4: Mace (40) with -75% slow → 5 ticks (40/0.25 = 160, round(160/30) = round(5.33) = 5)
   total++;
   if (assert(
-    computeSwingTicks(40, -0.75) === 6,
-    "Mace (delay 40) with -75% slow (max) = 6 ticks"
+    computeSwingTicks(40, -0.75) === 5,
+    "Mace (delay 40) with -75% slow (max) = 5 ticks (5.33 rounds to 5)"
   )) passed++;
 
   console.log(`\n📊 Suite 3: ${passed}/${total} passed\n`);

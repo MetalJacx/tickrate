@@ -163,7 +163,7 @@ function getTotalHastePct(actor) {
 function computeSwingTicks(baseDelayTenths, totalHastePct) {
   const clampedHaste = clamp(totalHastePct, -0.75, 3.0);
   const effectiveDelayTenths = baseDelayTenths / (1 + clampedHaste);
-  return Math.max(1, Math.ceil(effectiveDelayTenths / 30));
+  return Math.max(1, Math.round(effectiveDelayTenths / 30));
 }
 
 /**
@@ -285,6 +285,10 @@ export function refreshHeroDerived(hero) {
   hero.raceKey = hero.raceKey || race?.key || DEFAULT_RACE_KEY;
   hero.raceName = hero.raceName || race?.name;
 
+  // Store old delay/haste info for weapon swap detection during refreshHeroDerived
+  const oldBaseDelayTenths = hero.swingTicks ? getBaseDelayTenths(hero) : null;
+  const oldTotalHastePct = hero.swingTicks ? getTotalHastePct(hero) : null;
+
   // Reset stats to class base first (don't accumulate) then apply race modifiers
   const baseStats = fillStats({ ...cls.stats });
   for (const [stat, delta] of Object.entries(raceMods)) {
@@ -337,6 +341,26 @@ export function refreshHeroDerived(hero) {
           if (itemDef.stats.cha) hero.stats.cha = (hero.stats.cha || 0) + itemDef.stats.cha;
         }
       }
+    }
+  }
+
+  // === WEAPON SWAP RESET (if in combat) ===
+  // If delay or haste values changed and hero is in active combat,
+  // reset swing cooldown to prevent exploit where weapon swaps grant free hits
+  if (hero.inCombat && state.currentEnemies.length > 0 && oldBaseDelayTenths !== null) {
+    const newBaseDelayTenths = getBaseDelayTenths(hero);
+    const newTotalHastePct = getTotalHastePct(hero);
+    
+    // Detect if delay or haste changed (weapon swap or haste buff/debuff applied)
+    const delayChanged = Math.abs(newBaseDelayTenths - oldBaseDelayTenths) > 0.01;
+    const hasteChanged = Math.abs(newTotalHastePct - oldTotalHastePct) > 0.01;
+    
+    if (delayChanged || hasteChanged) {
+      // Recompute swing ticks with new weapon/haste
+      const newSwingTicks = computeSwingTicks(newBaseDelayTenths, newTotalHastePct);
+      hero.swingTicks = newSwingTicks;
+      hero.swingCd = newSwingTicks; // Reset cooldown (no free swing from weapon swap)
+      addLog(`${hero.name} swaps weapons and resets their swing timer!`, "normal");
     }
   }
 
