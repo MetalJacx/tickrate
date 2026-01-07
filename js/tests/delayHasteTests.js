@@ -102,6 +102,12 @@ function getDebuffListTest(actor, nowMs = Date.now()) {
   return [];
 }
 
+function isExpiredEffectTest(entry, nowMs) {
+  if (!entry || typeof entry !== "object") return false;
+  if (entry.expiresAt == null) return false;
+  return nowMs >= entry.expiresAt;
+}
+
 function getTotalHastePctTest(actor, nowMs = Date.now()) {
   let hastePct = 0;
 
@@ -708,6 +714,69 @@ function testHasteBuffNormalization() {
   console.log(`\n📊 Suite 10: ${passed}/${total} passed\n`);
   return { passed, total };
 }
+
+// Test Suite 11: purgeExpiredActive helper
+function testPurgeExpiredActive() {
+  console.log("=== Test Suite 11: purgeExpiredActive() Helper ===\n");
+  let passed = 0, total = 0;
+
+  // Import helper (validated copy mirrors util.js)
+  function purgeExpiredActiveTest(activeMap, nowMs = Date.now()) {
+    if (!activeMap) return 0;
+    let purged = 0;
+    for (const key of Object.keys(activeMap)) {
+      const entry = activeMap[key];
+      if (entry && isExpiredEffectTest(entry, nowMs)) {
+        delete activeMap[key];
+        purged += 1;
+      }
+    }
+    return purged;
+  }
+
+  // 11.1: purge expired entry, keep unexpired
+  total++;
+  const nowMs = 10000;
+  const map = {
+    expired_buff: { expiresAt: nowMs - 1, data: { hastePct: 0.5 } },
+    active_buff: { expiresAt: nowMs + 5000, data: { hastePct: 0.3 } }
+  };
+  const purgedCount = purgeExpiredActiveTest(map, nowMs);
+  const hasExpired = "expired_buff" in map;
+  const hasActive = "active_buff" in map;
+  if (assert(purgedCount === 1, "purgeExpiredActive: purged 1 entry")) passed++;
+
+  total++;
+  if (assert(!hasExpired, "purgeExpiredActive: expired_buff deleted")) passed++;
+
+  total++;
+  if (assert(hasActive, "purgeExpiredActive: active_buff remains")) passed++;
+
+  // 11.2: boundary case - expiresAt == nowMs is expired
+  total++;
+  const boundaryMap = {
+    boundary_buff: { expiresAt: nowMs, data: { hastePct: 0.2 } },
+    future_buff: { expiresAt: nowMs + 1, data: { hastePct: 0.4 } }
+  };
+  const boundaryPurged = purgeExpiredActiveTest(boundaryMap, nowMs);
+  if (assert(boundaryPurged === 1, "purgeExpiredActive: boundary (expiresAt == nowMs) purged")) passed++;
+
+  total++;
+  if (assert(!("boundary_buff" in boundaryMap), "purgeExpiredActive: boundary entry deleted")) passed++;
+
+  // 11.3: null/empty map returns 0
+  total++;
+  const nullResult = purgeExpiredActiveTest(null, nowMs);
+  if (assert(nullResult === 0, "purgeExpiredActive: null map returns 0")) passed++;
+
+  total++;
+  const emptyResult = purgeExpiredActiveTest({}, nowMs);
+  if (assert(emptyResult === 0, "purgeExpiredActive: empty map returns 0")) passed++;
+
+  console.log(`\n📊 Suite 11: ${passed}/${total} passed\n`);
+  return { passed, total };
+}
+
 // Master test runner
 function runTests() {
   console.log("\n");
@@ -727,7 +796,8 @@ function runTests() {
     testSwingRescale(),
     testWeaponDelayAndSwap(),
     testEquipCooldown(),
-    testHasteBuffNormalization()
+    testHasteBuffNormalization(),
+    testPurgeExpiredActive()
   ];
 
   results.forEach(r => {
