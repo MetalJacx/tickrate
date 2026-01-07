@@ -118,7 +118,17 @@ export function getBaseDelayTenths(actor) {
 function getBuffList(actor) {
   const active = actor?.activeBuffs;
   if (active && Object.keys(active).length > 0) {
-    return Object.values(active);
+    const now = Date.now();
+    const list = [];
+    for (const entry of Object.values(active)) {
+      if (entry && typeof entry === "object") {
+        // Skip expired entries if expiresAt provided
+        if (entry.expiresAt != null && now > entry.expiresAt) continue;
+        const payload = entry.data ?? entry;
+        list.push(payload);
+      }
+    }
+    return list;
   }
   if (Array.isArray(actor?.buffs)) {
     return actor.buffs;
@@ -130,7 +140,16 @@ function getBuffList(actor) {
 function getDebuffList(actor) {
   const active = actor?.activeDebuffs;
   if (active && Object.keys(active).length > 0) {
-    return Object.values(active);
+    const now = Date.now();
+    const list = [];
+    for (const entry of Object.values(active)) {
+      if (entry && typeof entry === "object") {
+        if (entry.expiresAt != null && now > entry.expiresAt) continue;
+        const payload = entry.data ?? entry;
+        list.push(payload);
+      }
+    }
+    return list;
   }
   if (Array.isArray(actor?.debuffs)) {
     return actor.debuffs;
