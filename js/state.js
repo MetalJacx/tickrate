@@ -1,7 +1,7 @@
 import { SAVE_KEY } from "./defs.js";
 import { DEFAULT_RACE_KEY } from "./races.js";
 import { getClassDef } from "./classes/index.js";
-import { isExpiredEffect } from "./util.js";
+import { isExpiredEffect, purgeExpiredActive } from "./util.js";
 
 // ===== Currency conversion helpers =====
 export function normalizePGSC(pgsc = {}) {
@@ -330,12 +330,7 @@ export function loadGame() {
       }
       // Remove expired buffs from old saves
       const now = Date.now();
-      for (const key of Object.keys(h.activeBuffs)) {
-        const entry = h.activeBuffs[key];
-        if (entry && isExpiredEffect(entry, now)) {
-          delete h.activeBuffs[key];
-        }
-      }
+      purgeExpiredActive(h.activeBuffs, now);
       return h;
     }) : [];
     state.partyMaxHP = data.partyMaxHP ?? 0;
