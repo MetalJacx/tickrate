@@ -1,4 +1,5 @@
 import { isExpiredEffect } from "./util.js";
+import { state } from "./state.js";
 // Centralized combat math and tuning knobs
 // Constants and helper functions to keep combat tuning in one place.
 export const COMBAT_CONSTANTS = {
@@ -42,17 +43,15 @@ export function rand01() {
   return Math.random();
 }
 
-function getStats(entity) {
+function getStats(entity, nowMs = state.nowMs ?? 0) {
   const stats = entity?.stats || {};
   // Include both old tempACBuffAmount (for backwards compatibility) and new buffs
   let acBonus = entity?.tempACBuffAmount || 0;
   
-  const now = Date.now();
-  
   // Fortify buff
   if (entity?.activeBuffs?.fortify) {
     const fortifyBuff = entity.activeBuffs.fortify;
-    if (!isExpiredEffect(fortifyBuff, now) && fortifyBuff.data?.acBonus) {
+    if (!isExpiredEffect(fortifyBuff, nowMs) && fortifyBuff.data?.acBonus) {
       acBonus += fortifyBuff.data.acBonus;
     }
   }
@@ -60,7 +59,7 @@ function getStats(entity) {
   // Courage buff
   if (entity?.activeBuffs?.courage) {
     const courageBuff = entity.activeBuffs.courage;
-    if (!isExpiredEffect(courageBuff, now) && courageBuff.data?.acBonus) {
+    if (!isExpiredEffect(courageBuff, nowMs) && courageBuff.data?.acBonus) {
       acBonus += courageBuff.data.acBonus;
     }
   }
@@ -68,7 +67,7 @@ function getStats(entity) {
   // WoodSkin buff
   if (entity?.activeBuffs?.woodskin) {
     const woodskinBuff = entity.activeBuffs.woodskin;
-    if (!isExpiredEffect(woodskinBuff, now) && woodskinBuff.data?.acBonus) {
+    if (!isExpiredEffect(woodskinBuff, nowMs) && woodskinBuff.data?.acBonus) {
       acBonus += woodskinBuff.data.acBonus;
     }
   }
@@ -76,7 +75,7 @@ function getStats(entity) {
   // Flame Lick debuff (reduces AC)
   if (entity?.activeBuffs?.flame_lick) {
     const flameLickBuff = entity.activeBuffs.flame_lick;
-    if (!isExpiredEffect(flameLickBuff, now) && flameLickBuff.data?.acReduction) {
+    if (!isExpiredEffect(flameLickBuff, nowMs) && flameLickBuff.data?.acReduction) {
       acBonus -= flameLickBuff.data.acReduction;
     }
   }

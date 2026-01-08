@@ -498,7 +498,7 @@ export function renderEnemy() {
     const debuffRow = document.createElement("div");
     debuffRow.style.cssText = "display:flex;gap:3px;flex-wrap:wrap;margin-top:3px;";
     if (e.activeBuffs) {
-      const now = Date.now();
+      const now = state.nowMs ?? 0;
       for (const [buffKey, buffData] of Object.entries(e.activeBuffs)) {
         if (!isExpiredEffect(buffData, now)) {
           const debuffPill = document.createElement("div");
@@ -793,7 +793,7 @@ export function renderParty() {
       const buffRow = document.createElement("div");
       buffRow.style.cssText = "display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;";
       if (hero.activeBuffs) {
-        const now = Date.now();
+        const now = state.nowMs ?? 0;
         for (const [buffKey, buffData] of Object.entries(hero.activeBuffs)) {
           if (!isExpiredEffect(buffData, now)) {
             const buffPill = document.createElement("div");

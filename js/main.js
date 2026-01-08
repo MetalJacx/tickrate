@@ -172,8 +172,8 @@ function startLoops({ lastSavedAt }) {
   }
 
   let offlineSummary = null;
-  if (lastSavedAt) {
-    const secondsOffline = Math.floor((Date.now() - lastSavedAt) / 1000);
+  if (lastSavedAt != null) {
+    const secondsOffline = Math.floor((state.nowMs - lastSavedAt) / 1000);
     offlineSummary = simulateOfflineProgress(secondsOffline);
   }
 

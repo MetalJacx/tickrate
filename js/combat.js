@@ -115,7 +115,7 @@ export function getBaseDelayTenths(actor) {
 }
 
 // Normalize buff storage: prefer activeBuffs, fallback to legacy buffs array
-function getBuffList(actor, nowMs = Date.now()) {
+function getBuffList(actor, nowMs = state.nowMs ?? 0) {
   const active = actor?.activeBuffs;
   if (active && Object.keys(active).length > 0) {
     const list = [];
@@ -132,7 +132,7 @@ function getBuffList(actor, nowMs = Date.now()) {
 }
 
 // Normalize debuff storage: prefer activeDebuffs, fallback to legacy debuffs array
-function getDebuffList(actor, nowMs = Date.now()) {
+function getDebuffList(actor, nowMs = state.nowMs ?? 0) {
   const active = actor?.activeDebuffs;
   if (active && Object.keys(active).length > 0) {
     const list = [];
@@ -152,7 +152,7 @@ function getDebuffList(actor, nowMs = Date.now()) {
  * Get total haste percentage for an actor (clamped to [-0.75, +3.00])
  * Includes equipment bonuses, buffs, debuffs (active-first)
  */
-export function getTotalHastePct(actor, nowMs = Date.now()) {
+export function getTotalHastePct(actor, nowMs = state.nowMs ?? 0) {
   let hastePct = 0;
 
   // Equipment haste (if any)
@@ -1267,21 +1267,21 @@ function meditateTick(hero) {
 }
 
 // Apply a buff to a hero
-export function applyBuff(hero, buffKey, durationMs, data = {}) {
+export function applyBuff(hero, buffKey, durationMs, data = {}, nowMs = state.nowMs ?? 0) {
   hero.activeBuffs = hero.activeBuffs || {};
   hero.activeBuffs[buffKey] = {
-    expiresAt: Date.now() + durationMs,
+    expiresAt: nowMs + durationMs,
     data
   };
 }
 
 // Check if a hero has an active buff
-export function hasBuff(hero, buffKey) {
+export function hasBuff(hero, buffKey, nowMs = state.nowMs ?? 0) {
   if (!hero.activeBuffs) return false;
   const buff = hero.activeBuffs[buffKey];
   if (!buff) return false;
   // Check if buff has expired
-  if (isExpiredEffect(buff, Date.now())) {
+  if (isExpiredEffect(buff, nowMs)) {
     delete hero.activeBuffs[buffKey];
     return false;
   }
@@ -1305,7 +1305,7 @@ export function getBuff(hero, buffKey) {
 // Clean up expired buffs for a hero
 function cleanupExpiredBuffs(hero) {
   if (!hero.activeBuffs) return;
-  const now = Date.now();
+  const now = state.nowMs ?? 0;
   purgeExpiredActive(hero.activeBuffs, now);
 }
 
@@ -2061,14 +2061,15 @@ function performEnemyAutoAttack(enemy, livingMembers) {
 
   if (target.health <= 0) {
     target.isDead = true;
-    target.deathTime = Date.now();
+    target.deathTime = state.nowMs ?? 0;
     addLog(`${target.name} has been defeated.`, "damage_taken");
   }
 }
 
 export function gameTick() {
+  state.nowMs = (state.nowMs ?? 0) + GAME_TICK_MS;
+  const now = state.nowMs;
   // Handle auto-revival for dead members (60 second timer)
-  const now = Date.now();
   for (const hero of state.party) {
     if (!hero.type) hero.type = "player";
     // Ensure temp AC buff fields exist for older saves
@@ -2174,7 +2175,6 @@ export function gameTick() {
     // Process DOT effects (Flame Lick)
     if (enemy.activeBuffs?.flame_lick) {
       const flameLick = enemy.activeBuffs.flame_lick;
-      const now = Date.now();
       if (!isExpiredEffect(flameLick, now) && flameLick.data?.dotDamagePerTick) {
         const dotDamage = flameLick.data.dotDamagePerTick;
         enemy.hp = Math.max(0, enemy.hp - dotDamage);
@@ -2271,7 +2271,6 @@ export function gameTick() {
       state.lastCampLogTime = 0;
     } else {
       // Log camping reason periodically: every 10 ticks OR every 30s (whichever comes first)
-      const now = Date.now();
       const ticksSinceLog = state.lastCampLogTick ?? 0;
       const msSinceLog = state.lastCampLogTime ? now - state.lastCampLogTime : Infinity;
       const shouldLogNow = ticksSinceLog >= 10 || msSinceLog >= 30000;

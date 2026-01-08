@@ -68,6 +68,7 @@ export const state = {
   accountLevel: 1,
   accountLevelXP: 0,
   accountLevelUpCost: 0, // Will be set at runtime using P99 curve
+  nowMs: 0,
   zone: 1,
   activeZoneId: "graveyard",
   killsThisZone: 0,
@@ -157,7 +158,8 @@ export function serializeState() {
     campThresholds: state.campThresholds || { health: 80, mana: 50, endurance: 30 },
     lastCampLogTick: state.lastCampLogTick ?? 0,
     lastCampLogTime: state.lastCampLogTime ?? 0,
-    lastSavedAt: Date.now()
+    nowMs: state.nowMs ?? 0,
+    lastSavedAt: state.nowMs ?? 0
   };
 }
 
@@ -329,7 +331,7 @@ export function loadGame() {
         h.activeBuffs = {};
       }
       // Remove expired buffs from old saves
-      const now = Date.now();
+      const now = state.nowMs ?? 0;
       purgeExpiredActive(h.activeBuffs, now);
       return h;
     }) : [];
@@ -345,6 +347,7 @@ export function loadGame() {
     state.campThresholds = data.campThresholds ?? { health: 80, mana: 50, endurance: 30 };
     state.lastCampLogTick = data.lastCampLogTick ?? 0;
     state.lastCampLogTime = data.lastCampLogTime ?? 0;
+    state.nowMs = Math.max(0, data.nowMs ?? 0);
 
     const maxId = state.party.reduce((m, h) => Math.max(m, h.id || 0), 0);
     bumpHeroIdCounterToAtLeast(maxId + 1);

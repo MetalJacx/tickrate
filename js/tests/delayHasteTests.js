@@ -777,6 +777,48 @@ function testPurgeExpiredActive() {
   return { passed, total };
 }
 
+// Test Suite 12: Game clock independence from system time
+function testGameClockIndependence() {
+  console.log("=== Test Suite 12: Game Clock Independence ===\n");
+  let passed = 0, total = 0;
+
+  const clock = { nowMs: 10000 };
+  const hero = { activeBuffs: {} };
+
+  function applyBuffClock(target, key, durationMs) {
+    target.activeBuffs[key] = { expiresAt: clock.nowMs + durationMs, data: { hastePct: 0.1 } };
+  }
+
+  function hasBuffClock(target, key) {
+    const entry = target.activeBuffs[key];
+    if (!entry) return false;
+    if (isExpiredEffectTest(entry, clock.nowMs)) {
+      delete target.activeBuffs[key];
+      return false;
+    }
+    return true;
+  }
+
+  // 12.1: Buff stays active if system clock jumps forward but game clock does not
+  applyBuffClock(hero, "test", 6000);
+  const expiresAt = hero.activeBuffs.test.expiresAt;
+  const fakeSystemJump = clock.nowMs + 600000; // simulate user changing system time far ahead
+
+  total++;
+  if (assert(fakeSystemJump > expiresAt, "fake system time is far ahead of expiresAt")) passed++;
+
+  total++;
+  if (assert(hasBuffClock(hero, "test"), "buff remains active because game clock did not advance")) passed++;
+
+  // 12.2: Buff expires when game clock advances past expiry
+  clock.nowMs = expiresAt;
+  total++;
+  if (assert(!hasBuffClock(hero, "test"), "buff expires when game clock reaches expiresAt")) passed++;
+
+  console.log(`\n📊 Suite 12: ${passed}/${total} passed\n`);
+  return { passed, total };
+}
+
 // Master test runner
 function runTests() {
   console.log("\n");
@@ -797,7 +839,8 @@ function runTests() {
     testWeaponDelayAndSwap(),
     testEquipCooldown(),
     testHasteBuffNormalization(),
-    testPurgeExpiredActive()
+    testPurgeExpiredActive(),
+    testGameClockIndependence()
   ];
 
   results.forEach(r => {

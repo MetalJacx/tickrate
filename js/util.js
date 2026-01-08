@@ -34,7 +34,7 @@ export function isExpiredEffect(entry, nowMs) {
   return nowMs >= entry.expiresAt;
 }
 
-export function purgeExpiredActive(activeMap, nowMs = Date.now()) {
+export function purgeExpiredActive(activeMap, nowMs = state.nowMs ?? 0) {
   if (!activeMap) return 0;
   let purged = 0;
   for (const key of Object.keys(activeMap)) {
