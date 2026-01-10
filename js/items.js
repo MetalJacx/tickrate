@@ -49,6 +49,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 10,
     icon: "🗡️",
+    weaponType: "1h_pierce",
     delayTenths: 15,
     stats: { dps: 2}
   },
@@ -59,6 +60,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 20,
     icon: "⚔️",
+    weaponType: "1h_slash",
     delayTenths: 30,
     stats: { str: 2, dps: 3 }
   },
@@ -78,6 +80,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 2,
     icon: "🪵",
+    weaponType: "1h_blunt",
     delayTenths: 30,
     stats: { dps: 1 }
   },
@@ -88,6 +91,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 40,
     icon: "🌿",
+    weaponType: "1h_blunt",
     delayTenths: 28,
     stats: { dps: 4, wis: 2, int: 2 }
   },
@@ -98,6 +102,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 26,
     icon: "🔨",
+    weaponType: "1h_blunt",
     delayTenths: 40,
     stats: { dps: 4, str: 1 }
   },
@@ -108,6 +113,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 20,
     icon: "⚔️",
+    weaponType: "1h_slash",
     delayTenths: 30,
     stats: { dps: 3 }
   },
@@ -118,6 +124,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 20,
     icon: "🔨",
+    weaponType: "1h_blunt",
     delayTenths: 40,
     stats: { dps: 3 }
   },

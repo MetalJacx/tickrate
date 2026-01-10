@@ -7,6 +7,7 @@ import { updateStatsModalSkills } from "./ui.js";
 import { getItemDef } from "./items.js";
 import { getRaceDef, DEFAULT_RACE_KEY } from "./races.js";
 import { ACTIONS } from "./actions.js";
+import { tryWeaponSkillUp, getEquippedWeaponType } from "./weaponSkills.js";
 import {
   applyACMitigation,
   computeCritChance,
@@ -1934,6 +1935,9 @@ function tryEnemyActionUses() {
 function performAutoAttack(hero, enemy) {
   if (!enemy || enemy.hp <= 0) return;
   
+  // Weapon skill-up roll on swing attempt (hit or miss)
+  tryWeaponSkillUp(hero, getEquippedWeaponType(hero), enemy.level);
+  
   const debuff = hero.tempDamageDebuffTicks > 0 ? hero.tempDamageDebuffAmount || 0 : 0;
   const attackBaseDamage = Math.max(0, (hero.baseDamage ?? hero.dps ?? 0) - debuff);
   const hitChance = computeHitChance(hero, enemy);
@@ -1960,6 +1964,9 @@ function performAutoAttack(hero, enemy) {
     const skill = hero.doubleAttackSkill || 0;
     const procChance = doubleAttackProcChance(skill);
     if (cap > 0 && procChance > 0 && Math.random() < procChance) {
+      // Weapon skill-up roll on double attack swing attempt
+      tryWeaponSkillUp(hero, getEquippedWeaponType(hero), enemy.level);
+      
       const daHitChance = computeHitChance(hero, enemy);
       if (Math.random() <= daHitChance) {
         const daCrit = Math.random() < computeCritChance(hero);

@@ -7,6 +7,7 @@ import { addLog, isExpiredEffect } from "./util.js";
 import { formatPGSC, saveGame, updateCurrencyDisplay } from "./state.js";
 import { MAX_PARTY_SIZE, ACCOUNT_SLOT_UNLOCKS, CONSUMABLE_SLOT_UNLOCK_LEVELS } from "./defs.js";
 import { getItemDef } from "./items.js";
+import { canEquipWeapon } from "./weaponSkills.js";
 import { computeSellValue } from "./combatMath.js";
 import { ACTIONS } from "./actions.js";
 
@@ -1988,6 +1989,14 @@ function populateEquipmentSection(hero) {
       if (isWeaponSlot && inCombat && equipCd > 0) {
         addLog(`Cannot swap weapons yet (${equipCd} tick${equipCd > 1 ? 's' : ''}).`, "error");
         return;
+      }
+
+      // Check weapon type unlocks (BEFORE consuming item)
+      if (isWeaponSlot && itemDef.weaponType) {
+        if (!canEquipWeapon(hero, itemDef)) {
+          addLog(`${hero.name} cannot equip ${itemDef.name} (locked weapon type).`, "error");
+          return;
+        }
       }
       
       // Consume one from shared inventory

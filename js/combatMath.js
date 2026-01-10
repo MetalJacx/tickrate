@@ -1,5 +1,6 @@
 import { isExpiredEffect } from "./util.js";
 import { state } from "./state.js";
+import { getEquippedWeaponType, getMeleeHitChance, getWeaponSkillRatio } from "./weaponSkills.js";
 // Centralized combat math and tuning knobs
 // Constants and helper functions to keep combat tuning in one place.
 export const COMBAT_CONSTANTS = {
@@ -95,6 +96,11 @@ export function effectiveAvoidance(entity) {
 }
 
 export function computeHitChance(attacker, defender) {
+  // Player melee uses weapon skill hit model
+  if (attacker && (attacker.classKey || attacker.equipment)) {
+    const wt = getEquippedWeaponType(attacker);
+    return getMeleeHitChance(attacker, wt, defender);
+  }
   const atkLevel = attacker?.level ?? 1;
   const defLevel = defender?.level ?? 1;
   const effAcc = effectiveAccuracy(attacker);
@@ -120,6 +126,13 @@ export function computeRawDamage(attacker, isCrit = false) {
   const str = stats.str || 0;
   const meleePower = 1 + str * COMBAT_CONSTANTS.STR_DAMAGE_PER_POINT;
   let rawDamage = baseDamage * meleePower;
+  // Apply weapon skill scalar for player melee
+  if (attacker && (attacker.classKey || attacker.equipment)) {
+    const wt = getEquippedWeaponType(attacker);
+    const skillRatio = getWeaponSkillRatio(attacker, wt);
+    const skillScalar = 0.85 + 0.15 * skillRatio;
+    rawDamage *= skillScalar;
+  }
   if (isCrit) {
     rawDamage *= COMBAT_CONSTANTS.CRIT_MULT;
   }

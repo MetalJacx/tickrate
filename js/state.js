@@ -2,6 +2,7 @@ import { SAVE_KEY } from "./defs.js";
 import { DEFAULT_RACE_KEY } from "./races.js";
 import { getClassDef } from "./classes/index.js";
 import { isExpiredEffect, purgeExpiredActive } from "./util.js";
+import { ensureWeaponSkills, applyWeaponUnlocks } from "./weaponSkills.js";
 
 // ===== Currency conversion helpers =====
 export function normalizePGSC(pgsc = {}) {
@@ -346,6 +347,9 @@ export function loadGame() {
           }
         }
       }
+      // Ensure weapon skills and apply unlocks per current level
+      ensureWeaponSkills(h);
+      applyWeaponUnlocks(h);
       
       return h;
     }) : [];
