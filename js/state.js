@@ -333,6 +333,20 @@ export function loadGame() {
       // Remove expired buffs from old saves
       const now = state.nowMs ?? 0;
       purgeExpiredActive(h.activeBuffs, now);
+      
+      // Migrate old-style buff timestamps (before game clock was used)
+      // If a buff's expiresAt is much larger than state.nowMs, it was created with an old clock
+      const MAX_REASONABLE_BUFF_DURATION_MS = 2000000; // ~33 minutes (max buff duration)
+      for (const [buffKey, buffData] of Object.entries(h.activeBuffs)) {
+        if (buffData && typeof buffData === "object" && buffData.expiresAt) {
+          // If expiresAt is way ahead of now + max duration, it's an old timestamp
+          if (buffData.expiresAt > now + MAX_REASONABLE_BUFF_DURATION_MS) {
+            // Old-style buff: recalculate as if applied fresh now with ~30 min duration
+            buffData.expiresAt = now + 1800000; // 30 minutes
+          }
+        }
+      }
+      
       return h;
     }) : [];
     state.partyMaxHP = data.partyMaxHP ?? 0;
