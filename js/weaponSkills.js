@@ -1,5 +1,6 @@
 // EverQuest-style weapon skill system
 import { getItemDef } from "./items.js";
+import { addLog } from "./util.js";
 
 export const WEAPON_TYPES = [
   "1h_slash",
@@ -11,6 +12,18 @@ export const WEAPON_TYPES = [
   "hand_to_hand",
   "archery"
 ];
+
+// Human-readable weapon type names
+const WEAPON_TYPE_NAMES = {
+  "1h_slash": "1H Slashing",
+  "1h_blunt": "1H Blunt",
+  "1h_pierce": "1H Piercing",
+  "2h_slash": "2H Slashing",
+  "2h_blunt": "2H Blunt",
+  "2h_pierce": "2H Piercing",
+  "hand_to_hand": "Hand to Hand",
+  "archery": "Archery"
+};
 
 const HARD_SKILL_CAP = 300;
 
@@ -178,6 +191,9 @@ export function tryWeaponSkillUp(hero, weaponType, targetLevel) {
   const chance = (maxChance - minChance) * Math.pow(0.99, skill) + minChance;
   if (Math.random() * 100 < chance) {
     entry.value = skill + 1;
+    const weaponName = WEAPON_TYPE_NAMES[weaponType] || weaponType;
+    const heroName = hero.name || "Hero";
+    addLog(`${heroName}'s ${weaponName} skill increases to ${entry.value}!`, "skill");
     return true;
   }
   return false;
