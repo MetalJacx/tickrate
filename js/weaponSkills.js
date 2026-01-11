@@ -2,6 +2,7 @@
 import { getItemDef } from "./items.js";
 import { addLog } from "./util.js";
 import { SKILL_UP_RATE_MULT } from "./defs.js";
+import { state } from "./state.js";
 
 export const WEAPON_TYPES = [
   "1h_slash",
@@ -259,6 +260,9 @@ export function tryWeaponSkillUp(hero, weaponType, targetLevel) {
     const weaponName = WEAPON_TYPE_NAMES[normalizedType] || normalizedType;
     const heroName = hero.name || "Hero";
     addLog(`${heroName}'s ${weaponName} skill increases to ${entry.value}!`, "skill");
+    // FIX 25: Throttle stats modal refresh to once per tick
+    // Set flag; ui.renderAll will flush a single update if modal open
+    state.needsSkillsUiRefresh = true;
     return true;
   }
   return false;

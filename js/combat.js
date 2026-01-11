@@ -2188,6 +2188,8 @@ export function getTargetLevelForSkillUps(hero, spellDef, resolvedTargets) {
 export function gameTick() {
   state.nowMs = (state.nowMs ?? 0) + GAME_TICK_MS;
   const now = state.nowMs;
+  // Track total damage for this tick (spells, skills, and auto-attacks)
+  let totalDamageThisTick = 0;
   // Handle auto-revival for dead members (60 second timer)
   for (const hero of state.party) {
     if (!hero.type) hero.type = "player";
@@ -2472,7 +2474,7 @@ export function gameTick() {
   const anyDead = state.party.some(h => h.isDead);
 
   // 3) Process skills and calculate bonuses
-  let totalDamageThisTick = 0;
+  
 
   for (const hero of state.party) {
     if (hero.isDead) continue; // Dead heroes can't use skills
