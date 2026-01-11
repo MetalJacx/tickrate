@@ -572,9 +572,8 @@ select {
 .specIcon {
   width: 14px;
   height: 14px;
-  flex: 0 0 14px;
-  margin-right: 8px;
-  vertical-align: -2px;
+  flex-shrink: 0;
+  vertical-align: middle;
   color: var(--spec-color, #cfd3ff);
   display: inline-block;
 }

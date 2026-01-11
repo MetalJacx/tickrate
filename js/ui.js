@@ -20,7 +20,25 @@ import {
 } from "./magicSkills.js";
 import { computeSellValue } from "./combatMath.js";
 import { ACTIONS } from "./actions.js";
-import { SPEC_LABEL, SPEC_ICON_SVG } from "./ui/specIcons.js";
+
+// Specialization icons and labels (defined inline to avoid import issues)
+const SPEC_LABEL = {
+  destruction: "Destruction",
+  restoration: "Restoration",
+  control: "Control",
+  enhancement: "Enhancement",
+  summoning: "Summoning",
+  utility: "Utility"
+};
+
+const SPEC_ICON_SVG = {
+  destruction: `<svg viewBox="0 0 16 16" style="width:14px;height:14px;vertical-align:middle;margin-right:6px;color:#ff6b6b;" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2"><path d="M 8 2 L 10 6 L 14 7 L 11 10 L 11.5 14 L 8 11.5 L 4.5 14 L 5 10 L 2 7 L 6 6 Z"/></g></svg>`,
+  restoration: `<svg viewBox="0 0 16 16" style="width:14px;height:14px;vertical-align:middle;margin-right:6px;color:#69db7c;" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2"><path d="M 8 2 L 8 14 M 3 9 L 13 9"/><circle cx="8" cy="9" r="5.5"/></g></svg>`,
+  control: `<svg viewBox="0 0 16 16" style="width:14px;height:14px;vertical-align:middle;margin-right:6px;color:#74c0fc;" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2"><path d="M 4 6 L 4 10 C 4 12 5.5 13 8 13 C 10.5 13 12 12 12 10 L 12 6"/><path d="M 4 6 C 4 4.5 5.5 3 8 3 C 10.5 3 12 4.5 12 6"/></g></svg>`,
+  enhancement: `<svg viewBox="0 0 16 16" style="width:14px;height:14px;vertical-align:middle;margin-right:6px;color:#ffd43b;" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2"><path d="M 8 2 L 10 7 L 15 7.5 L 11 11 L 12 15.5 L 8 12.5 L 4 15.5 L 5 11 L 1 7.5 L 6 7 Z"/></g></svg>`,
+  summoning: `<svg viewBox="0 0 16 16" style="width:14px;height:14px;vertical-align:middle;margin-right:6px;color:#b197fc;" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2"><circle cx="8" cy="8" r="5.5"/><path d="M 3.5 3.5 L 12.5 12.5 M 12.5 3.5 L 3.5 12.5"/></g></svg>`,
+  utility: `<svg viewBox="0 0 16 16" style="width:14px;height:14px;vertical-align:middle;margin-right:6px;color:#ffa94d;" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2"><path d="M 5 4 L 3.5 5.5 C 2.5 6.5 2.5 8 3.5 9 L 5 10.5"/><path d="M 11 4 L 12.5 5.5 C 13.5 6.5 13.5 8 12.5 9 L 11 10.5"/><path d="M 8 2 L 8 14"/></g></svg>`
+};
 
 export function initUI({ onRecruit, onReset, onOpenRecruitModal }) {
   const travelBtn = document.getElementById("travelBtn");
@@ -415,14 +433,15 @@ export function updateStatsModalSkills(hero) {
     }
     
     // Magic Skills section (for casters: channeling + specializations)
-    if (["cleric", "wizard", "enchanter", "ranger"].includes(hero.classKey)) {
+    const classKey = (hero.classKey || hero.className || hero.class || "").toLowerCase();
+    if (["cleric", "wizard", "enchanter", "ranger"].includes(classKey)) {
       const hr2 = document.createElement("hr");
       hr2.style.cssText = "border:0;border-top:1px solid #333;margin:12px 0;";
       rightColumn.appendChild(hr2);
 
       const magicTitle = document.createElement("div");
       magicTitle.style.cssText = "font-weight:600;font-size:12px;margin:8px 0 8px;color:#a78bfa;";
-      magicTitle.textContent = "Magic Skills";
+      magicTitle.textContent = "Magic Skills [v5]";
       rightColumn.appendChild(magicTitle);
 
       // Channeling skill
@@ -457,9 +476,21 @@ export function updateStatsModalSkills(hero) {
 
         const specLabel = document.createElement("div");
         specLabel.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:6px 0 2px;font-size:11px;color:#aaa;";
-        const specLabelText = SPEC_LABEL[spec] ?? spec;
-        const specIcon = SPEC_ICON_SVG[spec] ?? "";
-        specLabel.innerHTML = `<span style="display:flex;align-items:center;">${specIcon}<span>${specLabelText}</span></span> <span style='color:#ccc;'>${specValue} / ${specCap} (${specPct}%)</span>`;
+        
+        // Map spec to display name and emoji icon
+        const specMap = {
+          destruction: { name: "Destruction", icon: "🔥", color: "#ff6b6b" },
+          restoration: { name: "Restoration", icon: "✚", color: "#69db7c" },
+          control: { name: "Control", icon: "🔒", color: "#74c0fc" },
+          enhancement: { name: "Enhancement", icon: "⭐", color: "#ffd43b" },
+          summoning: { name: "Summoning", icon: "◉", color: "#b197fc" },
+          utility: { name: "Utility", icon: "⚙", color: "#ffa94d" }
+        };
+        
+        const specInfo = specMap[spec] || { name: spec, icon: "", color: "#cfd3ff" };
+        const iconHTML = specInfo.icon ? `<span style="margin-right:6px;color:${specInfo.color}">${specInfo.icon}</span>` : "";
+        
+        specLabel.innerHTML = `<span style="display:flex;align-items:center;">${iconHTML}${specInfo.name}</span> <span style='color:#ccc;'>${specValue} / ${specCap} (${specPct}%)</span>`;
         rightColumn.appendChild(specLabel);
 
         const specBarBg = document.createElement("div");
