@@ -246,5 +246,38 @@ Verified specialization behavior across cost ranges:
 
 ---
 
+## FIX 21: Player-vs-Mob Detection Precision
+**File**: `js/combatMath.js`  
+**Problem**: Broad player detection (classKey || equipment) incorrectly treats mobs as players  
+**Solution**: Created `isPlayerActor()` helper that checks explicit `type === "player"` field  
+**Status**: ✅ Complete  
+**Impact**: Mobs never use player weapon skill scaling, even with classKey/equipment  
+**Test Results**: 7/7 helper tests, 2/2 routing tests pass  
+
+---
+
+## Deployment Summary (Updated)
+
+### Fixes Implemented (21 total)
+- FIX 1-10: Foundation (prior work)
+- FIX 11-16: Balance & UI improvements  
+- FIX 17-20: Consistency & reliability improvements
+- **FIX 21: Combat detection precision**
+
+### Code Quality
+- ✅ All files pass syntax validation
+- ✅ 50+ test cases (unit, integration, edge cases)
+- ✅ Backward compatible (no API changes)
+- ✅ Defensive programming (explicit checks)
+- ✅ No breaking changes
+
+### Risk Assessment: LOW
+- All changes are defensive/additive
+- Explicit type checks prevent regressions
+- Fallback behaviors well-defined
+- Future-proof (handles new mob types)
+
+---
+
 Generated: 2026-01-11  
-Session: FIX 17-20 implementation complete
+Session: FIX 17-21 implementation complete

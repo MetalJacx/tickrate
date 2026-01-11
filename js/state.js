@@ -348,6 +348,11 @@ export function loadGame() {
           }
         }
       }
+      
+      // FIX 21: Ensure heroes always have type = "player" after load
+      // Critical for isPlayerActor() check in combatMath.js weapon skill routing
+      if (!h.type) h.type = "player";
+      
       // Ensure weapon skills and apply unlocks per current level
       ensureWeaponSkills(h);
       applyWeaponUnlocks(h);

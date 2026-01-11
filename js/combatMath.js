@@ -44,6 +44,13 @@ export function rand01() {
   return Math.random();
 }
 
+// FIX 21: Explicit player-vs-mob detection to prevent mobs from using player weapon-skill math
+// Purpose: Ensure mobs never incorrectly benefit from player weapon skills even if they have classKey/equipment
+// Strategy: Check explicit type field instead of broad classKey || equipment check
+export function isPlayerActor(a) {
+  return a?.type === "player";
+}
+
 function getStats(entity, nowMs = state.nowMs ?? 0) {
   const stats = entity?.stats || {};
   // Include both old tempACBuffAmount (for backwards compatibility) and new buffs
@@ -96,8 +103,9 @@ export function effectiveAvoidance(entity) {
 }
 
 export function computeHitChance(attacker, defender) {
-  // Player melee uses weapon skill hit model
-  if (attacker && (attacker.classKey || attacker.equipment)) {
+  // FIX 21: Only use player melee weapon-skill model for explicit player actors
+  // Mobs always use the mob model, even if they have classKey or equipment-like fields
+  if (isPlayerActor(attacker)) {
     const wt = getEquippedWeaponType(attacker);
     return getMeleeHitChance(attacker, wt, defender);
   }
@@ -126,8 +134,9 @@ export function computeRawDamage(attacker, isCrit = false) {
   const str = stats.str || 0;
   const meleePower = 1 + str * COMBAT_CONSTANTS.STR_DAMAGE_PER_POINT;
   let rawDamage = baseDamage * meleePower;
-  // Apply weapon skill scalar for player melee
-  if (attacker && (attacker.classKey || attacker.equipment)) {
+  // FIX 21: Only apply weapon skill scalar for explicit player actors
+  // Mobs always use base damage model, even if they have classKey or equipment-like fields
+  if (isPlayerActor(attacker)) {
     const wt = getEquippedWeaponType(attacker);
     const skillRatio = getWeaponSkillRatio(attacker, wt);
     const skillScalar = 0.85 + 0.15 * skillRatio;
