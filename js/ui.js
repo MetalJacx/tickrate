@@ -275,20 +275,22 @@ export function updateStatsModalSkills(hero) {
   const statsBox = document.getElementById("characterStatsContainer");
   if (!statsBox) return;
   
-  // Find and update the right column (Skills/Passives) if it exists
+  // Find the existing right column (Skills/Passives) if present; otherwise create it once
   const columns = statsBox.querySelectorAll("div[style*='flex: 1 1 auto']");
-  if (columns.length < 2) return;
-  
-  const rightColumn = columns[columns.length - 1];
-  if (!rightColumn) return;
+  let rightColumn = columns.length >= 2 ? columns[columns.length - 1] : null;
+  const createdColumn = !rightColumn;
+  if (!rightColumn) {
+    rightColumn = document.createElement("div");
+    rightColumn.style.flex = "1 1 auto";
+    rightColumn.style.minWidth = "140px";
+  } else {
+    rightColumn.innerHTML = "";
+  }
   
   // Rebuild just the skills section
   // Right column: Skills / Passives (warrior Double Attack or caster Meditate)
   if (hero.classKey === "warrior") {
     // Double Attack for Warriors
-    const rightColumn = document.createElement("div");
-    rightColumn.style.flex = "1 1 auto";
-    rightColumn.style.minWidth = "140px";
 
     const skillTitle = document.createElement("div");
     skillTitle.style.cssText = "font-weight:600;font-size:12px;margin:0 0 12px;color:#fbbf24;";
@@ -360,13 +362,8 @@ export function updateStatsModalSkills(hero) {
       
       rightColumn.appendChild(weaponBarBg);
     }
-    
-    statsBox.appendChild(rightColumn);
   } else if (["cleric", "wizard", "enchanter", "ranger"].includes(hero.classKey)) {
     // Meditate for Casters
-    const rightColumn = document.createElement("div");
-    rightColumn.style.flex = "1 1 auto";
-    rightColumn.style.minWidth = "140px";
 
     const skillTitle = document.createElement("div");
     skillTitle.style.cssText = "font-weight:600;font-size:12px;margin:0 0 12px;color:#fbbf24;";
@@ -409,6 +406,11 @@ export function updateStatsModalSkills(hero) {
     weaponMasteryTitle.textContent = "Weapon Mastery";
     rightColumn.appendChild(weaponMasteryTitle);
 
+
+  // Attach only if this column was newly created
+  if (createdColumn) {
+    statsBox.appendChild(rightColumn);
+  }
     for (const weaponType of unlockedWeaponTypes) {
       const weaponSkillValue = hero.weaponSkills?.[weaponType]?.value ?? 1;
       const weaponSkillCap = getWeaponSkillCap(hero, weaponType);
