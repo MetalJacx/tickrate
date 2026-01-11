@@ -268,6 +268,21 @@ export function ensureMagicSkills(hero) {
     const cap = calculateMagicSkillCap(hero, MAGIC_SKILLS.channeling);
     hero.magicSkills[MAGIC_SKILLS.channeling].value = sanitizeMagicSkillValue(hero.magicSkills[MAGIC_SKILLS.channeling].value, cap);
   }
+
+  // SANITY CHECK 23: Initialize fractional mana bank for each specialization
+  // This accumulates fractional mana savings to prevent low-cost spells from losing effectiveness
+  if (!hero.specManaBank) {
+    hero.specManaBank = {};
+  }
+  // Ensure each specialization has a bank entry; sanitize old saves
+  for (const specKey of SPECIALIZATIONS) {
+    if (hero.specManaBank[specKey] === undefined) {
+      hero.specManaBank[specKey] = 0;
+    } else if (!Number.isFinite(hero.specManaBank[specKey]) || hero.specManaBank[specKey] < 0) {
+      // Sanitize corrupted bank values
+      hero.specManaBank[specKey] = 0;
+    }
+  }
 }
 
 // ---------------------------
@@ -317,29 +332,56 @@ export function getSchoolRatio(hero, categoryKey) {
 // ---------------------------
 // Mana cost with specialization
 // ---------------------------
+// SANITY CHECK 23: Helper to extract stable specialization key from spell definition
+// Returns the specialization key if valid; undefined if spell has no specialization
+function getSpecKeyForSpell(spellDef) {
+  const specKey = spellDef.specialization;
+  // Validate: key must be in SPECIALIZATIONS list
+  if (specKey && SPECIALIZATIONS.includes(specKey)) {
+    return specKey;
+  }
+  return undefined;
+}
 
 export function getFinalManaCost(hero, spellDef) {
-  // spellDef.specialization must be one of SPECIALIZATIONS
-  const specKey = spellDef.specialization;
+  // SANITY CHECK 23: Fractional mana bank implementation
+  // Accumulate fractional mana savings per specialization to prevent low-cost spells
+  // from losing savings due to rounding (e.g., 5 mana spell × 10% = 0.5, which rounds to 0).
+  //
+  // Instead: accumulate 0.5 in the bank, and when bank ≥ 1, convert to whole mana savings.
+  // This ensures long-run average mana reduction matches SPEC_MANA_REDUCTION_AT_CAP * ratio.
+
+  const specKey = getSpecKeyForSpell(spellDef);
   const base = (spellDef.manaCost ?? spellDef.cost?.mana ?? 0);
   if (!specKey) return base;
 
+  ensureMagicSkills(hero); // Ensure bank exists
+
   const ratio = getSpecRatio(hero, specKey);
   const reduction = SPEC_MANA_REDUCTION_AT_CAP * ratio; // up to 10%
-  const finalCost = base * (1 - reduction);
+  const fractionalSaving = base * reduction;
 
-  // FIX 16: Guarantee at least 1 mana saved early-game when specialization is trained
-  // Problem: rounding causes low-cost spells to lose savings (5 * 0.1 = 0.5 rounds to 0)
-  // Solution: If reduction would save < 1 mana but spec is trained, force-save 1 mana
-  const roundedCost = Math.round(finalCost);
-  const manaSaved = base - roundedCost;
-  
-  if (ratio > 0 && manaSaved === 0 && base >= 2 && reduction > 0) {
-    // Force at least 1 mana saved to make specialization feel effective early-game
-    return Math.max(0, base - 1);
+  // Accumulate fractional savings into bank
+  hero.specManaBank[specKey] += fractionalSaving;
+
+  // Extract whole mana units from bank
+  const wholeSaved = Math.floor(hero.specManaBank[specKey]);
+  hero.specManaBank[specKey] -= wholeSaved;
+
+  // Final cost = base - whole units saved, clamped to [0, base]
+  const finalCost = Math.max(0, base - wholeSaved);
+
+  // Optional debug logging (disabled by default)
+  const DEBUG_MANA = false;
+  if (DEBUG_MANA && wholeSaved > 0) {
+    console.log(
+      `[Mana] ${spellDef.name} (${specKey}): ` +
+      `base=${base} → saving=${fractionalSaving.toFixed(2)} (bank=${hero.specManaBank[specKey].toFixed(2)}) ` +
+      `→ cost=${finalCost}`
+    );
   }
-  
-  return Math.max(0, roundedCost);
+
+  return finalCost;
 }
 
 // ---------------------------
