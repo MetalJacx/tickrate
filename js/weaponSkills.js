@@ -14,7 +14,7 @@ export const WEAPON_TYPES = [
 ];
 
 // Human-readable weapon type names
-const WEAPON_TYPE_NAMES = {
+export const WEAPON_TYPE_NAMES = {
   "1h_slash": "1H Slashing",
   "1h_blunt": "1H Blunt",
   "1h_pierce": "1H Piercing",
@@ -125,6 +125,16 @@ export function isWeaponTypeUnlocked(hero, weaponType) {
     }
   }
   return false;
+}
+
+export function getUnlockedWeaponTypes(hero) {
+  const unlocked = [];
+  for (const weaponType of WEAPON_TYPES) {
+    if (isWeaponTypeUnlocked(hero, weaponType)) {
+      unlocked.push(weaponType);
+    }
+  }
+  return unlocked;
 }
 
 export function applyWeaponUnlocks(hero) {

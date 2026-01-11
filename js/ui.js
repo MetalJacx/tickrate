@@ -7,7 +7,7 @@ import { addLog, isExpiredEffect } from "./util.js";
 import { formatPGSC, saveGame, updateCurrencyDisplay } from "./state.js";
 import { MAX_PARTY_SIZE, ACCOUNT_SLOT_UNLOCKS, CONSUMABLE_SLOT_UNLOCK_LEVELS } from "./defs.js";
 import { getItemDef } from "./items.js";
-import { canEquipWeapon } from "./weaponSkills.js";
+import { canEquipWeapon, getEquippedWeaponType, getWeaponSkillCap, WEAPON_TYPE_NAMES, getUnlockedWeaponTypes } from "./weaponSkills.js";
 import { computeSellValue } from "./combatMath.js";
 import { ACTIONS } from "./actions.js";
 
@@ -295,6 +295,42 @@ export function updateStatsModalSkills(hero) {
       
       rightColumn.appendChild(barBg);
     }
+
+    // Weapon Mastery section (all classes)
+    const equippedWeaponType = getEquippedWeaponType(hero) || "hand_to_hand";
+    const unlockedWeaponTypes = getUnlockedWeaponTypes(hero);
+
+    const hr = document.createElement("hr");
+    hr.style.cssText = "border:0;border-top:1px solid #333;margin:12px 0;";
+    rightColumn.appendChild(hr);
+
+    const weaponMasteryTitle = document.createElement("div");
+    weaponMasteryTitle.style.cssText = "font-weight:600;font-size:12px;margin:8px 0 8px;color:#10b981;";
+    weaponMasteryTitle.textContent = "Weapon Mastery";
+    rightColumn.appendChild(weaponMasteryTitle);
+
+    for (const weaponType of unlockedWeaponTypes) {
+      const weaponSkillValue = hero.weaponSkills?.[weaponType]?.value ?? 1;
+      const weaponSkillCap = getWeaponSkillCap(hero, weaponType);
+      const weaponPct = Math.floor((weaponSkillValue / Math.max(1, weaponSkillCap)) * 100);
+      const weaponTypeName = WEAPON_TYPE_NAMES[weaponType] || weaponType;
+      const isEquipped = weaponType === equippedWeaponType;
+
+      const weaponTypeLabel = document.createElement("div");
+      weaponTypeLabel.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:6px 0 2px;font-size:11px;color:#aaa;";
+      weaponTypeLabel.innerHTML = `<span>${weaponTypeName}${isEquipped ? ' <span style="color:#10b981;">★</span>' : ''}</span> <span style='color:#ccc;'>${weaponSkillValue} / ${weaponSkillCap} (${weaponPct}%)</span>`;
+      rightColumn.appendChild(weaponTypeLabel);
+
+      const weaponBarBg = document.createElement("div");
+      weaponBarBg.style.cssText = "width:100%;height:6px;background:#252525;border-radius:3px;overflow:hidden;border:1px solid #333;margin:2px 0 4px;position:relative;";
+      const weaponBarPercent = Math.min(100, weaponPct);
+      
+      const weaponBarFill = document.createElement("div");
+      weaponBarFill.style.cssText = `height:100%;width:${weaponBarPercent}%;background:${isEquipped ? 'linear-gradient(90deg,#10b981,#059669)' : 'linear-gradient(90deg,#4b5563,#374151)'};transition:width 0.2s;`;
+      weaponBarBg.appendChild(weaponBarFill);
+      
+      rightColumn.appendChild(weaponBarBg);
+    }
     
     statsBox.appendChild(rightColumn);
   } else if (["cleric", "wizard", "enchanter"].includes(hero.classKey)) {
@@ -329,6 +365,42 @@ export function updateStatsModalSkills(hero) {
       barBg.appendChild(barFill);
       
       rightColumn.appendChild(barBg);
+    }
+
+    // Weapon Mastery section (all classes)
+    const equippedWeaponType = getEquippedWeaponType(hero) || "hand_to_hand";
+    const unlockedWeaponTypes = getUnlockedWeaponTypes(hero);
+
+    const hr = document.createElement("hr");
+    hr.style.cssText = "border:0;border-top:1px solid #333;margin:12px 0;";
+    rightColumn.appendChild(hr);
+
+    const weaponMasteryTitle = document.createElement("div");
+    weaponMasteryTitle.style.cssText = "font-weight:600;font-size:12px;margin:8px 0 8px;color:#10b981;";
+    weaponMasteryTitle.textContent = "Weapon Mastery";
+    rightColumn.appendChild(weaponMasteryTitle);
+
+    for (const weaponType of unlockedWeaponTypes) {
+      const weaponSkillValue = hero.weaponSkills?.[weaponType]?.value ?? 1;
+      const weaponSkillCap = getWeaponSkillCap(hero, weaponType);
+      const weaponPct = Math.floor((weaponSkillValue / Math.max(1, weaponSkillCap)) * 100);
+      const weaponTypeName = WEAPON_TYPE_NAMES[weaponType] || weaponType;
+      const isEquipped = weaponType === equippedWeaponType;
+
+      const weaponTypeLabel = document.createElement("div");
+      weaponTypeLabel.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:6px 0 2px;font-size:11px;color:#aaa;";
+      weaponTypeLabel.innerHTML = `<span>${weaponTypeName}${isEquipped ? ' <span style="color:#10b981;">★</span>' : ''}</span> <span style='color:#ccc;'>${weaponSkillValue} / ${weaponSkillCap} (${weaponPct}%)</span>`;
+      rightColumn.appendChild(weaponTypeLabel);
+
+      const weaponBarBg = document.createElement("div");
+      weaponBarBg.style.cssText = "width:100%;height:6px;background:#252525;border-radius:3px;overflow:hidden;border:1px solid #333;margin:2px 0 4px;position:relative;";
+      const weaponBarPercent = Math.min(100, weaponPct);
+      
+      const weaponBarFill = document.createElement("div");
+      weaponBarFill.style.cssText = `height:100%;width:${weaponBarPercent}%;background:${isEquipped ? 'linear-gradient(90deg,#10b981,#059669)' : 'linear-gradient(90deg,#4b5563,#374151)'};transition:width 0.2s;`;
+      weaponBarBg.appendChild(weaponBarFill);
+      
+      rightColumn.appendChild(weaponBarBg);
     }
     
     statsBox.appendChild(rightColumn);
@@ -2660,6 +2732,42 @@ function populateStatsSection(hero) {
       
       rightColumn.appendChild(barBg);
     }
+
+    // Weapon Mastery section (all classes)
+    const equippedWeaponType = getEquippedWeaponType(hero) || "hand_to_hand";
+    const unlockedWeaponTypes = getUnlockedWeaponTypes(hero);
+
+    const hr = document.createElement("hr");
+    hr.style.cssText = "border:0;border-top:1px solid #333;margin:12px 0;";
+    rightColumn.appendChild(hr);
+
+    const weaponMasteryTitle = document.createElement("div");
+    weaponMasteryTitle.style.cssText = "font-weight:600;font-size:12px;margin:8px 0 8px;color:#10b981;";
+    weaponMasteryTitle.textContent = "Weapon Mastery";
+    rightColumn.appendChild(weaponMasteryTitle);
+
+    for (const weaponType of unlockedWeaponTypes) {
+      const weaponSkillValue = hero.weaponSkills?.[weaponType]?.value ?? 1;
+      const weaponSkillCap = getWeaponSkillCap(hero, weaponType);
+      const weaponPct = Math.floor((weaponSkillValue / Math.max(1, weaponSkillCap)) * 100);
+      const weaponTypeName = WEAPON_TYPE_NAMES[weaponType] || weaponType;
+      const isEquipped = weaponType === equippedWeaponType;
+
+      const weaponTypeLabel = document.createElement("div");
+      weaponTypeLabel.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:6px 0 2px;font-size:11px;color:#aaa;";
+      weaponTypeLabel.innerHTML = `<span>${weaponTypeName}${isEquipped ? ' <span style="color:#10b981;">★</span>' : ''}</span> <span style='color:#ccc;'>${weaponSkillValue} / ${weaponSkillCap} (${weaponPct}%)</span>`;
+      rightColumn.appendChild(weaponTypeLabel);
+
+      const weaponBarBg = document.createElement("div");
+      weaponBarBg.style.cssText = "width:100%;height:6px;background:#252525;border-radius:3px;overflow:hidden;border:1px solid #333;margin:2px 0 4px;position:relative;";
+      const weaponBarPercent = Math.min(100, weaponPct);
+      
+      const weaponBarFill = document.createElement("div");
+      weaponBarFill.style.cssText = `height:100%;width:${weaponBarPercent}%;background:${isEquipped ? 'linear-gradient(90deg,#10b981,#059669)' : 'linear-gradient(90deg,#4b5563,#374151)'};transition:width 0.2s;`;
+      weaponBarBg.appendChild(weaponBarFill);
+      
+      rightColumn.appendChild(weaponBarBg);
+    }
     
     statsBox.appendChild(rightColumn);
   } else if (["cleric", "wizard", "enchanter"].includes(hero.classKey)) {
@@ -2693,6 +2801,42 @@ function populateStatsSection(hero) {
       barBg.appendChild(barFill);
       
       rightColumn.appendChild(barBg);
+    }
+
+    // Weapon Mastery section (all classes)
+    const equippedWeaponType = getEquippedWeaponType(hero) || "hand_to_hand";
+    const unlockedWeaponTypes = getUnlockedWeaponTypes(hero);
+
+    const hr = document.createElement("hr");
+    hr.style.cssText = "border:0;border-top:1px solid #333;margin:12px 0;";
+    rightColumn.appendChild(hr);
+
+    const weaponMasteryTitle = document.createElement("div");
+    weaponMasteryTitle.style.cssText = "font-weight:600;font-size:12px;margin:8px 0 8px;color:#10b981;";
+    weaponMasteryTitle.textContent = "Weapon Mastery";
+    rightColumn.appendChild(weaponMasteryTitle);
+
+    for (const weaponType of unlockedWeaponTypes) {
+      const weaponSkillValue = hero.weaponSkills?.[weaponType]?.value ?? 1;
+      const weaponSkillCap = getWeaponSkillCap(hero, weaponType);
+      const weaponPct = Math.floor((weaponSkillValue / Math.max(1, weaponSkillCap)) * 100);
+      const weaponTypeName = WEAPON_TYPE_NAMES[weaponType] || weaponType;
+      const isEquipped = weaponType === equippedWeaponType;
+
+      const weaponTypeLabel = document.createElement("div");
+      weaponTypeLabel.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:6px 0 2px;font-size:11px;color:#aaa;";
+      weaponTypeLabel.innerHTML = `<span>${weaponTypeName}${isEquipped ? ' <span style="color:#10b981;">★</span>' : ''}</span> <span style='color:#ccc;'>${weaponSkillValue} / ${weaponSkillCap} (${weaponPct}%)</span>`;
+      rightColumn.appendChild(weaponTypeLabel);
+
+      const weaponBarBg = document.createElement("div");
+      weaponBarBg.style.cssText = "width:100%;height:6px;background:#252525;border-radius:3px;overflow:hidden;border:1px solid #333;margin:2px 0 4px;position:relative;";
+      const weaponBarPercent = Math.min(100, weaponPct);
+      
+      const weaponBarFill = document.createElement("div");
+      weaponBarFill.style.cssText = `height:100%;width:${weaponBarPercent}%;background:${isEquipped ? 'linear-gradient(90deg,#10b981,#059669)' : 'linear-gradient(90deg,#4b5563,#374151)'};transition:width 0.2s;`;
+      weaponBarBg.appendChild(weaponBarFill);
+      
+      rightColumn.appendChild(weaponBarBg);
     }
     
     statsBox.appendChild(rightColumn);
