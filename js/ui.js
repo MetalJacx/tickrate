@@ -2813,6 +2813,7 @@ function populateStatsSection(hero) {
   // Right column: Skills / Passives (warrior Double Attack or caster Meditate)
   if (hero.classKey === "warrior") {
     const rightColumn = document.createElement("div");
+    rightColumn.id = "statsSkillsColumn";
     rightColumn.style.flex = "1 1 auto";
     rightColumn.style.minWidth = "140px";
 
@@ -2890,6 +2891,7 @@ function populateStatsSection(hero) {
     statsBox.appendChild(rightColumn);
   } else if (["cleric", "wizard", "enchanter"].includes(hero.classKey)) {
     const rightColumn = document.createElement("div");
+    rightColumn.id = "statsSkillsColumn";
     rightColumn.style.flex = "1 1 auto";
     rightColumn.style.minWidth = "140px";
 
