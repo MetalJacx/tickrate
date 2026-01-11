@@ -354,8 +354,8 @@ export function updateStatsModalSkills(hero) {
       
       rightColumn.appendChild(weaponBarBg);
     }
-  } else if (["cleric", "wizard", "enchanter", "ranger"].includes(hero.classKey)) {
-    // Meditate for Casters
+  } else if (hero.maxMana > 0) {
+    // Meditate for Casters (any hero with mana)
 
     const skillTitle = document.createElement("div");
     skillTitle.style.cssText = "font-weight:600;font-size:12px;margin:0 0 12px;color:#fbbf24;";
@@ -425,8 +425,8 @@ export function updateStatsModalSkills(hero) {
     }
     
     // Magic Skills section (for casters: channeling + specializations)
-    const classKey = (hero.classKey || hero.className || hero.class || "").toLowerCase();
-    if (["cleric", "wizard", "enchanter", "ranger"].includes(classKey)) {
+    // Show Magic Skills for any hero with mana (scales to new classes automatically)
+    if (hero.maxMana > 0) {
       const hr2 = document.createElement("hr");
       hr2.style.cssText = "border:0;border-top:1px solid #333;margin:12px 0;";
       rightColumn.appendChild(hr2);
