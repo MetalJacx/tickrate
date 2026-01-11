@@ -26,6 +26,22 @@ export const WEAPON_TYPE_NAMES = {
   "archery": "Archery"
 };
 
+// FIX 17: Centralized weapon type key normalization
+// Purpose: Ensure equipment, combat, and UI all use identical weapon type keys
+// Prevents key mismatch bugs where skill-ups write to one key but UI reads another
+//
+// Rules:
+// - All weapon types must be one of the canonical keys in WEAPON_TYPES
+// - Default to "hand_to_hand" if weapon type is null/undefined/unrecognized
+// - This ensures skill-ups and displays never diverge
+export function normalizeWeaponType(weaponType) {
+  if (!weaponType) return "hand_to_hand";
+  const normalized = String(weaponType).toLowerCase().trim();
+  if (WEAPON_TYPES.includes(normalized)) return normalized;
+  // Unrecognized weapon type: fallback to hand_to_hand (safe default)
+  return "hand_to_hand";
+}
+
 const HARD_SKILL_CAP = 300;
 
 const CLASS_SKILL_MULTIPLIER = {
@@ -161,7 +177,8 @@ export function getEquippedWeaponType(entity) {
   const itemEntry = entity?.equipment?.main;
   if (!itemEntry?.id) return "hand_to_hand";
   const def = getItemDef(itemEntry.id);
-  return def?.weaponType || "hand_to_hand";
+  // FIX 17: Normalize weapon type to ensure consistent keys across combat/UI
+  return normalizeWeaponType(def?.weaponType);
 }
 
 // Melee hit chance and damage based on spec
@@ -178,7 +195,9 @@ function isTrivialTarget(heroLevel, targetLevel) {
 }
 
 export function getMeleeHitChance(hero, weaponType, target) {
-  const skillRatio = getWeaponSkillRatio(hero, weaponType);
+  // FIX 17: Normalize weapon type to prevent key mismatch
+  const normalizedType = normalizeWeaponType(weaponType);
+  const skillRatio = getWeaponSkillRatio(hero, normalizedType);
   let hitChance = BASE_HIT;
   hitChance += (hero.level || 1) * 0.002;
   hitChance += skillRatio * SKILL_HIT_BONUS_MAX;
@@ -189,7 +208,9 @@ export function getMeleeHitChance(hero, weaponType, target) {
 }
 
 export function getMeleeDamage(hero, weaponBaseDamage, weaponType) {
-  const skillRatio = getWeaponSkillRatio(hero, weaponType);
+  // FIX 17: Normalize weapon type to prevent key mismatch
+  const normalizedType = normalizeWeaponType(weaponType);
+  const skillRatio = getWeaponSkillRatio(hero, normalizedType);
   const skillScalar = 0.85 + 0.15 * skillRatio;
   const str = hero?.stats?.str || 0;
   const strScalar = 1 + str * 0.01;
@@ -197,11 +218,14 @@ export function getMeleeDamage(hero, weaponBaseDamage, weaponType) {
 }
 
 export function tryWeaponSkillUp(hero, weaponType, targetLevel) {
+  // FIX 17: Normalize weapon type to prevent key mismatch bugs
+  const normalizedType = normalizeWeaponType(weaponType);
+  
   ensureWeaponSkills(hero);
-  const entry = hero.weaponSkills[weaponType];
+  const entry = hero.weaponSkills[normalizedType];
   if (!entry) return false;
   const skill = entry.value || 1;
-  const cap = getWeaponSkillCap(hero, weaponType);
+  const cap = getWeaponSkillCap(hero, normalizedType);
   if (skill >= cap) return false;
   if (isTrivialTarget(hero.level, targetLevel)) return false;
   const minChance = 0.5;
@@ -210,7 +234,7 @@ export function tryWeaponSkillUp(hero, weaponType, targetLevel) {
   // FIX 15: Apply skill-up rate multiplier to normalize for tickrate
   if (Math.random() * 100 < chance * SKILL_UP_RATE_MULT) {
     entry.value = skill + 1;
-    const weaponName = WEAPON_TYPE_NAMES[weaponType] || weaponType;
+    const weaponName = WEAPON_TYPE_NAMES[normalizedType] || normalizedType;
     const heroName = hero.name || "Hero";
     addLog(`${heroName}'s ${weaponName} skill increases to ${entry.value}!`, "skill");
     return true;
