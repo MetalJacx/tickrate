@@ -226,6 +226,7 @@ export function ensureMagicSkills(hero) {
 // ---------------------------
 
 export function getMagicSkillCap(hero, skillId) {
+  ensureMagicSkills(hero);
   // Baseline: 5 per level, multiplied by class
   const baseCap = 5 * hero.level;
 
