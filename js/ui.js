@@ -272,20 +272,12 @@ export function updateStatsModalSkills(hero) {
   const modal = document.getElementById("statsModal");
   if (!modal || modal.style.display === "none") return;
   
-  const statsBox = document.getElementById("characterStatsContainer");
-  if (!statsBox) return;
+  // Use stable ID selector instead of brittle style-based selector
+  let rightColumn = document.getElementById("statsSkillsColumn");
+  if (!rightColumn) return; // Skills column doesn't exist or modal not initialized
   
-  // Find the existing right column (Skills/Passives) if present; otherwise create it once
-  const columns = statsBox.querySelectorAll("div[style*='flex: 1 1 auto']");
-  let rightColumn = columns.length >= 2 ? columns[columns.length - 1] : null;
-  const createdColumn = !rightColumn;
-  if (!rightColumn) {
-    rightColumn = document.createElement("div");
-    rightColumn.style.flex = "1 1 auto";
-    rightColumn.style.minWidth = "140px";
-  } else {
-    rightColumn.innerHTML = "";
-  }
+  // Clear existing content and rebuild
+  rightColumn.innerHTML = "";
   
   // Rebuild just the skills section
   // Right column: Skills / Passives (warrior Double Attack or caster Meditate)
@@ -407,11 +399,9 @@ export function updateStatsModalSkills(hero) {
     rightColumn.appendChild(weaponMasteryTitle);
 
 
-  // Attach only if this column was newly created
-  if (createdColumn) {
-    statsBox.appendChild(rightColumn);
-  }
-    for (const weaponType of unlockedWeaponTypes) {
+  // Note: rightColumn already exists in the DOM from populateStatsSection,
+  // we only need to clear and rebuild its content
+  for (const weaponType of unlockedWeaponTypes) {
       const weaponSkillValue = hero.weaponSkills?.[weaponType]?.value ?? 1;
       const weaponSkillCap = getWeaponSkillCap(hero, weaponType);
       const weaponPct = Math.floor((weaponSkillValue / Math.max(1, weaponSkillCap)) * 100);
