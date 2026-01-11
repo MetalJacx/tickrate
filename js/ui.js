@@ -441,7 +441,7 @@ export function updateStatsModalSkills(hero) {
 
       const magicTitle = document.createElement("div");
       magicTitle.style.cssText = "font-weight:600;font-size:12px;margin:8px 0 8px;color:#a78bfa;";
-      magicTitle.textContent = "Magic Skills [v5]";
+      magicTitle.textContent = "Magic Skills [v6-SVG]";
       rightColumn.appendChild(magicTitle);
 
       // Channeling skill
@@ -477,20 +477,11 @@ export function updateStatsModalSkills(hero) {
         const specLabel = document.createElement("div");
         specLabel.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:6px 0 2px;font-size:11px;color:#aaa;";
         
-        // Map spec to display name and emoji icon
-        const specMap = {
-          destruction: { name: "Destruction", icon: "🔥", color: "#ff6b6b" },
-          restoration: { name: "Restoration", icon: "✚", color: "#69db7c" },
-          control: { name: "Control", icon: "🔒", color: "#74c0fc" },
-          enhancement: { name: "Enhancement", icon: "⭐", color: "#ffd43b" },
-          summoning: { name: "Summoning", icon: "◉", color: "#b197fc" },
-          utility: { name: "Utility", icon: "⚙", color: "#ffa94d" }
-        };
+        // Use SVG icons and proper labels
+        const specName = SPEC_LABEL[spec] ?? spec;
+        const specIcon = SPEC_ICON_SVG[spec] ?? "";
         
-        const specInfo = specMap[spec] || { name: spec, icon: "", color: "#cfd3ff" };
-        const iconHTML = specInfo.icon ? `<span style="margin-right:6px;color:${specInfo.color}">${specInfo.icon}</span>` : "";
-        
-        specLabel.innerHTML = `<span style="display:flex;align-items:center;">${iconHTML}${specInfo.name}</span> <span style='color:#ccc;'>${specValue} / ${specCap} (${specPct}%)</span>`;
+        specLabel.innerHTML = `<span style="display:flex;align-items:center;gap:6px;">${specIcon}<span>${specName}</span></span> <span style='color:#ccc;'>${specValue} / ${specCap} (${specPct}%)</span>`;
         rightColumn.appendChild(specLabel);
 
         const specBarBg = document.createElement("div");
