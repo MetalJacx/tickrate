@@ -89,12 +89,14 @@ export function initUI({ onRecruit, onReset, onOpenRecruitModal }) {
   if (statsModalCloseBtn) {
     statsModalCloseBtn.addEventListener("click", () => {
       statsModal.style.display = "none";
+      currentStatsHeroId = null;
     });
   }
   if (statsModal) {
     statsModal.addEventListener("click", (e) => {
       if (e.target === statsModal) {
         statsModal.style.display = "none";
+        currentStatsHeroId = null;
       }
     });
   }
@@ -264,6 +266,19 @@ export function renderAll() {
     if (hero) {
       populateEquipmentSection(hero);
     }
+  }
+
+  // FIX 14: Throttle stats modal skills refresh to once per tick
+  // Only refresh if modal is open and flag is set
+  if (state.needsSkillsUiRefresh) {
+    const statsModal = document.getElementById("statsModal");
+    if (statsModal && statsModal.style.display !== "none" && currentStatsHeroId != null) {
+      const hero = state.party.find(h => h.id === currentStatsHeroId);
+      if (hero) {
+        updateStatsModalSkills(hero);
+      }
+    }
+    state.needsSkillsUiRefresh = false;
   }
 }
 
@@ -1299,13 +1314,15 @@ export function renderMeta() {
   if (travelBtn) travelBtn.disabled = !canTravelForward();
   if (travelBackBtn) travelBackBtn.disabled = state.zone <= 1;
 }
-
 // Track zone/sub-area selection for travel
 let selectedZoneForTravel = null;
 let selectedSubAreaForTravel = null;
 
 // Track which hero's inventory modal is open (for live refresh)
 let currentInventoryHeroId = null;
+
+// Track which hero's stats modal is open (for live refresh)
+let currentStatsHeroId = null;
 
 function zoneKey(zone) {
   return zone?.id || `zone_${zone?.zoneNumber ?? ""}`;
@@ -1458,6 +1475,9 @@ function openStatsModal(hero) {
   
   title.textContent = `${hero.name} (${cls?.name || 'Unknown'}) - Lv ${hero.level}`;
   populateStatsSection(hero);
+  
+  // FIX 14: Track which hero's stats modal is open
+  currentStatsHeroId = hero.id;
   
   modal.style.display = "flex";
 }

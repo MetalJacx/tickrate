@@ -3,7 +3,6 @@ import { getClassDef, CLASS_DEFS } from "./classes/index.js";
 import { getZoneDef, getEnemyForZone, MAX_ZONE, rollSubAreaDiscoveries, ensureZoneDiscovery, getZoneById, getActiveSubArea } from "./zones/index.js";
 import { addLog, randInt, isExpiredEffect, unwrapEffect, purgeExpiredActive } from "./util.js";
 import { ACCOUNT_SLOT_UNLOCKS, GAME_TICK_MS, MEDITATE_UNLOCK_LEVEL, MEDITATE_SKILL_HARD_CAP, MEDITATE_BASE_REGEN_FACTOR, COMBAT_REGEN_MULT, OOC_REGEN_MULT, XP_TEST_REDUCTION_PERCENT } from "./defs.js";
-import { updateStatsModalSkills } from "./ui.js";
 import { getItemDef } from "./items.js";
 import { getRaceDef, DEFAULT_RACE_KEY } from "./races.js";
 import { ACTIONS } from "./actions.js";
@@ -2305,7 +2304,8 @@ export function gameTick() {
                 const heroName = hero.name || "Hero";
                 addLog(`${heroName}'s ${skillName} increases to ${up.value}!`, "skill");
               }
-              updateStatsModalSkills(hero);
+              // FIX 14: Throttle UI refresh to once per tick (set flag, renderAll will refresh)
+              state.needsSkillsUiRefresh = true;
             }
           }
         }
