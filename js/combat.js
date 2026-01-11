@@ -15,7 +15,8 @@ import {
   getFinalManaCost,
   onSpellCastCompleteForSkills,
   ensureMagicSkills,
-  isMagicCategoryUnlocked
+  isMagicCategoryUnlocked,
+  getMagicSkillDisplayName
 } from "./magicSkills.js";
 import {
   applyACMitigation,
@@ -2266,17 +2267,33 @@ export function gameTick() {
           }
           
           // Attempt skill-ups on completion
-          // Determine target level (for trivial-target gating)
-          let targetLevel = hero.level; // Default for non-hostile or unknown
-          if (explicitTarget && explicitTarget.level != null) {
-            targetLevel = explicitTarget.level;
-          } else if (state.currentEnemies.length > 0) {
-            // If an enemy target exists as primary, use its level
-            const primary = targets && targets[0];
-            if (primary && primary.level != null) targetLevel = primary.level;
+          // Determine target level for skill-up gating:
+          // - For non-hostile spells (heals/buffs), use caster's level (support is always meaningful)
+          // - For hostile spells (damage/debuff), use enemy's level (allow trivial-enemy gating)
+          const isNonHostile = ["self", "ally", "party"].includes(spellDef.target);
+          let targetLevelForSkills = hero.level;
+          
+          if (!isNonHostile) {
+            // Hostile spell: use explicit target or primary target level
+            if (explicitTarget && explicitTarget.level != null) {
+              targetLevelForSkills = explicitTarget.level;
+            } else if (state.currentEnemies.length > 0) {
+              const primary = targets && targets[0];
+              if (primary && primary.level != null) targetLevelForSkills = primary.level;
+            }
           }
+          // For non-hostile spells, targetLevelForSkills stays as hero.level
+          
           if (quality?.outcome !== "resisted") {
-            onSpellCastCompleteForSkills(hero, spellDef, castingState, targetLevel);
+            const skillUps = onSpellCastCompleteForSkills(hero, spellDef, castingState, targetLevelForSkills) || [];
+            if (skillUps.length > 0) {
+              for (const up of skillUps) {
+                const skillName = getMagicSkillDisplayName(up.skillId);
+                const heroName = hero.name || "Hero";
+                addLog(`${heroName}'s ${skillName} increases to ${up.value}!`, "skill");
+              }
+              updateStatsModalSkills(hero);
+            }
           }
         }
       },

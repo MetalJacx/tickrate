@@ -71,6 +71,25 @@ export const MAGIC_SKILLS = {
   channeling: "channeling"
 };
 
+const MAGIC_SKILL_DISPLAY_NAMES = {
+  [MAGIC_SKILLS.channeling]: "Channeling"
+};
+
+function toTitleCase(str) {
+  if (!str) return "";
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+for (const key of SPECIALIZATIONS) {
+  const label = toTitleCase(key);
+  MAGIC_SKILL_DISPLAY_NAMES[MAGIC_SKILLS.school[key]] = `${label} Mastery`;
+  MAGIC_SKILL_DISPLAY_NAMES[MAGIC_SKILLS.spec[key]] = `${label} Specialization`;
+}
+
+export function getMagicSkillDisplayName(skillId) {
+  return MAGIC_SKILL_DISPLAY_NAMES[skillId] || skillId || "Magic Skill";
+}
+
 // Hard caps so values don't explode
 const HARD_SKILL_CAP = 300;
 
@@ -488,16 +507,16 @@ function isTrivialTarget(heroLevel, targetLevel) {
 export function tryMagicSkillUp(hero, skillId, targetLevel) {
   ensureMagicSkills(hero);
   const entry = hero.magicSkills?.[skillId];
-  if (!entry) return false;
+  if (!entry) return null;
 
   const skill = entry.value;
   const cap = getMagicSkillCap(hero, skillId);
 
-  if (skill >= cap) return false;
+  if (skill >= cap) return null;
 
   // Trivial target gating (optional): if you don't have "spell triviality", keep simple
   // For utility spells with no target, pass targetLevel = hero.level
-  if (typeof targetLevel === "number" && isTrivialTarget(hero.level, targetLevel)) return false;
+  if (typeof targetLevel === "number" && isTrivialTarget(hero.level, targetLevel)) return null;
 
   // Diminishing chance: same curve as weapon skills
   const minChance = 0.5; // %
@@ -506,9 +525,9 @@ export function tryMagicSkillUp(hero, skillId, targetLevel) {
 
   if (Math.random() * 100 < chance) {
     entry.value += 1;
-    return true;
+    return { skillId, value: entry.value };
   }
-  return false;
+  return null;
 }
 
 /**
@@ -518,27 +537,36 @@ export function tryMagicSkillUp(hero, skillId, targetLevel) {
  * - Increases channeling if you were hit during cast and still completed
  */
 export function onSpellCastCompleteForSkills(hero, spellDef, castingState, targetLevel) {
-  if (!spellDef?.specialization) return;
+  if (!spellDef?.specialization) return [];
 
   const cat = spellDef.specialization;
+  const skillUps = [];
 
   // Always attempt school mastery skill-up
-  tryMagicSkillUp(hero, MAGIC_SKILLS.school[cat], targetLevel);
+  const schoolUp = tryMagicSkillUp(hero, MAGIC_SKILLS.school[cat], targetLevel);
+  if (schoolUp) skillUps.push(schoolUp);
 
   // Attempt specialization skill-up, but slower:
   // Easiest approach: just halve maxChance by temporarily lowering it (simple hack),
   // OR do a second roll with a smaller chance by calling tryMagicSkillUp twice conditionally.
   // Here: 50% gate before attempting spec skill-up.
   if (Math.random() < 0.5) {
-    tryMagicSkillUp(hero, MAGIC_SKILLS.spec[cat], targetLevel);
+    const specUp = tryMagicSkillUp(hero, MAGIC_SKILLS.spec[cat], targetLevel);
+    if (specUp) skillUps.push(specUp);
   }
 
   // Channeling: only if you were hit during cast AND still completed
   if (castingState?.hitsTakenDuringCast > 0) {
     // Give a small "bonus" to improve feel: attempt twice if you took hits
     const u1 = tryMagicSkillUp(hero, MAGIC_SKILLS.channeling, targetLevel);
-    if (!u1 && Math.random() < 0.5) tryMagicSkillUp(hero, MAGIC_SKILLS.channeling, targetLevel);
+    if (u1) skillUps.push(u1);
+    if (!u1 && Math.random() < 0.5) {
+      const u2 = tryMagicSkillUp(hero, MAGIC_SKILLS.channeling, targetLevel);
+      if (u2) skillUps.push(u2);
+    }
   }
+
+  return skillUps;
 }
 
 /**
