@@ -343,7 +343,7 @@ export function updateStatsModalSkills(hero) {
     }
     
     statsBox.appendChild(rightColumn);
-  } else if (["cleric", "wizard", "enchanter"].includes(hero.classKey)) {
+  } else if (["cleric", "wizard", "enchanter", "ranger"].includes(hero.classKey)) {
     // Meditate for Casters
     const rightColumn = document.createElement("div");
     rightColumn.style.flex = "1 1 auto";
@@ -414,7 +414,7 @@ export function updateStatsModalSkills(hero) {
     }
     
     // Magic Skills section (for casters: channeling + specializations)
-    if (["cleric", "wizard", "enchanter"].includes(hero.classKey)) {
+    if (["cleric", "wizard", "enchanter", "ranger"].includes(hero.classKey)) {
       const hr2 = document.createElement("hr");
       hr2.style.cssText = "border:0;border-top:1px solid #333;margin:12px 0;";
       rightColumn.appendChild(hr2);

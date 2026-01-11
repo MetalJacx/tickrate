@@ -251,7 +251,7 @@ export function getSchoolRatio(hero, categoryKey) {
 export function getFinalManaCost(hero, spellDef) {
   // spellDef.specialization must be one of SPECIALIZATIONS
   const specKey = spellDef.specialization;
-  const base = spellDef.manaCost ?? 0;
+  const base = (spellDef.manaCost ?? spellDef.cost?.mana ?? 0);
   if (!specKey) return base;
 
   const ratio = getSpecRatio(hero, specKey);
