@@ -1890,12 +1890,17 @@ export function resolveActionUse({ actor, actionId, target = null, context = {} 
   }
 
   // Check for spells with cast time - start casting instead of immediate execution
-  if (actionDef.castTimeTicks && actionDef.castTimeTicks > 0 && actor.classKey) {
+  const hasCastTime = (actionDef.castTimeTicks && actionDef.castTimeTicks > 0);
+  const usesMana = ((actionDef.cost?.mana ?? 0) > 0);
+  const isSpellKind = (actionDef.kind === "spell");
+
+  // Only route into casting for mana-based or explicit spell actions
+  if (hasCastTime && actor.classKey && (usesMana || isSpellKind)) {
     // Verify mana cost using magic skill system
     const manaCost = getFinalManaCost(actor, actionDef);
-    const hasManaCost = (actor.mana ?? 0) >= manaCost;
+    const hasMana = (actor.mana ?? 0) >= manaCost;
     
-    if (!hasManaCost) {
+    if (!hasMana) {
       return { cast: false, reason: "no_resources", attempted: false };
     }
     
@@ -2560,6 +2565,10 @@ export function gameTick() {
       
       // Check if swing is ready
       if (hero.swingCd === 0) {
+        // Option B: hold ready swings while casting; resume immediately when casting ends
+        // hero.casting is the source of truth (do not use hero.isCasting here)
+        if (hero.casting) continue;
+
         // Perform auto-attack
         performAutoAttack(hero, mainEnemy);
         

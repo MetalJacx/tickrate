@@ -115,7 +115,7 @@ export const ACTIONS = {
     cooldownTicks: 6,
     cost: { mana: 12 },
     castTimeTicks: 1,
-    specialization: "utility",
+    specialization: "control",
     scaling: {
       durationTicks: 6,
       acReduction: 3,
@@ -144,6 +144,8 @@ export const ACTIONS = {
     target: "ally",
     cooldownTicks: 1,
     cost: { mana: 10 },
+    castTimeTicks: 1,
+    specialization: "enhancement",
     handler: "woodskin"
   },
   hawk_eye: {
@@ -154,6 +156,8 @@ export const ACTIONS = {
     target: "self",
     cooldownTicks: 1,
     cost: { mana: 45 },
+    castTimeTicks: 1,
+    specialization: "enhancement",
     handler: "hawk_eye"
   },
 
