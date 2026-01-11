@@ -7,13 +7,15 @@ import { updateStatsModalSkills } from "./ui.js";
 import { getItemDef } from "./items.js";
 import { getRaceDef, DEFAULT_RACE_KEY } from "./races.js";
 import { ACTIONS } from "./actions.js";
-import { tryWeaponSkillUp, getEquippedWeaponType } from "./weaponSkills.js";
+import { tryWeaponSkillUp, getEquippedWeaponType, ensureWeaponSkills } from "./weaponSkills.js";
 import {
   startCast,
   tickCasting,
   onHeroDamaged,
   getFinalManaCost,
-  onSpellCastCompleteForSkills
+  onSpellCastCompleteForSkills,
+  ensureMagicSkills,
+  isMagicCategoryUnlocked
 } from "./magicSkills.js";
 import {
   applyACMitigation,
@@ -601,6 +603,10 @@ export function createHero(classKey, customName = null, raceKey = DEFAULT_RACE_K
     hero.doubleAttackSkill = 1;
   }
   
+  // Ensure skill objects exist for new heroes
+  ensureWeaponSkills(hero);
+  ensureMagicSkills(hero);
+
   // Initialize swing timer
   initializeSwingTimer(hero);
   return hero;
@@ -1896,6 +1902,13 @@ export function resolveActionUse({ actor, actionId, target = null, context = {} 
 
   // Only route into casting for mana-based or explicit spell actions
   if (hasCastTime && actor.classKey && (usesMana || isSpellKind)) {
+    // Optional hard gating: block casting if magic category is locked
+    const category = actionDef.specialization;
+    if (category && !isMagicCategoryUnlocked(actor, category)) {
+      addLog(`You have not unlocked ${category} magic yet.`, "normal");
+      return { cast: false, reason: "locked_magic", attempted: false };
+    }
+
     // Verify mana cost using magic skill system
     const manaCost = getFinalManaCost(actor, actionDef);
     const hasMana = (actor.mana ?? 0) >= manaCost;
