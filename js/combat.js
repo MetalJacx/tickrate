@@ -1278,6 +1278,8 @@ function meditateTick(hero) {
     // FIX 15: Apply skill-up rate multiplier to normalize for tickrate
     if (Math.random() < skillUpChance * SKILL_UP_RATE_MULT) {
       hero.meditateSkill = Math.min(hero.meditateSkill + 1, cap);
+      // Request a single stats modal refresh this tick
+      state.needsSkillsUiRefresh = true;
     }
   }
 }
@@ -2035,6 +2037,8 @@ function performAutoAttack(hero, enemy) {
       if (skillChance > 0 && Math.random() < skillChance) {
         hero.doubleAttackSkill = Math.min(cap, skill + 1);
         addLog(`${hero.name}'s Double Attack skill increases to ${hero.doubleAttackSkill}!`, "skill");
+        // Request a single stats modal refresh this tick
+        state.needsSkillsUiRefresh = true;
       }
     }
   }
