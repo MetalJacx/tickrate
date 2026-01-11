@@ -478,6 +478,13 @@ export function tickCasting(hero, nowMs, gameTickMs, opts = {}) {
 // Channeling skill-up only if you were hit during the cast AND still completed.
 //
 
+function isTrivialTarget(heroLevel, targetLevel) {
+  const hl = heroLevel || 1;
+  const tl = targetLevel || 1;
+  const gap = hl <= 10 ? 3 : 5;
+  return tl <= hl - gap;
+}
+
 export function tryMagicSkillUp(hero, skillId, targetLevel) {
   ensureMagicSkills(hero);
   const entry = hero.magicSkills?.[skillId];
@@ -490,7 +497,7 @@ export function tryMagicSkillUp(hero, skillId, targetLevel) {
 
   // Trivial target gating (optional): if you don't have "spell triviality", keep simple
   // For utility spells with no target, pass targetLevel = hero.level
-  if (typeof targetLevel === "number" && targetLevel <= hero.level - 5) return false;
+  if (typeof targetLevel === "number" && isTrivialTarget(hero.level, targetLevel)) return false;
 
   // Diminishing chance: same curve as weapon skills
   const minChance = 0.5; // %

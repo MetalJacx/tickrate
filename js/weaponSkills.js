@@ -169,6 +169,13 @@ const HIT_MIN = 0.05;
 const HIT_MAX = 0.95;
 const SKILL_HIT_BONUS_MAX = 0.15;
 
+function isTrivialTarget(heroLevel, targetLevel) {
+  const hl = heroLevel || 1;
+  const tl = targetLevel || 1;
+  const gap = hl <= 10 ? 3 : 5;
+  return tl <= hl - gap;
+}
+
 export function getMeleeHitChance(hero, weaponType, target) {
   const skillRatio = getWeaponSkillRatio(hero, weaponType);
   let hitChance = BASE_HIT;
@@ -195,7 +202,7 @@ export function tryWeaponSkillUp(hero, weaponType, targetLevel) {
   const skill = entry.value || 1;
   const cap = getWeaponSkillCap(hero, weaponType);
   if (skill >= cap) return false;
-  if ((targetLevel || 1) <= (hero.level || 1) - 5) return false;
+  if (isTrivialTarget(hero.level, targetLevel)) return false;
   const minChance = 0.5;
   const maxChance = 6.0;
   const chance = (maxChance - minChance) * Math.pow(0.99, skill) + minChance;
