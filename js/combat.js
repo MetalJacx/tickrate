@@ -1197,7 +1197,7 @@ function checkCampThresholds() {
 // Meditate skill helper: get skill cap by level
 export function getMeditateCap(level) {
   if (level < MEDITATE_UNLOCK_LEVEL) return 0;
-  return Math.min(MEDITATE_SKILL_HARD_CAP, Math.floor((level - MEDITATE_UNLOCK_LEVEL) * MEDITATE_SKILL_HARD_CAP / 55));
+  return Math.min(MEDITATE_SKILL_HARD_CAP, Math.floor((level - MEDITATE_UNLOCK_LEVEL + 1) * MEDITATE_SKILL_HARD_CAP / 55));
 }
 
 // Meditate tick: mana regen with meditate bonus and skill progression

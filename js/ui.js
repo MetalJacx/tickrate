@@ -2745,8 +2745,9 @@ function populateStatsSection(hero) {
   
   // Create a wrapper with flex layout for side-by-side
   statsBox.style.display = "flex";
-  statsBox.style.gap = "20px";
+  statsBox.style.gap = "30px";
   statsBox.style.flexWrap = "nowrap";
+  statsBox.style.padding = "0 0 0 0";
   
   const stats = hero.stats || {};
   const derived = {
@@ -2764,12 +2765,29 @@ function populateStatsSection(hero) {
   leftColumn.style.flex = "1 1 auto";
   leftColumn.style.minWidth = "140px";
   
-  leftColumn.appendChild(statLine("Primary", primary));
-  leftColumn.appendChild(statLine("HP", derived.hp));
-  leftColumn.appendChild(statLine("Mana", derived.mana));
-  leftColumn.appendChild(statLine("Endurance", derived.endurance));
-  leftColumn.appendChild(statLine("DPS", derived.dps));
-  leftColumn.appendChild(statLine("Healing", derived.healing));
+  const primaryStatLine = statLine("Primary", primary);
+  primaryStatLine.style.marginBottom = "6px";
+  leftColumn.appendChild(primaryStatLine);
+  
+  const hpLine = statLine("HP", derived.hp);
+  hpLine.style.marginBottom = "6px";
+  leftColumn.appendChild(hpLine);
+  
+  const manaLine = statLine("Mana", derived.mana);
+  manaLine.style.marginBottom = "6px";
+  leftColumn.appendChild(manaLine);
+  
+  const enduranceLine = statLine("Endurance", derived.endurance);
+  enduranceLine.style.marginBottom = "6px";
+  leftColumn.appendChild(enduranceLine);
+  
+  const dpsLine = statLine("DPS", derived.dps);
+  dpsLine.style.marginBottom = "6px";
+  leftColumn.appendChild(dpsLine);
+  
+  const healingLine = statLine("Healing", derived.healing);
+  healingLine.style.marginBottom = "14px";
+  leftColumn.appendChild(healingLine);
 
   leftColumn.appendChild(document.createElement("hr"));
   const coreStats = [
@@ -2783,7 +2801,9 @@ function populateStatsSection(hero) {
     ["CHA", stats.cha ?? 0]
   ];
   for (const [label, val] of coreStats) {
-    leftColumn.appendChild(statLine(label, val));
+    const line = statLine(label, val);
+    line.style.marginBottom = "5px";
+    leftColumn.appendChild(line);
   }
   
   statsBox.appendChild(leftColumn);
@@ -2801,24 +2821,24 @@ function populateStatsSection(hero) {
 
     const cap = doubleAttackCap(hero.level);
     const skillVal = Math.min(hero.doubleAttackSkill || 0, cap || 0);
-    const locked = hero.level < 5 || cap === 0;
+    const locked = hero.level <= 4;
     const procPct = doubleAttackProcChance(skillVal) * 100;
 
     if (locked) {
       rightColumn.appendChild(statLine("Double Attack", "Locked until level 5"));
     } else {
       const skillLine = document.createElement("div");
-      skillLine.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:4px 0;font-size:12px;color:#ccc;";
+      skillLine.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:0 0 5px;font-size:12px;color:#ccc;";
       skillLine.innerHTML = `<span>Double Attack</span> <span style='color:#fff;'>${skillVal.toFixed(0)} / ${cap}</span>`;
       rightColumn.appendChild(skillLine);
 
       const procLine = document.createElement("div");
-      procLine.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:2px 0 8px;font-size:11px;color:#aaa;";
+      procLine.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:0 0 10px;padding-left:8px;font-size:10px;color:#999;opacity:0.9;";
       procLine.innerHTML = `<span>Proc Chance</span> <span style='color:#fbbf24;'>${procPct.toFixed(1)}%</span>`;
       rightColumn.appendChild(procLine);
 
       const barBg = document.createElement("div");
-      barBg.style.cssText = "width:100%;height:10px;background:#252525;border-radius:5px;overflow:hidden;border:1px solid #333;margin:0;position:relative;";
+      barBg.style.cssText = "width:100%;height:10px;background:#252525;border-radius:5px;overflow:hidden;border:1px solid #333;margin:4px 0 12px;position:relative;";
       const percent = cap > 0 ? Math.min(100, (skillVal / cap) * 100) : 0;
       const nextPercent = cap > 0 && skillVal < cap ? Math.min(100, ((skillVal + 1) / cap) * 100) : 100;
       
@@ -2834,11 +2854,11 @@ function populateStatsSection(hero) {
     const unlockedWeaponTypes = getUnlockedWeaponTypes(hero);
 
     const hr = document.createElement("hr");
-    hr.style.cssText = "border:0;border-top:1px solid #333;margin:12px 0;";
+    hr.style.cssText = "border:0;border-top:1px solid #333;margin:16px 0;";
     rightColumn.appendChild(hr);
 
     const weaponMasteryTitle = document.createElement("div");
-    weaponMasteryTitle.style.cssText = "font-weight:600;font-size:12px;margin:8px 0 8px;color:#10b981;";
+    weaponMasteryTitle.style.cssText = "font-weight:600;font-size:12px;margin:0 0 12px;color:#10b981;";
     weaponMasteryTitle.textContent = "Weapon Mastery";
     rightColumn.appendChild(weaponMasteryTitle);
 
@@ -2850,12 +2870,12 @@ function populateStatsSection(hero) {
       const isEquipped = weaponType === equippedWeaponType;
 
       const weaponTypeLabel = document.createElement("div");
-      weaponTypeLabel.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:6px 0 2px;font-size:11px;color:#aaa;";
+      weaponTypeLabel.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:10px 0 5px;font-size:11px;color:#aaa;";
       weaponTypeLabel.innerHTML = `<span>${weaponTypeName}${isEquipped ? ' <span style="color:#10b981;">★</span>' : ''}</span> <span style='color:#ccc;'>${weaponSkillValue} / ${weaponSkillCap} (${weaponPct}%)</span>`;
       rightColumn.appendChild(weaponTypeLabel);
 
       const weaponBarBg = document.createElement("div");
-      weaponBarBg.style.cssText = "width:100%;height:6px;background:#252525;border-radius:3px;overflow:hidden;border:1px solid #333;margin:2px 0 4px;position:relative;";
+      weaponBarBg.style.cssText = "width:100%;height:6px;background:#252525;border-radius:3px;overflow:hidden;border:1px solid #333;margin:4px 0 8px;position:relative;";
       const weaponBarPercent = Math.min(100, weaponPct);
       
       const weaponBarFill = document.createElement("div");
@@ -2878,18 +2898,18 @@ function populateStatsSection(hero) {
 
     const cap = getMeditateCap(hero.level);
     const skillVal = Math.min(hero.meditateSkill || 0, cap || 0);
-    const locked = hero.level < 5 || cap === 0;
+    const locked = hero.level <= 4;
 
     if (locked) {
       rightColumn.appendChild(statLine("Meditate", "Locked until level 5"));
     } else {
       const skillLine = document.createElement("div");
-      skillLine.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:4px 0;font-size:12px;color:#ccc;";
+      skillLine.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:0 0 5px;font-size:12px;color:#ccc;";
       skillLine.innerHTML = `<span>Meditate</span> <span style='color:#fff;'>${skillVal.toFixed(0)} / ${cap}</span>`;
       rightColumn.appendChild(skillLine);
 
       const barBg = document.createElement("div");
-      barBg.style.cssText = "width:100%;height:10px;background:#252525;border-radius:5px;overflow:hidden;border:1px solid #333;margin:4px 0;position:relative;";
+      barBg.style.cssText = "width:100%;height:10px;background:#252525;border-radius:5px;overflow:hidden;border:1px solid #333;margin:4px 0 12px;position:relative;";
       const percent = cap > 0 ? Math.min(100, (skillVal / cap) * 100) : 0;
       
       const barFill = document.createElement("div");
@@ -2904,11 +2924,11 @@ function populateStatsSection(hero) {
     const unlockedWeaponTypes = getUnlockedWeaponTypes(hero);
 
     const hr = document.createElement("hr");
-    hr.style.cssText = "border:0;border-top:1px solid #333;margin:12px 0;";
+    hr.style.cssText = "border:0;border-top:1px solid #333;margin:16px 0;";
     rightColumn.appendChild(hr);
 
     const weaponMasteryTitle = document.createElement("div");
-    weaponMasteryTitle.style.cssText = "font-weight:600;font-size:12px;margin:8px 0 8px;color:#10b981;";
+    weaponMasteryTitle.style.cssText = "font-weight:600;font-size:12px;margin:0 0 12px;color:#10b981;";
     weaponMasteryTitle.textContent = "Weapon Mastery";
     rightColumn.appendChild(weaponMasteryTitle);
 
@@ -2920,12 +2940,12 @@ function populateStatsSection(hero) {
       const isEquipped = weaponType === equippedWeaponType;
 
       const weaponTypeLabel = document.createElement("div");
-      weaponTypeLabel.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:6px 0 2px;font-size:11px;color:#aaa;";
+      weaponTypeLabel.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:10px 0 5px;font-size:11px;color:#aaa;";
       weaponTypeLabel.innerHTML = `<span>${weaponTypeName}${isEquipped ? ' <span style="color:#10b981;">★</span>' : ''}</span> <span style='color:#ccc;'>${weaponSkillValue} / ${weaponSkillCap} (${weaponPct}%)</span>`;
       rightColumn.appendChild(weaponTypeLabel);
 
       const weaponBarBg = document.createElement("div");
-      weaponBarBg.style.cssText = "width:100%;height:6px;background:#252525;border-radius:3px;overflow:hidden;border:1px solid #333;margin:2px 0 4px;position:relative;";
+      weaponBarBg.style.cssText = "width:100%;height:6px;background:#252525;border-radius:3px;overflow:hidden;border:1px solid #333;margin:4px 0 8px;position:relative;";
       const weaponBarPercent = Math.min(100, weaponPct);
       
       const weaponBarFill = document.createElement("div");
@@ -2937,11 +2957,11 @@ function populateStatsSection(hero) {
     
     // Magic Skills section (for casters: channeling + specializations)
     const hr2 = document.createElement("hr");
-    hr2.style.cssText = "border:0;border-top:1px solid #333;margin:12px 0;";
+    hr2.style.cssText = "border:0;border-top:1px solid #333;margin:16px 0;";
     rightColumn.appendChild(hr2);
 
     const magicTitle = document.createElement("div");
-    magicTitle.style.cssText = "font-weight:600;font-size:12px;margin:8px 0 8px;color:#a78bfa;";
+    magicTitle.style.cssText = "font-weight:600;font-size:12px;margin:0 0 12px;color:#a78bfa;";
     magicTitle.textContent = "Magic Skills";
     rightColumn.appendChild(magicTitle);
 
@@ -2952,12 +2972,12 @@ function populateStatsSection(hero) {
     const chanPct = Math.floor((chanValue / Math.max(1, chanCap)) * 100);
 
     const chanLabel = document.createElement("div");
-    chanLabel.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:6px 0 2px;font-size:11px;color:#aaa;";
+    chanLabel.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:0 0 5px;font-size:11px;color:#aaa;";
     chanLabel.innerHTML = `<span>Channeling</span> <span style='color:#ccc;'>${chanValue} / ${chanCap} (${chanPct}%)</span>`;
     rightColumn.appendChild(chanLabel);
 
     const chanBarBg = document.createElement("div");
-    chanBarBg.style.cssText = "width:100%;height:6px;background:#252525;border-radius:3px;overflow:hidden;border:1px solid #333;margin:2px 0 6px;position:relative;";
+    chanBarBg.style.cssText = "width:100%;height:6px;background:#252525;border-radius:3px;overflow:hidden;border:1px solid #333;margin:4px 0 12px;position:relative;";
     const chanBarPercent = Math.min(100, chanPct);
     const chanBarFill = document.createElement("div");
     chanBarFill.style.cssText = `height:100%;width:${chanBarPercent}%;background:linear-gradient(90deg,#a78bfa,#9333ea);transition:width 0.2s;`;
@@ -2976,7 +2996,7 @@ function populateStatsSection(hero) {
       const manaSavingsPct = Math.floor(specRatio * 10); // 10% at cap
 
       const specLabel = document.createElement("div");
-      specLabel.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:6px 0 2px;font-size:11px;color:#aaa;";
+      specLabel.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:10px 0 5px;font-size:11px;color:#aaa;";
       
       // Use SVG icons and proper labels
       const specName = SPEC_LABEL[spec] ?? spec;
@@ -2986,7 +3006,7 @@ function populateStatsSection(hero) {
       rightColumn.appendChild(specLabel);
 
       const specBarBg = document.createElement("div");
-      specBarBg.style.cssText = "width:100%;height:6px;background:#252525;border-radius:3px;overflow:hidden;border:1px solid #333;margin:2px 0 3px;position:relative;";
+      specBarBg.style.cssText = "width:100%;height:6px;background:#252525;border-radius:3px;overflow:hidden;border:1px solid #333;margin:4px 0 5px;position:relative;";
       const specBarPercent = Math.min(100, specPct);
       const specBarFill = document.createElement("div");
       specBarFill.style.cssText = `height:100%;width:${specBarPercent}%;background:linear-gradient(90deg,#818cf8,#6366f1);transition:width 0.2s;`;
@@ -2994,7 +3014,7 @@ function populateStatsSection(hero) {
       rightColumn.appendChild(specBarBg);
 
       const manaSavingsLabel = document.createElement("div");
-      manaSavingsLabel.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:0 0 6px;font-size:10px;color:#888;";
+      manaSavingsLabel.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:0 0 10px;padding-left:8px;font-size:10px;color:#888;opacity:0.85;";
       manaSavingsLabel.innerHTML = `<span>Mana Savings</span> <span style='color:#a78bfa;'>${manaSavingsPct}%</span>`;
       rightColumn.appendChild(manaSavingsLabel);
     }
