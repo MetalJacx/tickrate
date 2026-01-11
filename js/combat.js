@@ -9,6 +9,13 @@ import { getRaceDef, DEFAULT_RACE_KEY } from "./races.js";
 import { ACTIONS } from "./actions.js";
 import { tryWeaponSkillUp, getEquippedWeaponType } from "./weaponSkills.js";
 import {
+  startCast,
+  tickCasting,
+  onHeroDamaged,
+  getFinalManaCost,
+  onSpellCastCompleteForSkills
+} from "./magicSkills.js";
+import {
   applyACMitigation,
   computeCritChance,
   computeHitChance,
@@ -1866,6 +1873,37 @@ export function resolveActionUse({ actor, actionId, target = null, context = {} 
     return { cast: false, reason: "no_target" };
   }
 
+  // Check for spells with cast time - start casting instead of immediate execution
+  if (actionDef.castTimeTicks && actionDef.castTimeTicks > 0 && actor.classKey) {
+    // Verify mana cost using magic skill system
+    const manaCost = getFinalManaCost(actor, actionDef);
+    const hasManaCost = (actor.mana ?? 0) >= manaCost;
+    
+    if (!hasManaCost) {
+      return { cast: false, reason: "no_resources", attempted: false };
+    }
+    
+    const targetId = targets[0]?.id || null;
+    const castStart = startCast(actor, actionDef, targetId, state.nowMs, GAME_TICK_MS, {
+      reserveMana: false,
+      spendManaFn: (hero, amount) => {
+        hero.mana = Math.max(0, (hero.mana ?? 0) - amount);
+      },
+      setCooldownFn: (hero, spell) => {
+        const timers = getActionTimerStore(hero);
+        if (timers) timers[actionId] = spell.cooldownTicks;
+      }
+    });
+    
+    if (!castStart.ok) {
+      return { cast: false, reason: castStart.reason, attempted: false };
+    }
+    
+    addLog(`${actor.name} begins casting ${actionDef.name}...`, "skill");
+    return { cast: true, target: targets?.[0] || null, attempted: true };
+  }
+
+  // Non-casting actions proceed as normal
   const resourceCheck = hasActionResources(actor, actionDef.cost);
   if (!resourceCheck.ok) {
     return { cast: false, reason: resourceCheck.reason || "no_resources", attempted: false };
@@ -2048,6 +2086,10 @@ function performEnemyAutoAttack(enemy, livingMembers) {
   target.health = Math.max(0, target.health - damageToHealth);
   if (damageToHealth > 0) {
     addLog(`${enemy.name} attacks ${target.name} for ${damageToHealth.toFixed(1)} damage${isCrit ? " (CRIT)" : ""}!`, "damage_taken");
+    // Track damage for channeling interrupt checks
+    if (target.type === "player" || target.classKey) {
+      onHeroDamaged(target, damageToHealth);
+    }
   }
 
   // Apply any enemy-sourced debuffs defined on the enemy
@@ -2151,6 +2193,43 @@ export function gameTick() {
     // Tick down Arcane Shield lockout (prevents offensive spells for 1 tick)
     if (hero.arcaneShieldLockout && hero.arcaneShieldLockout > 0) {
       hero.arcaneShieldLockout -= 1;
+    }
+    
+    // Tick casting state (handle interrupts / completions)
+    const castRes = tickCasting(hero, now, GAME_TICK_MS, {
+      getSpellDefById: (spellId) => ACTIONS[spellId],
+      onComplete: (hero, castingState, quality) => {
+        const spellDef = ACTIONS[castingState.spellId];
+        if (spellDef) {
+          // Apply spell effects using quality.mult (scale by outcome)
+          // TODO: Wire spell effects here (damage, healing, buffs, etc)
+          // For now, just log completion
+          addLog(`${hero.name} cast ${spellDef.name} (${quality.outcome}).`, "skill");
+          
+          // Attempt skill-ups on completion
+          // Determine target level (for trivial-target gating)
+          let targetLevel = hero.level; // Default: utility spell, no special target
+          if (castingState.targetId && state.currentEnemies.length > 0) {
+            const targetEnemy = state.currentEnemies.find(e => e.id === castingState.targetId);
+            if (targetEnemy) targetLevel = targetEnemy.level;
+          }
+          onSpellCastCompleteForSkills(hero, spellDef, castingState, targetLevel);
+        }
+      },
+      onInterrupt: (hero, castingState) => {
+        const spellDef = ACTIONS[castingState.spellId];
+        addLog(`${hero.name}'s cast of ${spellDef?.name || "spell"} was interrupted!`, "skill");
+      },
+      spendManaFn: (hero, amount) => {
+        hero.mana = Math.max(0, (hero.mana ?? 0) - amount);
+      }
+    });
+    
+    // If casting, prevent action bar from firing (casting blocks actions)
+    if (hero.casting) {
+      hero.isCasting = true;
+    } else {
+      hero.isCasting = false;
     }
     
     // Tick down equip cooldown
@@ -2301,6 +2380,7 @@ export function gameTick() {
 
   for (const hero of state.party) {
     if (hero.isDead) continue; // Dead heroes can't use skills
+    if (hero.isCasting) continue; // Skip action bar while casting
     
     const cls = getClassDef(hero.classKey);
     if (!cls?.skills) continue;

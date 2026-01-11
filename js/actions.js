@@ -11,6 +11,8 @@ export const ACTIONS = {
     target: "enemy",
     cooldownTicks: 3,
     cost: { mana: 10 },
+    castTimeTicks: 1,
+    specialization: "destruction",
     scaling: {
       minDamage: 12,
       maxDamageBase: 20,
@@ -28,6 +30,8 @@ export const ACTIONS = {
     target: "enemy",
     cooldownTicks: 4,
     cost: { mana: 18 },
+    castTimeTicks: 2,
+    specialization: "destruction",
     scaling: {
       minDamage: 18,
       maxDamageBase: 30,
@@ -45,6 +49,8 @@ export const ACTIONS = {
     target: "aoe_enemies",
     cooldownTicks: 8,
     cost: { mana: 30 },
+    castTimeTicks: 2,
+    specialization: "destruction",
     scaling: {
       minDamage: 10,
       maxDamage: 16,
@@ -61,6 +67,8 @@ export const ACTIONS = {
     target: "self",
     cooldownTicks: 15,
     cost: { mana: 25 },
+    castTimeTicks: 1,
+    specialization: "enhancement",
     scaling: {
       tempHP: 50,
       castLockoutTicks: 1
@@ -75,6 +83,8 @@ export const ACTIONS = {
     target: "self",
     cooldownTicks: 12,
     cost: null,
+    castTimeTicks: 1,
+    specialization: "utility",
     handler: "gather_mana"
   },
 
@@ -103,6 +113,8 @@ export const ACTIONS = {
     target: "enemy",
     cooldownTicks: 6,
     cost: { mana: 12 },
+    castTimeTicks: 1,
+    specialization: "utility",
     scaling: {
       durationTicks: 6,
       acReduction: 3,
@@ -153,6 +165,8 @@ export const ACTIONS = {
     target: "ally",
     cooldownTicks: 4,
     cost: { mana: 10 },
+    castTimeTicks: 1,
+    specialization: "restoration",
     scaling: { minHeal: 10, maxHeal: 20 },
     handler: "minor_heal"
   },
@@ -164,6 +178,8 @@ export const ACTIONS = {
     target: "ally",
     cooldownTicks: 1,
     cost: { mana: 12 },
+    castTimeTicks: 1,
+    specialization: "enhancement",
     handler: "courage"
   },
   fear: {
@@ -174,6 +190,8 @@ export const ACTIONS = {
     target: "enemy",
     cooldownTicks: 7,
     cost: { mana: 40 },
+    castTimeTicks: 1,
+    specialization: "control",
     scaling: {
       levelCap: 52,
       baseDurationTicks: 2,
@@ -191,6 +209,8 @@ export const ACTIONS = {
     target: "self",
     cooldownTicks: 12,
     cost: { mana: 25 },
+    castTimeTicks: 1,
+    specialization: "enhancement",
     scaling: { durationTicks: 4 },
     handler: "divine_focus"
   },
@@ -202,6 +222,8 @@ export const ACTIONS = {
     target: "ally",
     cooldownTicks: 12,
     cost: { mana: 65 },
+    castTimeTicks: 2,
+    specialization: "restoration",
     scaling: { minHeal: 95, maxHeal: 175 },
     handler: "healing"
   },
@@ -215,6 +237,8 @@ export const ACTIONS = {
     target: "enemy",
     cooldownTicks: 3,
     cost: { mana: 7 },
+    castTimeTicks: 1,
+    specialization: "utility",
     handler: "feedback"
   },
   mesmerize: {
@@ -225,6 +249,8 @@ export const ACTIONS = {
     target: "xt_enemy",
     cooldownTicks: 6,
     cost: { mana: 20 },
+    castTimeTicks: 1,
+    specialization: "control",
     scaling: { durationTicks: 4 },
     handler: "mesmerize"
   },
@@ -236,6 +262,8 @@ export const ACTIONS = {
     target: "enemy",
     cooldownTicks: 6,
     cost: { mana: 15 },
+    castTimeTicks: 1,
+    specialization: "control",
     handler: "suffocate"
   },
   lesser_rune: {
@@ -246,6 +274,8 @@ export const ACTIONS = {
     target: "self",
     cooldownTicks: 8,
     cost: { mana: 25 },
+    castTimeTicks: 1,
+    specialization: "enhancement",
     handler: "lesser_rune"
   },
 

@@ -8,6 +8,16 @@ import { formatPGSC, saveGame, updateCurrencyDisplay } from "./state.js";
 import { MAX_PARTY_SIZE, ACCOUNT_SLOT_UNLOCKS, CONSUMABLE_SLOT_UNLOCK_LEVELS } from "./defs.js";
 import { getItemDef } from "./items.js";
 import { canEquipWeapon, getEquippedWeaponType, getWeaponSkillCap, WEAPON_TYPE_NAMES, getUnlockedWeaponTypes } from "./weaponSkills.js";
+import {
+  getMagicSkillCap,
+  getMagicSkillValue,
+  getMagicSkillRatio,
+  MAGIC_SKILLS,
+  SPECIALIZATIONS,
+  isMagicCategoryUnlocked,
+  getSpecRatio,
+  getFinalManaCost
+} from "./magicSkills.js";
 import { computeSellValue } from "./combatMath.js";
 import { ACTIONS } from "./actions.js";
 
@@ -401,6 +411,67 @@ export function updateStatsModalSkills(hero) {
       weaponBarBg.appendChild(weaponBarFill);
       
       rightColumn.appendChild(weaponBarBg);
+    }
+    
+    // Magic Skills section (for casters: channeling + specializations)
+    if (["cleric", "wizard", "enchanter"].includes(hero.classKey)) {
+      const hr2 = document.createElement("hr");
+      hr2.style.cssText = "border:0;border-top:1px solid #333;margin:12px 0;";
+      rightColumn.appendChild(hr2);
+
+      const magicTitle = document.createElement("div");
+      magicTitle.style.cssText = "font-weight:600;font-size:12px;margin:8px 0 8px;color:#a78bfa;";
+      magicTitle.textContent = "Magic Skills";
+      rightColumn.appendChild(magicTitle);
+
+      // Channeling skill
+      const channelingSkillId = MAGIC_SKILLS.channeling;
+      const chanValue = getMagicSkillValue(hero, channelingSkillId);
+      const chanCap = getMagicSkillCap(hero, channelingSkillId);
+      const chanPct = Math.floor((chanValue / Math.max(1, chanCap)) * 100);
+
+      const chanLabel = document.createElement("div");
+      chanLabel.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:6px 0 2px;font-size:11px;color:#aaa;";
+      chanLabel.innerHTML = `<span>Channeling</span> <span style='color:#ccc;'>${chanValue} / ${chanCap} (${chanPct}%)</span>`;
+      rightColumn.appendChild(chanLabel);
+
+      const chanBarBg = document.createElement("div");
+      chanBarBg.style.cssText = "width:100%;height:6px;background:#252525;border-radius:3px;overflow:hidden;border:1px solid #333;margin:2px 0 6px;position:relative;";
+      const chanBarPercent = Math.min(100, chanPct);
+      const chanBarFill = document.createElement("div");
+      chanBarFill.style.cssText = `height:100%;width:${chanBarPercent}%;background:linear-gradient(90deg,#a78bfa,#9333ea);transition:width 0.2s;`;
+      chanBarBg.appendChild(chanBarFill);
+      rightColumn.appendChild(chanBarBg);
+
+      // Specialization skills
+      for (const spec of SPECIALIZATIONS) {
+        if (!isMagicCategoryUnlocked(hero, spec)) continue;
+
+        const specSkillId = MAGIC_SKILLS.spec[spec];
+        const specValue = getMagicSkillValue(hero, specSkillId);
+        const specCap = getMagicSkillCap(hero, specSkillId);
+        const specPct = Math.floor((specValue / Math.max(1, specCap)) * 100);
+        const specRatio = getSpecRatio(hero, spec);
+        const manaSavingsPct = Math.floor(specRatio * 10); // 10% at cap
+
+        const specLabel = document.createElement("div");
+        specLabel.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:6px 0 2px;font-size:11px;color:#aaa;";
+        specLabel.innerHTML = `<span>${spec}</span> <span style='color:#ccc;'>${specValue} / ${specCap} (${specPct}%)</span>`;
+        rightColumn.appendChild(specLabel);
+
+        const specBarBg = document.createElement("div");
+        specBarBg.style.cssText = "width:100%;height:6px;background:#252525;border-radius:3px;overflow:hidden;border:1px solid #333;margin:2px 0 3px;position:relative;";
+        const specBarPercent = Math.min(100, specPct);
+        const specBarFill = document.createElement("div");
+        specBarFill.style.cssText = `height:100%;width:${specBarPercent}%;background:linear-gradient(90deg,#818cf8,#6366f1);transition:width 0.2s;`;
+        specBarBg.appendChild(specBarFill);
+        rightColumn.appendChild(specBarBg);
+
+        const manaSavingsLabel = document.createElement("div");
+        manaSavingsLabel.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:0 0 6px;font-size:10px;color:#888;";
+        manaSavingsLabel.innerHTML = `<span>Mana Savings</span> <span style='color:#a78bfa;'>${manaSavingsPct}%</span>`;
+        rightColumn.appendChild(manaSavingsLabel);
+      }
     }
     
     statsBox.appendChild(rightColumn);
@@ -2837,6 +2908,65 @@ function populateStatsSection(hero) {
       weaponBarBg.appendChild(weaponBarFill);
       
       rightColumn.appendChild(weaponBarBg);
+    }
+    
+    // Magic Skills section (for casters: channeling + specializations)
+    const hr2 = document.createElement("hr");
+    hr2.style.cssText = "border:0;border-top:1px solid #333;margin:12px 0;";
+    rightColumn.appendChild(hr2);
+
+    const magicTitle = document.createElement("div");
+    magicTitle.style.cssText = "font-weight:600;font-size:12px;margin:8px 0 8px;color:#a78bfa;";
+    magicTitle.textContent = "Magic Skills";
+    rightColumn.appendChild(magicTitle);
+
+    // Channeling skill
+    const channelingSkillId = MAGIC_SKILLS.channeling;
+    const chanValue = getMagicSkillValue(hero, channelingSkillId);
+    const chanCap = getMagicSkillCap(hero, channelingSkillId);
+    const chanPct = Math.floor((chanValue / Math.max(1, chanCap)) * 100);
+
+    const chanLabel = document.createElement("div");
+    chanLabel.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:6px 0 2px;font-size:11px;color:#aaa;";
+    chanLabel.innerHTML = `<span>Channeling</span> <span style='color:#ccc;'>${chanValue} / ${chanCap} (${chanPct}%)</span>`;
+    rightColumn.appendChild(chanLabel);
+
+    const chanBarBg = document.createElement("div");
+    chanBarBg.style.cssText = "width:100%;height:6px;background:#252525;border-radius:3px;overflow:hidden;border:1px solid #333;margin:2px 0 6px;position:relative;";
+    const chanBarPercent = Math.min(100, chanPct);
+    const chanBarFill = document.createElement("div");
+    chanBarFill.style.cssText = `height:100%;width:${chanBarPercent}%;background:linear-gradient(90deg,#a78bfa,#9333ea);transition:width 0.2s;`;
+    chanBarBg.appendChild(chanBarFill);
+    rightColumn.appendChild(chanBarBg);
+
+    // Specialization skills
+    for (const spec of SPECIALIZATIONS) {
+      if (!isMagicCategoryUnlocked(hero, spec)) continue;
+
+      const specSkillId = MAGIC_SKILLS.spec[spec];
+      const specValue = getMagicSkillValue(hero, specSkillId);
+      const specCap = getMagicSkillCap(hero, specSkillId);
+      const specPct = Math.floor((specValue / Math.max(1, specCap)) * 100);
+      const specRatio = getSpecRatio(hero, spec);
+      const manaSavingsPct = Math.floor(specRatio * 10); // 10% at cap
+
+      const specLabel = document.createElement("div");
+      specLabel.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:6px 0 2px;font-size:11px;color:#aaa;";
+      specLabel.innerHTML = `<span>${spec}</span> <span style='color:#ccc;'>${specValue} / ${specCap} (${specPct}%)</span>`;
+      rightColumn.appendChild(specLabel);
+
+      const specBarBg = document.createElement("div");
+      specBarBg.style.cssText = "width:100%;height:6px;background:#252525;border-radius:3px;overflow:hidden;border:1px solid #333;margin:2px 0 3px;position:relative;";
+      const specBarPercent = Math.min(100, specPct);
+      const specBarFill = document.createElement("div");
+      specBarFill.style.cssText = `height:100%;width:${specBarPercent}%;background:linear-gradient(90deg,#818cf8,#6366f1);transition:width 0.2s;`;
+      specBarBg.appendChild(specBarFill);
+      rightColumn.appendChild(specBarBg);
+
+      const manaSavingsLabel = document.createElement("div");
+      manaSavingsLabel.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:0 0 6px;font-size:10px;color:#888;";
+      manaSavingsLabel.innerHTML = `<span>Mana Savings</span> <span style='color:#a78bfa;'>${manaSavingsPct}%</span>`;
+      rightColumn.appendChild(manaSavingsLabel);
     }
     
     statsBox.appendChild(rightColumn);
