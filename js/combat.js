@@ -1197,7 +1197,7 @@ function checkCampThresholds() {
 // Meditate skill helper: get skill cap by level
 export function getMeditateCap(level) {
   if (level < MEDITATE_UNLOCK_LEVEL) return 0;
-  return Math.min(MEDITATE_SKILL_HARD_CAP, Math.floor((level - MEDITATE_UNLOCK_LEVEL + 1) * MEDITATE_SKILL_HARD_CAP / 55));
+  return Math.min(MEDITATE_SKILL_HARD_CAP, level * 5);
 }
 
 // Meditate tick: mana regen with meditate bonus and skill progression
@@ -2011,13 +2011,26 @@ function performAutoAttack(hero, enemy) {
   enemy.hp = Math.max(0, enemy.hp - mitigated);
   addLog(`${hero.name} hits ${enemy.name} for ${mitigated.toFixed(1)}${isCrit ? " (CRIT)" : ""}!`, "damage_dealt");
 
+  // Warrior: attempt Double Attack skill-up on successful main-hand hit (independent of proc)
+  if (hero.classKey === "warrior") {
+    const cap = doubleAttackCap(hero.level);
+    const skill = hero.doubleAttackSkill || 0;
+    if (cap > 0 && skill < cap) {
+      const skillChance = doubleAttackSkillUpChance(hero, cap);
+      if (skillChance > 0 && Math.random() < skillChance) {
+        hero.doubleAttackSkill = Math.min(cap, skill + 1);
+        addLog(`${hero.name}'s Double Attack skill increases to ${hero.doubleAttackSkill}!`, "skill");
+      }
+    }
+  }
+
   // Break mesmerize on any damage taken by the enemy
   if (hasBuff(enemy, "mesmerize")) {
     removeBuff(enemy, "mesmerize");
     addLog(`${enemy.name} is jolted awake!`, "skill");
   }
 
-  // Warrior-only: Double Attack proc and skill-ups
+  // Warrior-only: Double Attack proc (skill-up now handled on main hit above)
   if (hero.classKey === "warrior" && enemy.hp > 0) {
     const cap = doubleAttackCap(hero.level);
     const skill = hero.doubleAttackSkill || 0;
@@ -2037,15 +2050,7 @@ function performAutoAttack(hero, enemy) {
         addLog(`${hero.name}'s double attack misses ${enemy.name}.`, "damage_dealt");
       }
 
-      // Skill-up roll only when double attack procs
-      if (skill < cap) {
-        const skillChance = doubleAttackSkillUpChance(hero, cap);
-        if (skillChance > 0 && Math.random() < skillChance) {
-          hero.doubleAttackSkill = Math.min(cap, skill + 1);
-          addLog(`${hero.name}'s Double Attack skill increases to ${hero.doubleAttackSkill}!`, "skill");
-          updateStatsModalSkills(hero);
-        }
-      }
+      // Note: skill-up no longer rolls here to avoid double-rolls
     }
   }
 }
