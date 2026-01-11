@@ -1,5 +1,6 @@
 // Centralized action definitions for both players and mobs.
 // Learn levels live in class files; these definitions only describe mechanics and permissions.
+// This is the single source of truth for spells/abilities (legacy spells.js removed).
 
 export const ACTIONS = {
   // Wizard
