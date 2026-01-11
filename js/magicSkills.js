@@ -282,8 +282,18 @@ export function getFinalManaCost(hero, spellDef) {
   const reduction = SPEC_MANA_REDUCTION_AT_CAP * ratio; // up to 10%
   const finalCost = base * (1 - reduction);
 
-  // Keep integer mana if your game uses ints; otherwise return float.
-  return Math.max(0, Math.round(finalCost));
+  // FIX 16: Guarantee at least 1 mana saved early-game when specialization is trained
+  // Problem: rounding causes low-cost spells to lose savings (5 * 0.1 = 0.5 rounds to 0)
+  // Solution: If reduction would save < 1 mana but spec is trained, force-save 1 mana
+  const roundedCost = Math.round(finalCost);
+  const manaSaved = base - roundedCost;
+  
+  if (ratio > 0 && manaSaved === 0 && base >= 2 && reduction > 0) {
+    // Force at least 1 mana saved to make specialization feel effective early-game
+    return Math.max(0, base - 1);
+  }
+  
+  return Math.max(0, roundedCost);
 }
 
 // ---------------------------
