@@ -441,7 +441,7 @@ export function updateStatsModalSkills(hero) {
 
       const magicTitle = document.createElement("div");
       magicTitle.style.cssText = "font-weight:600;font-size:12px;margin:8px 0 8px;color:#a78bfa;";
-      magicTitle.textContent = "Magic Skills [v6-SVG]";
+      magicTitle.textContent = "Magic Skills";
       rightColumn.appendChild(magicTitle);
 
       // Channeling skill
@@ -2977,7 +2977,12 @@ function populateStatsSection(hero) {
 
       const specLabel = document.createElement("div");
       specLabel.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:6px 0 2px;font-size:11px;color:#aaa;";
-      specLabel.innerHTML = `<span>${spec}</span> <span style='color:#ccc;'>${specValue} / ${specCap} (${specPct}%)</span>`;
+      
+      // Use SVG icons and proper labels
+      const specName = SPEC_LABEL[spec] ?? spec;
+      const specIcon = SPEC_ICON_SVG[spec] ?? "";
+      
+      specLabel.innerHTML = `<span style="display:flex;align-items:center;gap:6px;">${specIcon}<span>${specName}</span></span> <span style='color:#ccc;'>${specValue} / ${specCap} (${specPct}%)</span>`;
       rightColumn.appendChild(specLabel);
 
       const specBarBg = document.createElement("div");
