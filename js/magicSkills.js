@@ -221,6 +221,7 @@ export function getMagicSkillCap(hero, skillId) {
 }
 
 export function getMagicSkillValue(hero, skillId) {
+  ensureMagicSkills(hero);
   return hero.magicSkills?.[skillId]?.value ?? 1;
 }
 
@@ -478,6 +479,7 @@ export function tickCasting(hero, nowMs, gameTickMs, opts = {}) {
 //
 
 export function tryMagicSkillUp(hero, skillId, targetLevel) {
+  ensureMagicSkills(hero);
   const entry = hero.magicSkills?.[skillId];
   if (!entry) return false;
 
