@@ -1499,7 +1499,7 @@ function breakMesmerizeOnDamage(target) {
   }
 }
 
-function performAction(actionId, actionDef, actor, targets, context) {
+function performAction(actionId, actionDef, actor, targets, context, quality = { mult: 1, outcome: "full" }) {
   const actorLevel = actor.spellLevel ?? actor.level ?? 1;
   let damageDealt = 0;
   let attempted = true;
@@ -1508,50 +1508,58 @@ function performAction(actionId, actionDef, actor, targets, context) {
   let cooldownOverride = null;
 
   const primaryTarget = targets?.[0] ?? null;
+  const q = Math.max(0, quality?.mult ?? 1);
+  const outcome = quality?.outcome || "full";
+  const isPartial = q > 0 && q < 1;
+  const isResisted = q === 0 || outcome === "resisted";
+  const outcomeTag = isPartial ? " (partial)" : "";
 
   switch (actionId) {
     case "fireblast": {
       if (!primaryTarget) break;
+      if (isResisted) { addLog(`${actor.name}'s ${actionDef.name} was resisted by ${primaryTarget.name}.`, "skill"); attempted = true; success = false; break; }
       const scale = actionDef.scaling;
       const bonusSteps = Math.max(0, Math.floor((actorLevel - 1) / (scale.maxDamageBonusIntervalLevels || 1)));
       const maxBonus = Math.min(scale.maxDamageBonusCap || 0, bonusSteps);
       const minDmg = scale.minDamage || 0;
       const maxDmg = (scale.maxDamageBase || 0) + maxBonus;
-      const raw = minDmg + Math.random() * (maxDmg - minDmg);
+      const raw = (minDmg + Math.random() * (maxDmg - minDmg)) * q;
       const mitigated = applyACMitigation(raw, primaryTarget);
       primaryTarget.hp = Math.max(0, primaryTarget.hp - mitigated);
       damageDealt += mitigated;
       success = true;
-      addLog(`${actor.name} uses ${actionDef.name} (${scale.damageType}) for ${mitigated.toFixed(1)} damage!`, "damage_dealt");
+      addLog(`${actor.name} uses ${actionDef.name} (${scale.damageType}) for ${mitigated.toFixed(1)} damage${outcomeTag}!`, "damage_dealt");
       breakMesmerizeOnDamage(primaryTarget);
       break;
     }
     case "iceblast": {
       if (!primaryTarget) break;
+      if (isResisted) { addLog(`${actor.name}'s ${actionDef.name} was resisted by ${primaryTarget.name}.`, "skill"); attempted = true; success = false; break; }
       const scale = actionDef.scaling;
       const bonusSteps = Math.max(0, Math.floor((actorLevel - 7) / (scale.maxDamageBonusIntervalLevels || 1)));
       const maxBonus = Math.min(scale.maxDamageBonusCap || 0, bonusSteps);
       const minDmg = scale.minDamage || 0;
       const maxDmg = (scale.maxDamageBase || 0) + maxBonus;
-      const raw = minDmg + Math.random() * (maxDmg - minDmg);
+      const raw = (minDmg + Math.random() * (maxDmg - minDmg)) * q;
       const mitigated = applyACMitigation(raw, primaryTarget);
       primaryTarget.hp = Math.max(0, primaryTarget.hp - mitigated);
       damageDealt += mitigated;
       success = true;
-      addLog(`${actor.name} uses ${actionDef.name} (${scale.damageType}) for ${mitigated.toFixed(1)} damage!`, "damage_dealt");
+      addLog(`${actor.name} uses ${actionDef.name} (${scale.damageType}) for ${mitigated.toFixed(1)} damage${outcomeTag}!`, "damage_dealt");
       breakMesmerizeOnDamage(primaryTarget);
       break;
     }
     case "rain_of_fire": {
       const targetList = targets || [];
       if (targetList.length === 0) break;
+      if (isResisted) { addLog(`${actor.name}'s ${actionDef.name} was resisted.`, "skill"); attempted = true; success = false; break; }
       const scale = actionDef.scaling || {};
       const minDmg = scale.minDamage || 0;
       const maxDmg = scale.maxDamage || 0;
       const cleaveLimit = scale.cleaveTargets || targetList.length;
       const chosen = targetList.slice(0, cleaveLimit);
       chosen.forEach((t, idx) => {
-        let raw = minDmg + Math.random() * (maxDmg - minDmg);
+        let raw = (minDmg + Math.random() * (maxDmg - minDmg)) * q;
         if (scale.aoeDiminishing && idx >= 3) {
           const diminishCount = idx - 2;
           const diminishPercent = Math.max(0.4, 1.0 - diminishCount * 0.2);
@@ -1560,7 +1568,7 @@ function performAction(actionId, actionDef, actor, targets, context) {
         const mitigated = applyACMitigation(raw, t);
         t.hp = Math.max(0, t.hp - mitigated);
         damageDealt += mitigated;
-        addLog(`${actor.name} scorches ${t.name} for ${mitigated.toFixed(1)} damage!`, "damage_dealt");
+        addLog(`${actor.name} scorches ${t.name} for ${mitigated.toFixed(1)} damage${outcomeTag}!`, "damage_dealt");
         breakMesmerizeOnDamage(t);
       });
       success = true;
@@ -1605,18 +1613,20 @@ function performAction(actionId, actionDef, actor, targets, context) {
     }
     case "flame_lick": {
       if (!primaryTarget) break;
+      if (isResisted) { addLog(`${actor.name}'s ${actionDef.name} was resisted by ${primaryTarget.name}.`, "skill"); attempted = true; success = false; break; }
       const scale = actionDef.scaling || {};
-      const durationTicks = scale.durationTicks ?? 6;
+      let durationTicks = scale.durationTicks ?? 6;
+      if (isPartial) durationTicks = Math.max(1, Math.floor(durationTicks * q));
       const durationMs = durationTicks * GAME_TICK_MS;
       const steps = Math.max(0, Math.floor(Math.max(0, actorLevel - (scale.dotScaleFromLevel ?? 3)) * 2 / 3));
-      const dotDamage = Math.min(scale.dotMax ?? 3, (scale.dotBase ?? 1) + steps);
+      const dotDamage = Math.max(1, Math.min(scale.dotMax ?? 3, Math.floor(((scale.dotBase ?? 1) + steps) * q)));
       applyBuff(primaryTarget, "flame_lick", durationMs, {
         durationTicks,
         dotDamagePerTick: dotDamage,
         acReduction: scale.acReduction || 3,
         sourceHero: actor.name
       });
-      addLog(`${actor.name} casts ${actionDef.name} on ${primaryTarget.name}! Fire burns for ${durationTicks} ticks (${dotDamage} dmg/tick, -${scale.acReduction || 3} AC)!`, "skill");
+      addLog(`${actor.name} casts ${actionDef.name} on ${primaryTarget.name}! Fire burns for ${durationTicks} ticks (${dotDamage} dmg/tick, -${scale.acReduction || 3} AC)${outcomeTag}!`, "skill");
       success = true;
       break;
     }
@@ -1679,10 +1689,10 @@ function performAction(actionId, actionDef, actor, targets, context) {
       const scale = actionDef.scaling || {};
       const minHeal = scale.minHeal || 0;
       const maxHeal = scale.maxHeal || minHeal;
-      const baseHeal = minHeal + Math.random() * (maxHeal - minHeal);
+      const baseHeal = (minHeal + Math.random() * (maxHeal - minHeal)) * q;
       const healAmount = Math.min(baseHeal, target.maxHP - target.health);
       target.health += healAmount;
-      addLog(`${actor.name} casts ${actionDef.name} on ${target.name} for ${healAmount.toFixed(1)} healing!`, "healing");
+      addLog(`${actor.name} casts ${actionDef.name} on ${target.name} for ${healAmount.toFixed(1)} healing${outcomeTag}!`, "healing");
       success = true;
       break;
     }
@@ -1700,6 +1710,7 @@ function performAction(actionId, actionDef, actor, targets, context) {
     }
     case "fear": {
       if (!primaryTarget) break;
+      if (isResisted) { addLog(`${actor.name}'s ${actionDef.name} was resisted by ${primaryTarget.name}.`, "skill"); attempted = true; success = false; break; }
       const scale = actionDef.scaling || {};
       if (primaryTarget.level > (scale.levelCap ?? 52)) {
         addLog(`${actor.name} attempts ${actionDef.name}, but ${primaryTarget.name} is too powerful.`, "normal");
@@ -1709,7 +1720,8 @@ function performAction(actionId, actionDef, actor, targets, context) {
       const drCount = primaryTarget.fearDRCount || 0;
       const baseDuration = scale.baseDurationTicks ?? 2;
       const bonusDuration = actorLevel >= (scale.bonusDurationAtLevel ?? 9) ? 1 : 0;
-      const effectiveDuration = Math.max(scale.minDurationTicks ?? 1, baseDuration + bonusDuration - drCount);
+      let effectiveDuration = Math.max(scale.minDurationTicks ?? 1, baseDuration + bonusDuration - drCount);
+      if (isPartial) effectiveDuration = Math.max(scale.minDurationTicks ?? 1, Math.floor(effectiveDuration * q));
       const durationMs = effectiveDuration * GAME_TICK_MS;
       let fearAggroMultiplier = scale.fearAggroMultiplier ?? 1.4;
       if (hasBuff(primaryTarget, "root")) {
@@ -1720,7 +1732,7 @@ function performAction(actionId, actionDef, actor, targets, context) {
       }
       applyBuff(primaryTarget, "fear", durationMs, { durationTicks: effectiveDuration, fleeing: true, fearAggroMultiplier });
       primaryTarget.fearDRCount = drCount + 1;
-      addLog(`${actor.name} casts ${actionDef.name} on ${primaryTarget.name}! ${primaryTarget.name} flees for ${effectiveDuration} ticks.`, "skill");
+      addLog(`${actor.name} casts ${actionDef.name} on ${primaryTarget.name}! ${primaryTarget.name} flees for ${effectiveDuration} ticks${outcomeTag}.`, "skill");
       success = true;
       break;
     }
@@ -1738,11 +1750,12 @@ function performAction(actionId, actionDef, actor, targets, context) {
     }
     case "feedback": {
       if (!primaryTarget) break;
-      const scaled = Math.min(8, 3 + ((actorLevel - 1) * 5) / 4);
+      if (isResisted) { addLog(`${actor.name}'s ${actionDef.name} was resisted by ${primaryTarget.name}.`, "skill"); attempted = true; success = false; break; }
+      const scaled = Math.min(8, 3 + ((actorLevel - 1) * 5) / 4) * q;
       const mitigated = applyACMitigation(scaled, primaryTarget);
       primaryTarget.hp = Math.max(0, primaryTarget.hp - mitigated);
       damageDealt += mitigated;
-      addLog(`${actor.name} deals ${mitigated.toFixed(1)} magic damage to ${primaryTarget.name}.`, "damage_dealt");
+      addLog(`${actor.name} deals ${mitigated.toFixed(1)} magic damage to ${primaryTarget.name}${outcomeTag}.`, "damage_dealt");
       const canStun = mitigated > 0 && primaryTarget.level <= 30 && !hasBuff(primaryTarget, "stun");
       if (canStun && Math.random() < 0.25) {
         applyBuff(primaryTarget, "stun", GAME_TICK_MS, {});
@@ -1754,33 +1767,36 @@ function performAction(actionId, actionDef, actor, targets, context) {
     }
     case "mesmerize": {
       if (!primaryTarget) break;
+      if (isResisted) { addLog(`${actor.name}'s ${actionDef.name} was resisted by ${primaryTarget.name}.`, "skill"); attempted = true; success = false; break; }
       const durationTicks = actionDef.scaling?.durationTicks ?? 4;
+      const finalDuration = isPartial ? Math.max(1, Math.floor(durationTicks * q)) : durationTicks;
       if (hasBuff(primaryTarget, "mesmerize")) {
         attempted = false;
         success = false;
         refund = true;
         break;
       }
-      applyBuff(primaryTarget, "mesmerize", durationTicks * GAME_TICK_MS, { sourceHeroId: actor.id });
-      addLog(`${actor.name} mesmerizes ${primaryTarget.name} for ${durationTicks} ticks!`, "skill");
+      applyBuff(primaryTarget, "mesmerize", finalDuration * GAME_TICK_MS, { sourceHeroId: actor.id });
+      addLog(`${actor.name} mesmerizes ${primaryTarget.name} for ${finalDuration} ticks${outcomeTag}!`, "skill");
       success = true;
       break;
     }
     case "suffocate": {
       if (!primaryTarget) break;
+      if (isResisted) { addLog(`${actor.name}'s ${actionDef.name} was resisted by ${primaryTarget.name}.`, "skill"); attempted = true; success = false; cooldownOverride = 1; break; }
       if (hasBuff(primaryTarget, "suffocate")) {
         attempted = false;
         refund = true;
         cooldownOverride = 1;
         break;
       }
-      const damage = 13;
+      const damage = 13 * q;
       const mitigated = applyACMitigation(damage, primaryTarget);
       primaryTarget.hp = Math.max(0, primaryTarget.hp - mitigated);
       damageDealt += mitigated;
       applyBuff(primaryTarget, "suffocate", 6 * GAME_TICK_MS, { strDebuff: -2, agiDebuff: -2 });
       addLog(`${actor.name} is suffocated (-2 STR, -2 AGI for 6 ticks).`, "skill");
-      addLog(`${actor.name} deals ${mitigated.toFixed(1)} magic damage to ${primaryTarget.name}.`, "damage_dealt");
+      addLog(`${actor.name} deals ${mitigated.toFixed(1)} magic damage to ${primaryTarget.name}${outcomeTag}.`, "damage_dealt");
       breakMesmerizeOnDamage(primaryTarget);
       success = true;
       break;
@@ -2201,17 +2217,40 @@ export function gameTick() {
       onComplete: (hero, castingState, quality) => {
         const spellDef = ACTIONS[castingState.spellId];
         if (spellDef) {
-          // Apply spell effects using quality.mult (scale by outcome)
-          // TODO: Wire spell effects here (damage, healing, buffs, etc)
-          // For now, just log completion
+          // Resolve targets at completion using stored targetId if possible
+          let explicitTarget = null;
+          if (castingState.targetId != null) {
+            explicitTarget = state.currentEnemies.find(e => e && e.id === castingState.targetId)
+              || state.party.find(h => h && h.id === castingState.targetId)
+              || null;
+          }
+          if (!explicitTarget && spellDef.target === "self") {
+            explicitTarget = hero;
+          }
+
+          const context = { enemies: state.currentEnemies, party: state.party };
+          const targets = resolveActionTargets(spellDef, hero, context, explicitTarget);
+
+          // Apply spell effects with quality outcome
+          const result = performAction(castingState.spellId, spellDef, hero, targets, context, quality);
+
+          // Log completion outcome (in addition to effect logs)
           addLog(`${hero.name} cast ${spellDef.name} (${quality.outcome}).`, "skill");
+
+          // Track damage dealt this tick
+          if (result && result.damageDealt) {
+            totalDamageThisTick += result.damageDealt;
+          }
           
           // Attempt skill-ups on completion
           // Determine target level (for trivial-target gating)
-          let targetLevel = hero.level; // Default: utility spell, no special target
-          if (castingState.targetId && state.currentEnemies.length > 0) {
-            const targetEnemy = state.currentEnemies.find(e => e.id === castingState.targetId);
-            if (targetEnemy) targetLevel = targetEnemy.level;
+          let targetLevel = hero.level; // Default for non-hostile or unknown
+          if (explicitTarget && explicitTarget.level != null) {
+            targetLevel = explicitTarget.level;
+          } else if (state.currentEnemies.length > 0) {
+            // If an enemy target exists as primary, use its level
+            const primary = targets && targets[0];
+            if (primary && primary.level != null) targetLevel = primary.level;
           }
           onSpellCastCompleteForSkills(hero, spellDef, castingState, targetLevel);
         }
