@@ -144,14 +144,14 @@ const CLASS_CHANNELING_MULTIPLIER = {
   paladin: 0.90,
   shadowknight: 0.90,
 
-  cleric: 1.00,
-  druid: 1.00,
-  shaman: 1.00,
+  cleric: 1.05,
+  druid: 1.05,
+  shaman: 1.05,
 
-  enchanter: 1.05,
-  wizard: 1.05,
-  magician: 1.05,
-  necromancer: 1.05
+  enchanter: 1.10,
+  wizard: 1.10,
+  magician: 1.10,
+  necromancer: 1.10
 };
 
 // ---------------------------
