@@ -1,6 +1,7 @@
 // EverQuest-style weapon skill system
 import { getItemDef } from "./items.js";
 import { addLog } from "./util.js";
+import { SKILL_UP_RATE_MULT } from "./defs.js";
 
 export const WEAPON_TYPES = [
   "1h_slash",
@@ -206,7 +207,8 @@ export function tryWeaponSkillUp(hero, weaponType, targetLevel) {
   const minChance = 0.5;
   const maxChance = 6.0;
   const chance = (maxChance - minChance) * Math.pow(0.99, skill) + minChance;
-  if (Math.random() * 100 < chance) {
+  // FIX 15: Apply skill-up rate multiplier to normalize for tickrate
+  if (Math.random() * 100 < chance * SKILL_UP_RATE_MULT) {
     entry.value = skill + 1;
     const weaponName = WEAPON_TYPE_NAMES[weaponType] || weaponType;
     const heroName = hero.name || "Hero";

@@ -2,7 +2,7 @@ import { state, nextHeroId, updateCurrencyDisplay, formatPGSC } from "./state.js
 import { getClassDef, CLASS_DEFS } from "./classes/index.js";
 import { getZoneDef, getEnemyForZone, MAX_ZONE, rollSubAreaDiscoveries, ensureZoneDiscovery, getZoneById, getActiveSubArea } from "./zones/index.js";
 import { addLog, randInt, isExpiredEffect, unwrapEffect, purgeExpiredActive } from "./util.js";
-import { ACCOUNT_SLOT_UNLOCKS, GAME_TICK_MS, MEDITATE_UNLOCK_LEVEL, MEDITATE_SKILL_HARD_CAP, MEDITATE_BASE_REGEN_FACTOR, COMBAT_REGEN_MULT, OOC_REGEN_MULT, XP_TEST_REDUCTION_PERCENT } from "./defs.js";
+import { ACCOUNT_SLOT_UNLOCKS, GAME_TICK_MS, MEDITATE_UNLOCK_LEVEL, MEDITATE_SKILL_HARD_CAP, MEDITATE_BASE_REGEN_FACTOR, COMBAT_REGEN_MULT, OOC_REGEN_MULT, XP_TEST_REDUCTION_PERCENT, SKILL_UP_RATE_MULT } from "./defs.js";
 import { getItemDef } from "./items.js";
 import { getRaceDef, DEFAULT_RACE_KEY } from "./races.js";
 import { ACTIONS } from "./actions.js";
@@ -316,7 +316,8 @@ function doubleAttackSkillUpChance(hero, cap) {
   // Level-based DR for very high levels
   const levelDR = hero.level < 50 ? 1.0 : (hero.level <= 54 ? 0.6 : 0.4);
   
-  return baseChance * progressPenalty * levelDR;
+  // FIX 15: Apply skill-up rate multiplier to normalize for tickrate
+  return baseChance * progressPenalty * levelDR * SKILL_UP_RATE_MULT;
 }
 
 function getZoneKey(zoneNumber) {
@@ -1274,7 +1275,8 @@ function meditateTick(hero) {
   if (!hero.inCombat && didRegenMana && hero.level >= MEDITATE_UNLOCK_LEVEL && hero.meditateSkill < cap) {
     const skillNorm = Math.min(1, hero.meditateSkill / MEDITATE_SKILL_HARD_CAP);
     const skillUpChance = Math.max(0.01, Math.min(0.06, 0.06 - skillNorm * 0.05));
-    if (Math.random() < skillUpChance) {
+    // FIX 15: Apply skill-up rate multiplier to normalize for tickrate
+    if (Math.random() < skillUpChance * SKILL_UP_RATE_MULT) {
       hero.meditateSkill = Math.min(hero.meditateSkill + 1, cap);
     }
   }

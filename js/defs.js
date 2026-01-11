@@ -1,6 +1,12 @@
 export const GAME_TICK_MS = 3000;
 export const TICK_SECONDS = GAME_TICK_MS / 1000; // 3 seconds per tick
 
+// FIX 15: Skill-up rate multiplier to normalize for tickrate
+// Game runs on 3s ticks, but skill-up formulas appear tuned for ~6s
+// This multiplier compensates so skills don't level 2x as fast
+// Set to 0.5 to halve skill-up chances across the board
+export const SKILL_UP_RATE_MULT = 0.5;
+
 export const SAVE_KEY = "tickrate_save_v2";
 export const AUTO_SAVE_EVERY_MS = 5000;
 // Cap both offline and background catch-up to 3 hours

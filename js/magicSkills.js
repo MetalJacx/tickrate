@@ -20,6 +20,9 @@
  * ============================================================
  */
 
+// FIX 15: Import skill-up rate multiplier for tickrate normalization
+import { SKILL_UP_RATE_MULT } from "./defs.js";
+
 // ---------------------------
 // Constants / Enums
 // ---------------------------
@@ -524,7 +527,8 @@ export function tryMagicSkillUp(hero, skillId, targetLevel) {
   const maxChance = 6.0; // %
   const chance = (maxChance - minChance) * Math.pow(0.99, skill) + minChance;
 
-  if (Math.random() * 100 < chance) {
+  // FIX 15: Apply skill-up rate multiplier to normalize for tickrate
+  if (Math.random() * 100 < chance * SKILL_UP_RATE_MULT) {
     entry.value += 1;
     return { skillId, value: entry.value };
   }
