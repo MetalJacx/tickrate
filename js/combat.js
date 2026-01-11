@@ -2275,7 +2275,9 @@ export function gameTick() {
             const primary = targets && targets[0];
             if (primary && primary.level != null) targetLevel = primary.level;
           }
-          onSpellCastCompleteForSkills(hero, spellDef, castingState, targetLevel);
+          if (quality?.outcome !== "resisted") {
+            onSpellCastCompleteForSkills(hero, spellDef, castingState, targetLevel);
+          }
         }
       },
       onInterrupt: (hero, castingState) => {
