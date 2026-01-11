@@ -567,3 +567,25 @@ select {
 #characterAbilityBar > div {
   position: relative;
 }
+
+/* Specialization Icons */
+.specIcon {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  margin-right: 8px;
+  vertical-align: -2px;
+  color: var(--spec-color, #cfd3ff);
+  display: inline-block;
+}
+
+.spec-destruction { --spec-color: #ff6b6b; }
+.spec-restoration { --spec-color: #69db7c; }
+.spec-control     { --spec-color: #74c0fc; }
+.spec-enhancement { --spec-color: #ffd43b; }
+.spec-summoning   { --spec-color: #b197fc; }
+.spec-utility     { --spec-color: #ffa94d; }
+
+.specLocked {
+  opacity: 0.45;
+}

@@ -20,6 +20,7 @@ import {
 } from "./magicSkills.js";
 import { computeSellValue } from "./combatMath.js";
 import { ACTIONS } from "./actions.js";
+import { SPEC_LABEL, SPEC_ICON_SVG } from "./ui/specIcons.js";
 
 export function initUI({ onRecruit, onReset, onOpenRecruitModal }) {
   const travelBtn = document.getElementById("travelBtn");
@@ -456,7 +457,9 @@ export function updateStatsModalSkills(hero) {
 
         const specLabel = document.createElement("div");
         specLabel.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin:6px 0 2px;font-size:11px;color:#aaa;";
-        specLabel.innerHTML = `<span>${spec}</span> <span style='color:#ccc;'>${specValue} / ${specCap} (${specPct}%)</span>`;
+        const specLabelText = SPEC_LABEL[spec] ?? spec;
+        const specIcon = SPEC_ICON_SVG[spec] ?? "";
+        specLabel.innerHTML = `<span style="display:flex;align-items:center;">${specIcon}<span>${specLabelText}</span></span> <span style='color:#ccc;'>${specValue} / ${specCap} (${specPct}%)</span>`;
         rightColumn.appendChild(specLabel);
 
         const specBarBg = document.createElement("div");
