@@ -2155,6 +2155,35 @@ function performEnemyAutoAttack(enemy, livingMembers) {
   }
 }
 
+/**
+ * FIX 13: Centralized logic to determine target level for skill-up gating.
+ * Ensures consistent behavior across all spell types.
+ * 
+ * Rules:
+ * - For hostile spells (damage/debuff): use enemy level (allows trivial-enemy gating)
+ * - For non-hostile spells (self/ally/party heals/buffs): use caster level
+ *   (support spells are always meaningful, don't trivialize)
+ */
+export function getTargetLevelForSkillUps(hero, spellDef, resolvedTargets) {
+  const isNonHostile = ["self", "ally", "party"].includes(spellDef?.target);
+  
+  if (isNonHostile) {
+    // For heals/buffs/self, always use caster's level
+    return hero.level;
+  }
+  
+  // For hostile spells, use the target's level
+  if (resolvedTargets && resolvedTargets.length > 0) {
+    const primaryTarget = resolvedTargets[0];
+    if (primaryTarget && primaryTarget.level != null) {
+      return primaryTarget.level;
+    }
+  }
+  
+  // Fallback to caster level if no valid target found
+  return hero.level;
+}
+
 export function gameTick() {
   state.nowMs = (state.nowMs ?? 0) + GAME_TICK_MS;
   const now = state.nowMs;
@@ -2266,25 +2295,9 @@ export function gameTick() {
             totalDamageThisTick += result.damageDealt;
           }
           
-          // Attempt skill-ups on completion
-          // Determine target level for skill-up gating:
-          // - For non-hostile spells (heals/buffs), use caster's level (support is always meaningful)
-          // - For hostile spells (damage/debuff), use enemy's level (allow trivial-enemy gating)
-          const isNonHostile = ["self", "ally", "party"].includes(spellDef.target);
-          let targetLevelForSkills = hero.level;
-          
-          if (!isNonHostile) {
-            // Hostile spell: use explicit target or primary target level
-            if (explicitTarget && explicitTarget.level != null) {
-              targetLevelForSkills = explicitTarget.level;
-            } else if (state.currentEnemies.length > 0) {
-              const primary = targets && targets[0];
-              if (primary && primary.level != null) targetLevelForSkills = primary.level;
-            }
-          }
-          // For non-hostile spells, targetLevelForSkills stays as hero.level
-          
+          // Attempt skill-ups on completion (FIX 13: centralized target level logic)
           if (quality?.outcome !== "resisted") {
+            const targetLevelForSkills = getTargetLevelForSkillUps(hero, spellDef, targets);
             const skillUps = onSpellCastCompleteForSkills(hero, spellDef, castingState, targetLevelForSkills) || [];
             if (skillUps.length > 0) {
               for (const up of skillUps) {
