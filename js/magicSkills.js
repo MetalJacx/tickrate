@@ -206,21 +206,67 @@ export function applyMagicUnlocks(hero) {
 // Skill state initialization
 // ---------------------------
 
+// FIX 20: Sanitize magic skill values during load/migration
+// Purpose: Handle saves with corrupted/old data (NaN, undefined, negative, above-cap values)
+// - If value is not finite (NaN, Infinity) => reset to 1
+// - If value is negative => reset to 1
+// - If value exceeds cap => clamp to cap
+// This ensures skills remain valid after formula/gating changes
+export function sanitizeMagicSkillValue(value, cap) {
+  // Not finite (NaN, Infinity) => invalid
+  if (!Number.isFinite(value)) return 1;
+  // Negative values are invalid
+  if (value < 0) return 1;
+  // Clamp to valid range [1, cap]
+  return Math.max(1, Math.min(value, cap));
+}
+
+// Helper: Calculate magic skill cap without calling ensure (prevents infinite recursion during load)
+function calculateMagicSkillCap(hero, skillId) {
+  // Baseline: 5 per level, multiplied by class
+  const baseCap = 5 * hero.level;
+
+  if (skillId === MAGIC_SKILLS.channeling) {
+    const mult = CLASS_CHANNELING_MULTIPLIER[hero.classKey] ?? 1.0;
+    return Math.min(Math.floor(baseCap * mult), HARD_SKILL_CAP);
+  }
+
+  // school_*/spec_* use magic multiplier
+  const mult = CLASS_MAGIC_MULTIPLIER[hero.classKey] ?? 1.0;
+  return Math.min(Math.floor(baseCap * mult), HARD_SKILL_CAP);
+}
+
 export function ensureMagicSkills(hero) {
   hero.magicSkills ??= {};
 
   // School mastery skills
   for (const key of SPECIALIZATIONS) {
     const schoolSkillId = MAGIC_SKILLS.school[key];
-    if (!hero.magicSkills[schoolSkillId]) hero.magicSkills[schoolSkillId] = { value: 1 };
+    if (!hero.magicSkills[schoolSkillId]) {
+      hero.magicSkills[schoolSkillId] = { value: 1 };
+    } else {
+      // FIX 20: Sanitize skill values during load
+      const cap = calculateMagicSkillCap(hero, schoolSkillId);
+      hero.magicSkills[schoolSkillId].value = sanitizeMagicSkillValue(hero.magicSkills[schoolSkillId].value, cap);
+    }
 
     const specSkillId = MAGIC_SKILLS.spec[key];
-    if (!hero.magicSkills[specSkillId]) hero.magicSkills[specSkillId] = { value: 1 };
+    if (!hero.magicSkills[specSkillId]) {
+      hero.magicSkills[specSkillId] = { value: 1 };
+    } else {
+      // FIX 20: Sanitize skill values during load
+      const cap = calculateMagicSkillCap(hero, specSkillId);
+      hero.magicSkills[specSkillId].value = sanitizeMagicSkillValue(hero.magicSkills[specSkillId].value, cap);
+    }
   }
 
   // Channeling
   if (!hero.magicSkills[MAGIC_SKILLS.channeling]) {
     hero.magicSkills[MAGIC_SKILLS.channeling] = { value: 1 };
+  } else {
+    // FIX 20: Sanitize skill values during load
+    const cap = calculateMagicSkillCap(hero, MAGIC_SKILLS.channeling);
+    hero.magicSkills[MAGIC_SKILLS.channeling].value = sanitizeMagicSkillValue(hero.magicSkills[MAGIC_SKILLS.channeling].value, cap);
   }
 }
 

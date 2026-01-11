@@ -42,6 +42,21 @@ export function normalizeWeaponType(weaponType) {
   return "hand_to_hand";
 }
 
+// FIX 20: Sanitize skill values during load/migration
+// Purpose: Handle saves with corrupted/old data (NaN, undefined, negative, above-cap values)
+// - If value is not finite (NaN, Infinity) => reset to 1
+// - If value is negative => reset to 1
+// - If value exceeds cap => clamp to cap
+// This ensures skills remain valid after formula/gating changes
+export function sanitizeWeaponSkillValue(value, cap) {
+  // Not finite (NaN, Infinity) => invalid
+  if (!Number.isFinite(value)) return 1;
+  // Negative values are invalid
+  if (value < 0) return 1;
+  // Clamp to valid range [1, cap]
+  return Math.max(1, Math.min(value, cap));
+}
+
 const HARD_SKILL_CAP = 300;
 
 const CLASS_SKILL_MULTIPLIER = {
@@ -63,7 +78,14 @@ const CLASS_SKILL_MULTIPLIER = {
 export function ensureWeaponSkills(hero) {
   hero.weaponSkills = hero.weaponSkills || {};
   for (const wt of WEAPON_TYPES) {
-    if (!hero.weaponSkills[wt]) hero.weaponSkills[wt] = { value: 1 };
+    if (!hero.weaponSkills[wt]) {
+      hero.weaponSkills[wt] = { value: 1 };
+    } else {
+      // FIX 20: Sanitize skill values during load
+      // Clamp to current cap and handle corrupted data (NaN, negative, etc)
+      const cap = getWeaponSkillCap(hero, wt);
+      hero.weaponSkills[wt].value = sanitizeWeaponSkillValue(hero.weaponSkills[wt].value, cap);
+    }
   }
 }
 
