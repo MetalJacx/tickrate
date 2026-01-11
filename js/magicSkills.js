@@ -384,9 +384,10 @@ export function startCast(hero, spellDef, targetId, nowMs, gameTickMs, opts = {}
     startedAtMs: nowMs,
     endsAtMs,
     lastTickMs: nowMs,
-    wasHitDuringCast: false,
     hitsTakenDuringCast: 0,
     interrupted: false,
+    // FIX 18: Track if interrupted by damage (roll happens immediately per hit)
+    wasInterruptedByDamage: false,
     // If you reserve mana, track it:
     reserveMana: !!opts.reserveMana
   };
@@ -396,33 +397,69 @@ export function startCast(hero, spellDef, targetId, nowMs, gameTickMs, opts = {}
 
 /**
  * Mark that the hero took damage. Call from your damage pipeline.
- * This enables channeling checks during tickCasting().
+ * 
+ * FIX 18: Interrupt roll happens immediately per hit (not per tick).
+ * - Computes interrupt chance based on hits taken so far
+ * - One roll per hit event
+ * - If interrupted, clears casting immediately
+ * - If survives, increments hitsSoFar counter for next interrupt
  */
 export function onHeroDamaged(hero, damageAmount) {
   if (!hero?.casting) return;
   if (damageAmount <= 0) return;
 
-  hero.casting.wasHitDuringCast = true;
-  hero.casting.hitsTakenDuringCast += 1;
+  const c = hero.casting;
+  
+  // Track this hit for future calculations
+  c.hitsTakenDuringCast += 1;
+  const hitsSoFar = c.hitsTakenDuringCast;
+
+  // FIX 18: Single interrupt roll per hit
+  const interruptChance = getInterruptChance(hero, c, hitsSoFar);
+  
+  if (Math.random() < interruptChance) {
+    // Interrupted immediately on this hit
+    c.interrupted = true;
+    
+    // Mana handling: spend fraction of mana on interrupt
+    const frac = INTERRUPT_MANA_FRACTION;
+    if (c.reserveMana) {
+      const spend = Math.round((c.manaCost ?? 0) * frac);
+      hero.mana = Math.max(0, (hero.mana ?? 0) - spend);
+    }
+    // If not reserveMana, mana already spent at cast start
+    
+    // Mark casting as complete so tickCasting() will clean it up
+    c.wasInterruptedByDamage = true;
+  }
 }
 
 /**
  * Channeling: chance to avoid interruption when hit while casting.
- * Idle-friendly model:
- * - More hits during cast => more interrupt pressure
- * - Channeling reduces interrupt chance by up to 10% at cap
+ * 
+ * FIX 18: One interrupt roll per hit event.
+ * - Base: 15% base interrupt chance
+ * - Per-hit penalty: 10% additional per hit taken during cast
+ * - Channeling reduction: reduces final chance by up to 10% at cap
+ * - Formula: finalChance = clamp(base + perHitPenalty*hitsSoFar - channelingReduction, min, max)
+ * 
+ * @param hero The casting hero
+ * @param castingState The casting state object
+ * @param hitsSoFar Number of hits taken during this cast (used to scale interrupt chance)
+ * @returns The probability [0,1] that this hit will interrupt the cast
  */
-export function getInterruptChance(hero, castingState) {
-  const hits = castingState.hitsTakenDuringCast ?? 0;
-
-  // Base interrupt grows with hits; clamp to max
-  let base = 0.15 + 0.10 * hits; // 15% + 10% per hit
-  base = Math.min(base, INTERRUPT_MAX);
+export function getInterruptChance(hero, castingState, hitsSoFar = 1) {
+  // Base interrupt grows with hits taken so far
+  const BASE_INTERRUPT = 0.15;
+  const PER_HIT_PENALTY = 0.10;
+  
+  let chance = BASE_INTERRUPT + PER_HIT_PENALTY * hitsSoFar;
+  chance = Math.min(chance, INTERRUPT_MAX);
 
   const chanRatio = getMagicSkillRatio(hero, MAGIC_SKILLS.channeling);
-  const reduction = 0.10 * chanRatio; // up to -10%
+  const reduction = 0.10 * chanRatio; // up to -10% at cap
 
-  const finalChance = Math.max(INTERRUPT_MIN, Math.min(INTERRUPT_MAX, base - reduction));
+  const finalChance = Math.max(INTERRUPT_MIN, Math.min(INTERRUPT_MAX, chance - reduction));
   return finalChance;
 }
 
@@ -446,36 +483,15 @@ export function tickCasting(hero, nowMs, gameTickMs, opts = {}) {
   const c = hero.casting;
   if (!c) return { idle: true };
 
-  // Each tick: if hero was hit during cast since last tick, do a channel check
-  // We're using a simple "flag + count" model; if you need per-tick hit tracking,
-  // reset wasHitDuringCast at end of tick.
-  if (c.wasHitDuringCast) {
-    const interruptChance = getInterruptChance(hero, c);
+  // FIX 18: Check if already interrupted by a hit during this tick
+  // (interrupt roll happens immediately in onHeroDamaged(), not here)
+  if (c.wasInterruptedByDamage) {
+    const interruptedState = hero.casting;
+    hero.casting = null;
 
-    if (Math.random() < interruptChance) {
-      // Interrupted
-      c.interrupted = true;
+    if (opts.onInterrupt) opts.onInterrupt(hero, interruptedState);
 
-      // Mana handling: if reserveMana, spend fraction now; if already spent, optionally refund some
-      const frac = opts.spendManaOnInterrupt ?? INTERRUPT_MANA_FRACTION;
-
-      if (c.reserveMana) {
-        const spend = Math.round((c.manaCost ?? 0) * frac);
-        if (opts.spendManaFn) opts.spendManaFn(hero, spend);
-        else hero.mana = Math.max(0, (hero.mana ?? 0) - spend);
-      }
-      // If not reserveMana, we already spent full mana; keep as-is for simplicity.
-
-      const interruptedState = hero.casting;
-      hero.casting = null;
-
-      if (opts.onInterrupt) opts.onInterrupt(hero, interruptedState);
-
-      return { interrupted: true, reason: "channel_failed" };
-    }
-
-    // Passed channel check; clear per-tick flag (keeps checks from repeating without new hits)
-    c.wasHitDuringCast = false;
+    return { interrupted: true, reason: "channel_failed" };
   }
 
   // Completion check
