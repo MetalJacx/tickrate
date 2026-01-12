@@ -353,15 +353,25 @@ function renderClassDetails() {
 }
 
 function formatRaceMods(race) {
-  const mods = race?.statMods || {};
+  const statMods = race?.statMods || {};
+  const resistMods = race?.resistMods || {};
   const order = ["str", "con", "dex", "agi", "wis", "int", "cha"];
-  return order
+  
+  // Format stat mods
+  const statParts = order
     .map(stat => {
-      const val = mods[stat] || 0;
+      const val = statMods[stat] || 0;
       const sign = val > 0 ? "+" : "";
       return `${stat.toUpperCase()} ${sign}${val}`;
-    })
-    .join(", ");
+    });
+  
+  // Format resist mods
+  const resistLabels = { magic: "MR", elemental: "ER", contagion: "CR", physical: "PR" };
+  const resistParts = Object.entries(resistMods)
+    .filter(([_, val]) => val > 0)
+    .map(([type, val]) => `${resistLabels[type]} +${val}`);
+  
+  return [...statParts, ...resistParts].join(", ");
 }
 
 function updateStartButtonState() {
