@@ -2412,6 +2412,9 @@ export function gameTick() {
               continue;  // Skip resist check this tick
             }
             
+            // CC break logic intentionally isolated here for future DR / escalation
+            // Future enhancements: escalating break chance, diminishing returns, CC category stacking rules
+            
             // Find the source actor for the resist check (stored name in data)
             // For simplicity, use average enemy level or stored sourceLevel
             const sourceLevel = buff.data?.sourceLevel ?? hero.level ?? 1;
@@ -2485,6 +2488,9 @@ export function gameTick() {
               buff.data.ccGraceTicksRemaining--;
               continue;  // Skip resist check this tick
             }
+            
+            // CC break logic intentionally isolated here for future DR / escalation
+            // Future enhancements: escalating break chance, diminishing returns, CC category stacking rules
             
             // Find the source actor for the resist check (stored name in data)
             // For simplicity, use average party level or stored sourceLevel
