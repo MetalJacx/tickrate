@@ -17,6 +17,7 @@ import {
   isMagicCategoryUnlocked,
   getMagicSkillDisplayName
 } from "./magicSkills.js";
+import { resolveActionResist, getResistLogMessage, ensureActorResists } from "./resist.js";
 import {
   applyACMitigation,
   computeCritChance,
@@ -607,6 +608,9 @@ export function createHero(classKey, customName = null, raceKey = DEFAULT_RACE_K
   // Ensure skill objects exist for new heroes
   ensureWeaponSkills(hero);
   ensureMagicSkills(hero);
+  
+  // Initialize resist stats
+  ensureActorResists(hero);
 
   // Initialize swing timer
   initializeSwingTimer(hero);
@@ -867,6 +871,9 @@ function spawnEnemyToList() {
   enemy.drops = rollLoot(enemyDef, getZoneDef(z));
   applyEnemyEquipmentBonuses(enemy, enemy.drops);
   enemy.hp = enemy.maxHP;
+  
+  // Initialize resist stats
+  ensureActorResists(enemy);
   
   // Initialize swing timer
   initializeSwingTimer(enemy);
@@ -1634,7 +1641,8 @@ function performAction(actionId, actionDef, actor, targets, context, quality = {
         durationTicks,
         dotDamagePerTick: dotDamage,
         acReduction: scale.acReduction || 3,
-        sourceHero: actor.name
+        sourceHero: actor.name,
+        effectMult: q  // Store resist mult for damage calculation
       });
       addLog(`${actor.name} casts ${actionDef.name} on ${primaryTarget.name}! Fire burns for ${durationTicks} ticks (${dotDamage} dmg/tick, -${scale.acReduction || 3} AC)${outcomeTag}!`, "skill");
       success = true;
@@ -1740,7 +1748,7 @@ function performAction(actionId, actionDef, actor, targets, context, quality = {
         const bonusPortion = fearAggroMultiplier - 1;
         fearAggroMultiplier = 1 + Math.max(0, bonusPortion * 0.5);
       }
-      applyBuff(primaryTarget, "fear", durationMs, { durationTicks: effectiveDuration, fleeing: true, fearAggroMultiplier });
+      applyBuff(primaryTarget, "fear", durationMs, { durationTicks: effectiveDuration, fleeing: true, fearAggroMultiplier, sourceHero: actor.name, sourceLevel: actor.level });
       primaryTarget.fearDRCount = drCount + 1;
       addLog(`${actor.name} casts ${actionDef.name} on ${primaryTarget.name}! ${primaryTarget.name} flees for ${effectiveDuration} ticks${outcomeTag}.`, "skill");
       success = true;
@@ -1786,7 +1794,7 @@ function performAction(actionId, actionDef, actor, targets, context, quality = {
         refund = true;
         break;
       }
-      applyBuff(primaryTarget, "mesmerize", finalDuration * GAME_TICK_MS, { sourceHeroId: actor.id });
+      applyBuff(primaryTarget, "mesmerize", finalDuration * GAME_TICK_MS, { sourceHeroId: actor.id, sourceHero: actor.name, sourceLevel: actor.level });
       addLog(`${actor.name} mesmerizes ${primaryTarget.name} for ${finalDuration} ticks${outcomeTag}!`, "skill");
       success = true;
       break;
@@ -1949,7 +1957,34 @@ export function resolveActionUse({ actor, actionId, target = null, context = {} 
 
   spendActionResources(actor, actionDef.cost);
 
-  const result = performAction(actionId, actionDef, actor, targets, context);
+  // Check resist for non-casting actions (instant casts)
+  let quality = { mult: 1, outcome: "full" };
+  if (actionDef.resist && targets.length > 0) {
+    const primaryTarget = targets[0];
+    const resistResult = resolveActionResist({
+      caster: actor,
+      target: primaryTarget,
+      action: actionDef
+    });
+    
+    if (resistResult.mult === 0) {
+      // Binary resisted: log and skip effect
+      addLog(getResistLogMessage(actionDef.name, resistResult.type, false, 0), "skill");
+      refundActionResources(actor, actionDef.cost);
+      if (true) { // Log resist and cooldown anyway
+        const cd = actionDef.cooldownTicks;
+        setActionCooldown(actor, actionId, cd);
+      }
+      return { cast: false, reason: "resisted", attempted: true };
+    } else if (resistResult.mult < 1) {
+      // Partial: reduce effect
+      quality = { mult: resistResult.mult, outcome: "partial" };
+      const resistMsg = getResistLogMessage(actionDef.name, resistResult.type, true, resistResult.partialPct);
+      if (resistMsg) addLog(resistMsg, "skill");
+    }
+  }
+
+  const result = performAction(actionId, actionDef, actor, targets, context, quality);
 
   if (result.refund) {
     refundActionResources(actor, actionDef.cost);
@@ -2291,6 +2326,28 @@ export function gameTick() {
           const context = { enemies: state.currentEnemies, party: state.party };
           const targets = resolveActionTargets(spellDef, hero, context, explicitTarget);
 
+          // Perform resist check for spells (before performAction)
+          let quality = { mult: 1, outcome: "full" };
+          if (spellDef.resist && targets.length > 0) {
+            const primaryTarget = targets[0];
+            const resistResult = resolveActionResist({
+              caster: hero,
+              target: primaryTarget,
+              action: spellDef
+            });
+            
+            if (resistResult.mult === 0) {
+              // Binary resisted
+              addLog(getResistLogMessage(spellDef.name, resistResult.type, false, 0), "skill");
+              return; // Don't apply effect
+            } else if (resistResult.mult < 1) {
+              // Partial: reduce effect
+              quality = { mult: resistResult.mult, outcome: "partial" };
+              const resistMsg = getResistLogMessage(spellDef.name, resistResult.type, true, resistResult.partialPct);
+              if (resistMsg) addLog(resistMsg, "skill");
+            }
+          }
+
           // Apply spell effects with quality outcome
           const result = performAction(castingState.spellId, spellDef, hero, targets, context, quality);
 
@@ -2341,6 +2398,34 @@ export function gameTick() {
       hero.equipCd = Math.max(0, hero.equipCd - 1);
     }
 
+    // Process CC per-tick resist checks (mesmerize, fear, etc.)
+    if (hero.activeBuffs) {
+      const ccEffects = ["mesmerize", "fear"];  // Binary CC that can break
+      for (const ccKey of ccEffects) {
+        if (hasBuff(hero, ccKey)) {
+          const buff = hero.activeBuffs[ccKey];
+          const actionDef = ACTIONS[ccKey];
+          if (actionDef && buff.data?.sourceHero) {
+            // Find the source actor for the resist check (stored name in data)
+            // For simplicity, use average enemy level or stored sourceLevel
+            const sourceLevel = buff.data?.sourceLevel ?? hero.level ?? 1;
+            const fakeSource = { level: sourceLevel, spellPen: { magic: 0, elemental: 0, contagion: 0, physical: 0 } };
+            
+            const resistResult = resolveActionResist({
+              caster: fakeSource,
+              target: hero,
+              action: actionDef
+            });
+            
+            if (resistResult.resisted) {
+              removeBuff(hero, ccKey);
+              addLog(`${hero.name}'s ${actionDef.name} was resisted and broke!`, "skill");
+            }
+          }
+        }
+      }
+    }
+
     // Clean up expired buffs
     cleanupExpiredBuffs(hero);
   }
@@ -2364,7 +2449,9 @@ export function gameTick() {
     if (enemy.activeBuffs?.flame_lick) {
       const flameLick = enemy.activeBuffs.flame_lick;
       if (!isExpiredEffect(flameLick, now) && flameLick.data?.dotDamagePerTick) {
-        const dotDamage = flameLick.data.dotDamagePerTick;
+        const baseDotDamage = flameLick.data.dotDamagePerTick;
+        const effectMult = flameLick.data.effectMult ?? 1;  // Apply resist mult
+        const dotDamage = baseDotDamage * effectMult;
         enemy.hp = Math.max(0, enemy.hp - dotDamage);
         addLog(`${enemy.name} burns for ${dotDamage.toFixed(1)} fire damage!`, "dot_fire");
 
@@ -2375,6 +2462,34 @@ export function gameTick() {
         
         if (enemy.hp <= 0) {
           addLog(`${enemy.name} succumbs to the flames!`, "gold");
+        }
+      }
+    }
+    
+    // Process CC per-tick resist checks (mesmerize, fear, etc.)
+    if (enemy.activeBuffs) {
+      const ccEffects = ["mesmerize", "fear"];  // Binary CC that can break
+      for (const ccKey of ccEffects) {
+        if (hasBuff(enemy, ccKey)) {
+          const buff = enemy.activeBuffs[ccKey];
+          const actionDef = ACTIONS[ccKey];
+          if (actionDef && buff.data?.sourceHero) {
+            // Find the source actor for the resist check (stored name in data)
+            // For simplicity, use average party level or stored sourceLevel
+            const sourceLevel = buff.data?.sourceLevel ?? state.party?.[0]?.level ?? 1;
+            const fakeSource = { level: sourceLevel, spellPen: { magic: 0, elemental: 0, contagion: 0, physical: 0 } };
+            
+            const resistResult = resolveActionResist({
+              caster: fakeSource,
+              target: enemy,
+              action: actionDef
+            });
+            
+            if (resistResult.resisted) {
+              removeBuff(enemy, ccKey);
+              addLog(`${enemy.name}'s ${actionDef.name} was resisted and broke!`, "skill");
+            }
+          }
         }
       }
     }

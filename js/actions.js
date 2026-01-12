@@ -14,6 +14,7 @@ export const ACTIONS = {
     cost: { mana: 10 },
     castTimeTicks: 1,
     specialization: "destruction",
+    resist: { type: "elemental", difficulty: 0, partial: true },
     scaling: {
       minDamage: 12,
       maxDamageBase: 20,
@@ -33,6 +34,7 @@ export const ACTIONS = {
     cost: { mana: 18 },
     castTimeTicks: 2,
     specialization: "destruction",
+    resist: { type: "elemental", difficulty: 0, partial: true },
     scaling: {
       minDamage: 18,
       maxDamageBase: 30,
@@ -52,6 +54,7 @@ export const ACTIONS = {
     cost: { mana: 30 },
     castTimeTicks: 2,
     specialization: "destruction",
+    resist: { type: "elemental", difficulty: 0, partial: true },
     scaling: {
       minDamage: 10,
       maxDamage: 16,
@@ -116,6 +119,7 @@ export const ACTIONS = {
     cost: { mana: 12 },
     castTimeTicks: 1,
     specialization: "control",
+    resist: { type: "contagion", difficulty: 0, partial: true },
     scaling: {
       durationTicks: 6,
       acReduction: 3,
@@ -197,6 +201,7 @@ export const ACTIONS = {
     cost: { mana: 40 },
     castTimeTicks: 1,
     specialization: "control",
+    resist: { type: "magic", difficulty: 5, partial: false },
     scaling: {
       levelCap: 52,
       baseDurationTicks: 2,
@@ -256,6 +261,7 @@ export const ACTIONS = {
     cost: { mana: 20 },
     castTimeTicks: 1,
     specialization: "control",
+    resist: { type: "magic", difficulty: 5, partial: false },
     scaling: { durationTicks: 4 },
     handler: "mesmerize"
   },
