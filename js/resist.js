@@ -173,3 +173,60 @@ export function ensureActorResists(actor) {
     };
   }
 }
+
+/**
+ * Racial resist bonuses (EQ-inspired)
+ * Additive bonuses to base resists by race
+ */
+export const RACE_RESISTS = {
+  human: {},
+  noetian: { magic: 5 },
+  barbarian: { contagion: 5 },
+  halfling: { contagion: 5 },
+  dwarf: { contagion: 5, magic: 5 },
+  gnome: { magic: 5 },
+  half_elf: { contagion: 3 },
+  wood_elf: {},
+  high_elf: { magic: 3 },
+  dark_elf: { magic: 5 },
+  ogre: {},
+  troll: { contagion: 10 }
+};
+
+/**
+ * Apply racial resist bonuses to an actor
+ * Idempotent - will only apply once per actor
+ * 
+ * @param {Object} actor - Actor to apply racial bonuses to
+ */
+export function applyRacialResists(actor) {
+  // Guard: only apply once
+  if (actor._racialResistsApplied) {
+    return;
+  }
+  
+  // Ensure resists exist first
+  ensureActorResists(actor);
+  
+  // Get race key (support both actor.race and actor.raceKey)
+  const raceKey = (actor.race || actor.raceKey || "human").toLowerCase();
+  
+  // Look up racial bonuses
+  const racialBonuses = RACE_RESISTS[raceKey];
+  
+  // If race not found or no bonuses, mark as applied and return
+  if (!racialBonuses) {
+    actor._racialResistsApplied = true;
+    return;
+  }
+  
+  // Apply additive bonuses
+  for (const resistType of ["magic", "elemental", "contagion", "physical"]) {
+    if (racialBonuses[resistType]) {
+      actor.resists[resistType] += racialBonuses[resistType];
+    }
+  }
+  
+  // Mark as applied
+  actor._racialResistsApplied = true;
+}
