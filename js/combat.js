@@ -17,7 +17,7 @@ import {
   isMagicCategoryUnlocked,
   getMagicSkillDisplayName
 } from "./magicSkills.js";
-import { resolveActionResist, getResistLogMessage, ensureActorResists } from "./resist.js";
+import { resolveActionResist, getResistLogMessage, ensureActorResists, applyRacialResists } from "./resist.js";
 import {
   applyACMitigation,
   computeCritChance,
@@ -609,8 +609,9 @@ export function createHero(classKey, customName = null, raceKey = DEFAULT_RACE_K
   ensureWeaponSkills(hero);
   ensureMagicSkills(hero);
   
-  // Initialize resist stats
+  // Initialize resist stats and apply racials
   ensureActorResists(hero);
+  applyRacialResists(hero);
 
   // Initialize swing timer
   initializeSwingTimer(hero);

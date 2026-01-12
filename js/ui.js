@@ -20,6 +20,7 @@ import {
 } from "./magicSkills.js";
 import { computeSellValue } from "./combatMath.js";
 import { ACTIONS } from "./actions.js";
+import { getRaceDef } from "./races.js";
 
 // Specialization icons and labels (defined inline to avoid import issues)
 const SPEC_LABEL = {
@@ -2771,6 +2772,8 @@ function populateStatsSection(hero) {
   };
 
   const primary = hero.primaryStat ? hero.primaryStat.toUpperCase() : "-";
+  const raceDef = getRaceDef(hero.raceKey || hero.race || state.playerRaceKey);
+  const raceName = hero.raceName || raceDef?.name || (hero.raceKey || "-");
 
   // Left column: core stats
   const leftColumn = document.createElement("div");
@@ -2780,6 +2783,10 @@ function populateStatsSection(hero) {
   const primaryStatLine = statLine("Primary", primary);
   primaryStatLine.style.marginBottom = "6px";
   leftColumn.appendChild(primaryStatLine);
+
+  const raceLine = statLine("Race", raceName);
+  raceLine.style.marginBottom = "6px";
+  leftColumn.appendChild(raceLine);
   
   const hpLine = statLine("HP", derived.hp);
   hpLine.style.marginBottom = "6px";
