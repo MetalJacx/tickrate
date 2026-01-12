@@ -483,7 +483,7 @@ function buildEnemyFromTemplate(enemyDef, level) {
   const maxMana = computeMaxMana(baseMana, primaryValue);
   const maxHP = Math.floor(computeMaxHP(baseHP, stats.con || 0));
 
-  return {
+  const enemy = {
     type: "mob",
     name: enemyDef.name,
     level,
@@ -502,6 +502,16 @@ function buildEnemyFromTemplate(enemyDef, level) {
     mana: maxMana,
     spellTimers: {}
   };
+
+  // Apply optional per-mob resist overrides
+  if (enemyDef.resists && typeof enemyDef.resists === "object") {
+    enemy.resists = { ...enemyDef.resists };
+  }
+
+  // Ensure all resist buckets exist and are finite (no racial bonuses for mobs)
+  ensureActorResists(enemy);
+
+  return enemy;
 }
 
 export function createHero(classKey, customName = null, raceKey = DEFAULT_RACE_KEY) {

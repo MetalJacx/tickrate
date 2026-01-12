@@ -14,7 +14,7 @@ import {
   RESIST_PARTIAL_STRENGTH,
   RESIST_PARTIAL_FLOOR
 } from "./defs.js";
-import { getRaceDef, DEFAULT_RACE_KEY } from "./races.js";
+import { getRaceDef, DEFAULT_RACE_KEY, normalizeRaceKey } from "./races.js";
 
 // Resist types
 export const RESIST_TYPES = {
@@ -155,23 +155,36 @@ export function getResistLogMessage(actionName, resistType, isPartial, partialPc
 
 /**
  * Initialize actor resists and spell pen (for heroes and mobs)
+ * Ensures all buckets exist and are finite numbers (not NaN or Infinity)
+ * Preserves existing finite values; resets non-finite values to 0
  */
 export function ensureActorResists(actor) {
-  if (!actor.resists) {
-    actor.resists = {
-      magic: 0,
-      elemental: 0,
-      contagion: 0,
-      physical: 0
-    };
+  const BUCKETS = ["magic", "elemental", "contagion", "physical"];
+  
+  // Ensure resists object exists
+  if (!actor.resists || typeof actor.resists !== "object") {
+    actor.resists = {};
   }
-  if (!actor.spellPen) {
-    actor.spellPen = {
-      magic: 0,
-      elemental: 0,
-      contagion: 0,
-      physical: 0
-    };
+  
+  // Fill/sanitize each bucket: 0 if missing, non-finite, or uninitialized
+  for (const bucket of BUCKETS) {
+    const val = actor.resists[bucket];
+    if (val === undefined || val === null || !Number.isFinite(val)) {
+      actor.resists[bucket] = 0;
+    }
+  }
+  
+  // Ensure spellPen object exists (for heroes casting against targets)
+  if (!actor.spellPen || typeof actor.spellPen !== "object") {
+    actor.spellPen = {};
+  }
+  
+  // Fill/sanitize each spellPen bucket
+  for (const bucket of BUCKETS) {
+    const val = actor.spellPen[bucket];
+    if (val === undefined || val === null || !Number.isFinite(val)) {
+      actor.spellPen[bucket] = 0;
+    }
   }
 }
 
@@ -198,9 +211,9 @@ export function applyRacialResists(actor, { force = false } = {}) {
     }
   }
 
-  // Apply current racial bonuses
-  const raceKey = (actor.race || actor.raceKey || DEFAULT_RACE_KEY).toLowerCase();
-  const raceDef = getRaceDef(raceKey);
+  // Apply current racial bonuses using normalized race key
+  const rawRaceKey = actor.race || actor.raceKey || DEFAULT_RACE_KEY;
+  const raceDef = getRaceDef(rawRaceKey);  // getRaceDef internally normalizes
   const racialBonuses = raceDef?.resistMods || {};
 
   const applied = { magic: 0, elemental: 0, contagion: 0, physical: 0 };

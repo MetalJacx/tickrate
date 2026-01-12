@@ -1,8 +1,18 @@
 export const DEFAULT_RACE_KEY = "human";
 
+// Normalize race key: handle spaces, hyphens, mixed case
+export function normalizeRaceKey(raw) {
+  if (!raw) return DEFAULT_RACE_KEY;
+  return String(raw)
+    .trim()
+    .toLowerCase()
+    .replace(/[\s\-]+/g, "_")  // Replace spaces and hyphens with underscores
+    .replace(/_+/g, "_");        // Collapse multiple underscores
+}
+
 // P99-inspired racial baselines scaled relative to Human (75) into small stat modifiers
 export const RACES = [
-  { key: "human", name: "Human", statMods: { str: 0, con: 0, agi: 0, dex: 0, wis: 0, int: 0, cha: 0 }, resistMods: { magic: 3 } },
+  { key: "human", name: "Human", statMods: { str: 0, con: 0, agi: 0, dex: 0, wis: 0, int: 0, cha: 0 }, resistMods: {} },
   { key: "noetian", name: "Noetian", statMods: { str: -2, con: -1, agi: -1, dex: -1, wis: 1, int: 3, cha: -1 }, resistMods: { magic: 5 } },
   { key: "barbarian", name: "Barbarian", statMods: { str: 3, con: 2, agi: 1, dex: -1, wis: -1, int: -2, cha: -2 }, resistMods: { contagion: 5 } },
   { key: "halfling", name: "Halfling", statMods: { str: -1, con: 0, agi: 2, dex: 2, wis: 1, int: -1, cha: -3 }, resistMods: { contagion: 5 } },
@@ -17,5 +27,6 @@ export const RACES = [
 ];
 
 export function getRaceDef(key) {
-  return RACES.find(r => r.key === key) || RACES.find(r => r.key === DEFAULT_RACE_KEY);
+  const normalizedKey = normalizeRaceKey(key);
+  return RACES.find(r => r.key === normalizedKey) || RACES.find(r => r.key === DEFAULT_RACE_KEY);
 }
