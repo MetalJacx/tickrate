@@ -19,7 +19,7 @@ export const RACES = [
   { key: "dwarf", name: "Dwarf", statMods: { str: 2, con: 2, agi: -1, dex: 2, wis: 1, int: -2, cha: -3 }, resistMods: { contagion: 5, magic: 5 } },
   { key: "gnome", name: "Gnome", statMods: { str: -2, con: -1, agi: 1, dex: 1, wis: -1, int: 2, cha: -2 }, resistMods: { magic: 5 } },
   { key: "half_elf", name: "Half-Elf", statMods: { str: -1, con: -1, agi: 2, dex: 1, wis: -2, int: 0, cha: 0 }, resistMods: { contagion: 3 } },
-  { key: "wood_elf", name: "Wood Elf", statMods: { str: -1, con: -1, agi: 2, dex: 1, wis: 1, int: 0, cha: 0 }, resistMods: {} },
+  { key: "wood_elf", name: "Wood Elf", statMods: { str: -1, con: -1, agi: 2, dex: 1, wis: 1, int: 0, cha: 0 }, resistMods: { magic: 2, elemental: 2 } },
   { key: "high_elf", name: "High Elf", statMods: { str: -2, con: -1, agi: 1, dex: -1, wis: 2, int: 2, cha: 1 }, resistMods: { magic: 3 } },
   { key: "dark_elf", name: "Dark Elf", statMods: { str: -2, con: -1, agi: 2, dex: 0, wis: 1, int: 2, cha: -2 }, resistMods: { magic: 5 } },
   { key: "ogre", name: "Ogre", statMods: { str: 6, con: 5, agi: -1, dex: -1, wis: -1, int: -2, cha: -4 }, resistMods: { magic: 3 } },
