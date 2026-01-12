@@ -220,7 +220,7 @@ export function loadGame() {
         h.raceName = h.raceKey;
       }
       ensureActorResists(h);
-      applyRacialResists(h);
+      applyRacialResists(h, { force: true });
       if (h.health === undefined) {
         h.health = h.maxHP || 0;
       }

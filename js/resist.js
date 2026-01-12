@@ -181,28 +181,37 @@ export function ensureActorResists(actor) {
  * 
  * @param {Object} actor - Actor to apply racial bonuses to
  */
-export function applyRacialResists(actor) {
-  // Guard: only apply once
-  if (actor._racialResistsApplied) {
+export function applyRacialResists(actor, { force = false } = {}) {
+  ensureActorResists(actor);
+
+  // If already applied and not forcing, exit
+  if (actor._racialResistsApplied && !force) {
     return;
   }
-  
-  // Ensure resists exist first
-  ensureActorResists(actor);
-  
-  // Get race definition (support both actor.race and actor.raceKey)
+
+  // Remove previously applied racial bonuses if present to avoid stacking
+  const prior = actor._racialResistsValues || { magic: 0, elemental: 0, contagion: 0, physical: 0 };
+  for (const resistType of ["magic", "elemental", "contagion", "physical"]) {
+    const prev = prior[resistType] || 0;
+    if (prev) {
+      actor.resists[resistType] -= prev;
+    }
+  }
+
+  // Apply current racial bonuses
   const raceKey = (actor.race || actor.raceKey || DEFAULT_RACE_KEY).toLowerCase();
   const raceDef = getRaceDef(raceKey);
   const racialBonuses = raceDef?.resistMods || {};
-  
-  // Apply additive bonuses
+
+  const applied = { magic: 0, elemental: 0, contagion: 0, physical: 0 };
   for (const resistType of ["magic", "elemental", "contagion", "physical"]) {
     const bonus = racialBonuses[resistType] || 0;
     if (bonus) {
       actor.resists[resistType] += bonus;
+      applied[resistType] = bonus;
     }
   }
-  
-  // Mark as applied
+
+  actor._racialResistsValues = applied;
   actor._racialResistsApplied = true;
 }
