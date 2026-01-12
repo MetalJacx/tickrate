@@ -46,9 +46,7 @@ export function calculateResistChance(targetResist, pen, difficulty, levelMod) {
   const minChance = 0.05;
   const maxChance = 0.95;
   
-  const final = clamp(rawChance, minChance, maxChance);
-  console.debug(`[Resist Calc] resist=${targetResist} pen=${pen} diff=${difficulty} levelMod=${levelMod} => score=${resistScore} raw=${rawChance.toFixed(3)} final=${final.toFixed(3)}`);
-  return final;
+  return clamp(rawChance, minChance, maxChance);
 }
 
 /**
@@ -107,7 +105,6 @@ export function resolveActionResist({ caster, target, action, rng = Math.random 
   // Roll for resist
   const roll = rng();
   const isResisted = roll < chance;
-  console.debug(`[Resist Roll] action=${action.name} vs ${target.name} type=${resistType} chance=${chance.toFixed(3)} roll=${roll.toFixed(3)} [${isResisted ? "RESIST" : "HIT"}]`);
   
   if (!isPartial) {
     // Binary: either resisted or not
@@ -174,5 +171,4 @@ export function ensureActorResists(actor) {
       physical: 0
     };
   }
-  console.debug(`[Actor Init] ${actor.name} resists:`, actor.resists, `pen:`, actor.spellPen);
 }
