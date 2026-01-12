@@ -2803,16 +2803,34 @@ function populateStatsSection(hero) {
 
   leftColumn.appendChild(document.createElement("hr"));
   const coreStats = [
+    ["AC", stats.ac ?? 0],
     ["STR", stats.str ?? 0],
     ["CON", stats.con ?? 0],
     ["DEX", stats.dex ?? 0],
     ["AGI", stats.agi ?? 0],
-    ["AC", stats.ac ?? 0],
     ["WIS", stats.wis ?? 0],
     ["INT", stats.int ?? 0],
     ["CHA", stats.cha ?? 0]
   ];
   for (const [label, val] of coreStats) {
+    const line = statLine(label, val);
+    line.style.marginBottom = "5px";
+    leftColumn.appendChild(line);
+  }
+
+  const resistHeader = document.createElement("div");
+  resistHeader.style.cssText = "font-weight:600;font-size:12px;margin:10px 0 6px;color:#38bdf8;";
+  resistHeader.textContent = "Resists";
+  leftColumn.appendChild(resistHeader);
+
+  const resists = hero.resists || {};
+  const resistStats = [
+    ["Magic", resists.magic ?? 0],
+    ["Elemental", resists.elemental ?? 0],
+    ["Contagion", resists.contagion ?? 0],
+    ["Physical", resists.physical ?? 0]
+  ];
+  for (const [label, val] of resistStats) {
     const line = statLine(label, val);
     line.style.marginBottom = "5px";
     leftColumn.appendChild(line);

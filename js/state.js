@@ -4,6 +4,7 @@ import { getClassDef } from "./classes/index.js";
 import { isExpiredEffect, purgeExpiredActive } from "./util.js";
 import { ensureWeaponSkills, applyWeaponUnlocks } from "./weaponSkills.js";
 import { ensureMagicSkills, applyMagicUnlocks } from "./magicSkills.js";
+import { ensureActorResists, applyRacialResists } from "./resist.js";
 
 // ===== Currency conversion helpers =====
 export function normalizePGSC(pgsc = {}) {
@@ -218,6 +219,8 @@ export function loadGame() {
         // defer to runtime lookup; keep simple string for now
         h.raceName = h.raceKey;
       }
+      ensureActorResists(h);
+      applyRacialResists(h);
       if (h.health === undefined) {
         h.health = h.maxHP || 0;
       }
