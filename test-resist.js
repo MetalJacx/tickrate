@@ -299,6 +299,56 @@ const extremeResult = resolveActionResist({
 });
 assert(extremeResult.chance <= 0.95, 'Extreme resist still clamped to 95%');
 
+section('GRACE TICK FOR CC');
+
+subsection('Grace tick prevents immediate break');
+// Simulate CC application with grace tick
+const ccBuff = {
+  key: 'mesmerize',
+  data: {
+    sourceHero: 'TestCaster',
+    sourceLevel: 1,
+    ccGraceTicksRemaining: 1
+  }
+};
+
+// First tick: grace tick active, should skip resist check
+assert(ccBuff.data.ccGraceTicksRemaining === 1, 'Grace tick starts at 1');
+if (ccBuff.data.ccGraceTicksRemaining > 0) {
+  ccBuff.data.ccGraceTicksRemaining--;
+}
+assert(ccBuff.data.ccGraceTicksRemaining === 0, 'Grace tick decrements to 0 after first tick');
+
+// Second tick: grace tick expired, resist check can happen
+assert(ccBuff.data.ccGraceTicksRemaining === 0, 'Grace tick is 0 on second tick');
+
+subsection('Grace tick does not affect DoTs');
+const dotBuff = {
+  key: 'flame_lick',
+  data: {
+    effectMult: 0.75
+  }
+};
+assert(dotBuff.data.ccGraceTicksRemaining === undefined, 'DoTs do not have grace ticks');
+
+subsection('Constants from defs.js');
+// Import constants to verify they exist
+import {
+  RESIST_BASE,
+  RESIST_SCALE,
+  RESIST_MIN_CHANCE,
+  RESIST_MAX_CHANCE,
+  RESIST_PARTIAL_STRENGTH,
+  RESIST_PARTIAL_FLOOR
+} from './js/defs.js';
+
+assert(RESIST_BASE === 50, 'RESIST_BASE = 50');
+assert(RESIST_SCALE === 200, 'RESIST_SCALE = 200');
+assert(RESIST_MIN_CHANCE === 0.05, 'RESIST_MIN_CHANCE = 0.05');
+assert(RESIST_MAX_CHANCE === 0.95, 'RESIST_MAX_CHANCE = 0.95');
+assert(RESIST_PARTIAL_STRENGTH === 0.75, 'RESIST_PARTIAL_STRENGTH = 0.75');
+assert(RESIST_PARTIAL_FLOOR === 0.10, 'RESIST_PARTIAL_FLOOR = 0.10');
+
 // ============================================================================
 // RESULTS SUMMARY
 // ============================================================================

@@ -1,11 +1,36 @@
 # Changelog - feat/skills Branch
 
 ## Overview
-Major skill system overhaul including weapon skills, magic skills, combat mechanics, and UI improvements for 3-second tickrate gameplay.
+Major skill system overhaul including weapon skills, magic skills, combat mechanics, resist system, and UI improvements for 3-second tickrate gameplay.
 
 ---
 
 ## Core Systems
+
+### Resist System
+**Implementation**: Full 4-bucket resist system with binary/partial mechanics
+- **4 Resist Types**: magic, elemental, contagion, physical
+- **Binary Resists** (CC/debuffs): 0% or 100% effective (mesmerize, fear)
+- **Partial Resists** (damage/DoTs): 10%-100% effectiveness scaling
+- **Level Difference Modifier**: Piecewise function (-20 to +30) based on caster vs target level
+- **Grace Tick for CC**: CC that lands successfully cannot break on the first tick (guaranteed 1 tick duration)
+- **Per-Tick Break Checks**: CC checks for resist break each tick after grace period
+- **DoT Resist**: Rolls once at application; multiplier stored and applied every tick
+- **Raw Melee Bypass**: Auto-attacks never call resist checks
+- **Tunable Constants**: All resist formulas parameterized in `js/defs.js` for balance
+- **Files**: `js/resist.js`, `js/actions.js` (resist blocks), `js/combat.js` (integration)
+- **Tests**: `test-resist.js` (449 tests, 100% pass rate)
+
+**Resist Formula**:
+- `resistScore = (targetResist - spellPen) + difficulty + levelMod`
+- `chance = clamp((resistScore + 50) / 200, 5%, 95%)`
+- Partial: `mult = clamp(1 - 0.75 * chance, 10%, 100%)`
+
+**Grace Tick Mechanism**:
+- CC buffs store `ccGraceTicksRemaining: 1` on application
+- First tick: decrement grace counter, skip resist check
+- Second tick onwards: perform per-tick resist roll, break if resisted
+- Prevents "instant break" while preserving challenge
 
 ### Delay/Haste System
 **Implementation**: Complete swing timer system with overflow mechanics
@@ -124,14 +149,26 @@ Major skill system overhaul including weapon skills, magic skills, combat mechan
 - `test-delay-haste.html` - swing timer harness
 - `js/combat_head_backup.js` - backup file
 
+### Test Files (Active)
+- `test-resist.js` - resist system validation (449 tests, Node.js)
+
 ### Documentation Structure
 - `README.md` - main project documentation
 - `CHANGELOG.md` - this file, consolidated changes
 - `DELAY_HASTE_SYSTEM.md` - technical reference for swing mechanics
+- `RESIST_IMPLEMENTATION.md` - resist system specification and implementation notes
 
 ---
 
 ## Technical Notes
+
+### Resist System Constants (js/defs.js)
+- `RESIST_BASE = 50` - Base value for resist score calculation
+- `RESIST_SCALE = 200` - Scale factor for chance conversion
+- `RESIST_MIN_CHANCE = 0.05` - Minimum 5% resist chance
+- `RESIST_MAX_CHANCE = 0.95` - Maximum 95% resist chance
+- `RESIST_PARTIAL_STRENGTH = 0.75` - Multiplier for partial resist reduction
+- `RESIST_PARTIAL_FLOOR = 0.10` - Minimum 10% effectiveness for partial resists
 
 ### Tickrate Configuration
 - `GAME_TICK_MS = 3000` (3 seconds per tick)

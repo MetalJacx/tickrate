@@ -7,6 +7,14 @@ export const TICK_SECONDS = GAME_TICK_MS / 1000; // 3 seconds per tick
 // Set to 0.5 to halve skill-up chances across the board
 export const SKILL_UP_RATE_MULT = 0.5;
 
+// Resist System Constants (tunable for balance)
+export const RESIST_BASE = 50;
+export const RESIST_SCALE = 200;
+export const RESIST_MIN_CHANCE = 0.05;   // 5% minimum resist chance
+export const RESIST_MAX_CHANCE = 0.95;   // 95% maximum resist chance
+export const RESIST_PARTIAL_STRENGTH = 0.75;  // Multiplier for partial resist calculation
+export const RESIST_PARTIAL_FLOOR = 0.10;     // Minimum effectiveness for partial resists (10%)
+
 export const SAVE_KEY = "tickrate_save_v2";
 export const AUTO_SAVE_EVERY_MS = 5000;
 // Cap both offline and background catch-up to 3 hours

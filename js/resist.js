@@ -6,6 +6,15 @@
  * Binary for CC/debuffs, Partial for damage spells + DoTs
  */
 
+import {
+  RESIST_BASE,
+  RESIST_SCALE,
+  RESIST_MIN_CHANCE,
+  RESIST_MAX_CHANCE,
+  RESIST_PARTIAL_STRENGTH,
+  RESIST_PARTIAL_FLOOR
+} from "./defs.js";
+
 // Resist types
 export const RESIST_TYPES = {
   MAGIC: "magic",
@@ -38,15 +47,9 @@ export function levelDiffMod(diff) {
 export function calculateResistChance(targetResist, pen, difficulty, levelMod) {
   const resistScore = (targetResist - pen) + difficulty + levelMod;
   
-  const BASE = 50;
-  const SCALE = 200;
-  const rawChance = (resistScore + BASE) / SCALE;
+  const rawChance = (resistScore + RESIST_BASE) / RESIST_SCALE;
   
-  // Default clamps (can be overridden by action)
-  const minChance = 0.05;
-  const maxChance = 0.95;
-  
-  return clamp(rawChance, minChance, maxChance);
+  return clamp(rawChance, RESIST_MIN_CHANCE, RESIST_MAX_CHANCE);
 }
 
 /**
@@ -92,14 +95,12 @@ export function resolveActionResist({ caster, target, action, rng = Math.random 
   const levelDiff = target.level - caster.level;
   const levelMod = levelDiffMod(levelDiff);
   
-  // Calculate chance with optional min/max overrides
-  const minChance = action.resist.minChance ?? 0.05;
-  const maxChance = action.resist.maxChance ?? 0.95;
+  // Calculate chance (constants from defs.js)
+  const minChance = action.resist.minChance ?? RESIST_MIN_CHANCE;
+  const maxChance = action.resist.maxChance ?? RESIST_MAX_CHANCE;
   
   const resistScore = (targetResist - casterPen) + difficulty + levelMod;
-  const BASE = 50;
-  const SCALE = 200;
-  const rawChance = (resistScore + BASE) / SCALE;
+  const rawChance = (resistScore + RESIST_BASE) / RESIST_SCALE;
   const chance = clamp(rawChance, minChance, maxChance);
   
   // Roll for resist
@@ -118,7 +119,7 @@ export function resolveActionResist({ caster, target, action, rng = Math.random 
   } else {
     // Partial: reduce effectiveness if resisted
     if (isResisted) {
-      const mult = clamp(1 - 0.75 * chance, 0.1, 1);
+      const mult = clamp(1 - RESIST_PARTIAL_STRENGTH * chance, RESIST_PARTIAL_FLOOR, 1);
       const partialPct = Math.round(mult * 100);
       return {
         type: resistType,

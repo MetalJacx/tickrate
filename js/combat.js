@@ -1748,7 +1748,7 @@ function performAction(actionId, actionDef, actor, targets, context, quality = {
         const bonusPortion = fearAggroMultiplier - 1;
         fearAggroMultiplier = 1 + Math.max(0, bonusPortion * 0.5);
       }
-      applyBuff(primaryTarget, "fear", durationMs, { durationTicks: effectiveDuration, fleeing: true, fearAggroMultiplier, sourceHero: actor.name, sourceLevel: actor.level });
+      applyBuff(primaryTarget, "fear", durationMs, { durationTicks: effectiveDuration, fleeing: true, fearAggroMultiplier, sourceHero: actor.name, sourceLevel: actor.level, ccGraceTicksRemaining: 1 });
       primaryTarget.fearDRCount = drCount + 1;
       addLog(`${actor.name} casts ${actionDef.name} on ${primaryTarget.name}! ${primaryTarget.name} flees for ${effectiveDuration} ticks${outcomeTag}.`, "skill");
       success = true;
@@ -1794,7 +1794,7 @@ function performAction(actionId, actionDef, actor, targets, context, quality = {
         refund = true;
         break;
       }
-      applyBuff(primaryTarget, "mesmerize", finalDuration * GAME_TICK_MS, { sourceHeroId: actor.id, sourceHero: actor.name, sourceLevel: actor.level });
+      applyBuff(primaryTarget, "mesmerize", finalDuration * GAME_TICK_MS, { sourceHeroId: actor.id, sourceHero: actor.name, sourceLevel: actor.level, ccGraceTicksRemaining: 1 });
       addLog(`${actor.name} mesmerizes ${primaryTarget.name} for ${finalDuration} ticks${outcomeTag}!`, "skill");
       success = true;
       break;
@@ -2406,6 +2406,12 @@ export function gameTick() {
           const buff = hero.activeBuffs[ccKey];
           const actionDef = ACTIONS[ccKey];
           if (actionDef && buff.data?.sourceHero) {
+            // Check grace tick: CC cannot break on first tick after landing
+            if (buff.data.ccGraceTicksRemaining > 0) {
+              buff.data.ccGraceTicksRemaining--;
+              continue;  // Skip resist check this tick
+            }
+            
             // Find the source actor for the resist check (stored name in data)
             // For simplicity, use average enemy level or stored sourceLevel
             const sourceLevel = buff.data?.sourceLevel ?? hero.level ?? 1;
@@ -2474,6 +2480,12 @@ export function gameTick() {
           const buff = enemy.activeBuffs[ccKey];
           const actionDef = ACTIONS[ccKey];
           if (actionDef && buff.data?.sourceHero) {
+            // Check grace tick: CC cannot break on first tick after landing
+            if (buff.data.ccGraceTicksRemaining > 0) {
+              buff.data.ccGraceTicksRemaining--;
+              continue;  // Skip resist check this tick
+            }
+            
             // Find the source actor for the resist check (stored name in data)
             // For simplicity, use average party level or stored sourceLevel
             const sourceLevel = buff.data?.sourceLevel ?? state.party?.[0]?.level ?? 1;
