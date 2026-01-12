@@ -506,8 +506,6 @@ export function updateStatsModalSkills(hero) {
         rightColumn.appendChild(manaSavingsLabel);
       }
     }
-    
-    statsBox.appendChild(rightColumn);
   }
 }
 
