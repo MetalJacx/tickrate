@@ -1,84 +1,41 @@
 export default {
   zoneNumber: 2,
-  id: "dark_forest",
-  name: "Dark Forest",
-  levelRange: [2, 5],
-  description: "An eerie woodland",
-  copperReward: { min: 12, max: 18 },
-  aggroChance: 0.05,
+  id: "mundane_plains",
+  name: "Mundane Plains",
+  levelRange: [1, 3],
+  description: "Wide open plains crossed by old trade roads and wandering threats.",
+  copperReward: { min: 10, max: 18 },
+  aggroChance: 0.02,
   globalLoot: [
-    { itemId: "copper_ore", dropRate: 0.2, minQty: 1, maxQty: 3 },
+    { itemId: "copper_ore", dropRate: 0.20, minQty: 1, maxQty: 3 },
     { itemId: "health_potion_small", dropRate: 0.06, minQty: 1, maxQty: 2 },
-    { itemId: "mana_potion_small", dropRate: 0.04, minQty: 1, maxQty: 2 }
+    { itemId: "rusty_short_sword", dropRate: 0.10 },
+    { itemId: "rusty_axe", dropRate: 0.08 },
+    { itemId: "tattered_robe", dropRate: 0.10 },
+    { itemId: "cloth_cap", dropRate: 0.10 }
   ],
   global: {},
   enemies: [
-    { id: "forest_ghoul", weight: 1.0, loot: [{ itemId: "rusty_dagger", dropRate: 0.05 }] },
-    {
-      id: "shadow_sprite",
-      loot: [{ itemId: "mana_potion_small", dropRate: 0.08 }],
-      debuffs: [
-        { type: "weaken_damage", amount: 1, durationTicks: 5, chance: 0.25 }
-      ],
-      weight: 1.0
-    },
-    { id: "cursed_treant", weight: 1.0, loot: [{ itemId: "wooden_shield", dropRate: 0.08 }] },
-    {
-      id: "werewolf",
-      loot: [{ itemId: "iron_sword", dropRate: 0.06 }],
-      debuffs: [
-        { type: "weaken_damage", amount: 1, durationTicks: 5, chance: 0.25 }
-      ],
-      weight: 1.0
-    },
-    { id: "wood_spirit", weight: 0, rare: true, loot: [{ itemId: "enchanted_branch", dropRate: 0.2 }] }
+    { id: "plains_rat", weight: 1.1, loot: [{ itemId: "cloth_sandals", dropRate: 0.08 }] },
+    { id: "plains_wolf", weight: 1.0, loot: [{ itemId: "health_potion_small", dropRate: 0.05 }] },
+    { id: "plains_bandit", weight: 1.0, loot: [{ itemId: "rusty_short_sword", dropRate: 0.07 }] },
+    { id: "field_brigand", weight: 0.9, loot: [{ itemId: "tattered_robe", dropRate: 0.08 }] }
   ],
   subAreas: [
+    { id: "open_world", name: "Open World", discovered: true, discoveryChance: 0, mobWeightModifiers: {} },
     {
-      id: "open_world",
-      name: "Open World",
-      discovered: true,
-      discoveryChance: 0,
-      mobWeightModifiers: {}
-    },
-    {
-      id: "forest_edge",
-      name: "Forest Edge",
+      id: "broken_trade_road",
+      name: "Broken Trade Road",
       discovered: false,
       discoveryChance: 0,
-      mobWeightModifiers: {
-        forest_ghoul: 1.2,
-        shadow_sprite: 1.0,
-        cursed_treant: 0.9,
-        werewolf: 0.9,
-        wood_spirit: 0
-      }
+      mobWeightModifiers: { plains_bandit: 1.2, plains_wolf: 0.9, plains_rat: 1.0, field_brigand: 0.8 }
     },
     {
-      id: "shadowed_glen",
-      name: "Shadowed Glen",
+      id: "windworn_fields",
+      name: "Windworn Fields",
       discovered: false,
       discoveryChance: 0.04,
-      mobWeightModifiers: {
-        shadow_sprite: 1.5,
-        forest_ghoul: 0.9,
-        cursed_treant: 1.1,
-        werewolf: 1.0,
-        wood_spirit: 0.12
-      }
-    },
-    {
-      id: "blighted_thicket",
-      name: "Blighted Thicket",
-      discovered: false,
-      discoveryChance: 0.03,
-      mobWeightModifiers: {
-        cursed_treant: 1.6,
-        forest_ghoul: 1.0,
-        shadow_sprite: 0.8,
-        werewolf: 1.0,
-        wood_spirit: 0.18
-      }
+      mobWeightModifiers: { field_brigand: 1.3, plains_wolf: 1.0, plains_bandit: 1.0, plains_rat: 0.9 }
     }
   ]
 };

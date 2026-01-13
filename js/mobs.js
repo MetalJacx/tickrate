@@ -36,7 +36,26 @@ export const MOBS = {
   field_gnawer: { id: "field_gnawer", name: "Field Gnawer", baseHP: 23, baseDPS: 4, naturalDelayTenths: 29, stats: { str: 9, con: 7, dex: 8, agi: 8, ac: 7 } },
   plains_marauder: { id: "plains_marauder", name: "Plains Marauder", baseHP: 28, baseDPS: 4, naturalDelayTenths: 32, stats: { str: 10, con: 9, dex: 8, agi: 7, ac: 9 } },
   dusthorn_calf: { id: "dusthorn_calf", name: "Dusthorn Calf", baseHP: 34, baseDPS: 3, naturalDelayTenths: 45, stats: { str: 9, con: 12, dex: 6, agi: 6, ac: 10 } },
-  field_spirit: { id: "field_spirit", name: "Restless Field Spirit", baseHP: 25, baseDPS: 5, naturalDelayTenths: 28, stats: { str: 7, con: 8, dex: 9, agi: 10, ac: 9 } }
+  field_spirit: { id: "field_spirit", name: "Restless Field Spirit", baseHP: 25, baseDPS: 5, naturalDelayTenths: 28, stats: { str: 7, con: 8, dex: 9, agi: 10, ac: 9 } },
+
+  // Mundane Plains humanoids (1-3)
+  plains_bandit: { id: "plains_bandit", name: "Plains Bandit", baseHP: 34, baseDPS: 4, naturalDelayTenths: 30, stats: { str: 9, con: 9, dex: 9, agi: 9, ac: 8 } },
+  field_brigand: { id: "field_brigand", name: "Field Brigand", baseHP: 38, baseDPS: 4, naturalDelayTenths: 32, stats: { str: 10, con: 10, dex: 9, agi: 8, ac: 9 } },
+
+  // Shatterbone (orcs) (4-9)
+  shatterbone_scout: { id: "shatterbone_scout", name: "Shatterbone Scout", baseHP: 52, baseDPS: 6, naturalDelayTenths: 30, stats: { str: 13, con: 12, dex: 12, agi: 11, ac: 12 } },
+  shatterbone_legionary: { id: "shatterbone_legionary", name: "Shatterbone Legionary", baseHP: 60, baseDPS: 7, naturalDelayTenths: 40, stats: { str: 15, con: 14, dex: 12, agi: 10, ac: 14 } },
+  shatterbone_brute: { id: "shatterbone_brute", name: "Shatterbone Brute", baseHP: 70, baseDPS: 8, naturalDelayTenths: 46, stats: { str: 16, con: 15, dex: 11, agi: 9, ac: 15 } },
+
+  // Rolling Hills (6-8)
+  hill_skirmisher: { id: "hill_skirmisher", name: "Hill Skirmisher", baseHP: 58, baseDPS: 7, naturalDelayTenths: 32, stats: { str: 14, con: 13, dex: 13, agi: 12, ac: 13 } },
+
+  // Cornfields (8-11)
+  cornfield_raider: { id: "cornfield_raider", name: "Cornfield Raider", baseHP: 80, baseDPS: 9, naturalDelayTenths: 34, stats: { str: 16, con: 15, dex: 13, agi: 12, ac: 16 } },
+
+  // Hallowbone Castle (9-12)
+  hallowbone_warpriest: { id: "hallowbone_warpriest", name: "Hallowbone Warpriest", baseHP: 95, baseDPS: 11, naturalDelayTenths: 32, stats: { str: 15, con: 16, dex: 13, agi: 12, ac: 18, wis: 14, int: 10 } },
+  bone_king: { id: "bone_king", name: "Bone-King Malzor", baseHP: 120, baseDPS: 13, naturalDelayTenths: 40, stats: { str: 18, con: 18, dex: 13, agi: 12, ac: 20, wis: 16, int: 12 } }
 };
 
 export function getMobDef(id) {

@@ -128,6 +128,88 @@ export const ITEMS = {
     delayTenths: 40,
     stats: { dps: 3 }
   },
+
+  // --- Cloth Armor (early drops) ---
+  cloth_cap: {
+    id: "cloth_cap",
+    name: "Frayed Cloth Cap",
+    rarity: "common",
+    maxStack: 1,
+    baseValue: 6,
+    icon: "🧢",
+    stats: { ac: 1 }
+  },
+  tattered_robe: {
+    id: "tattered_robe",
+    name: "Tattered Robe",
+    rarity: "common",
+    maxStack: 1,
+    baseValue: 10,
+    icon: "🥻",
+    stats: { ac: 2 }
+  },
+  cloth_wraps: {
+    id: "cloth_wraps",
+    name: "Cloth Wraps",
+    rarity: "common",
+    maxStack: 1,
+    baseValue: 6,
+    icon: "🧤",
+    stats: { ac: 1 }
+  },
+  cloth_sandals: {
+    id: "cloth_sandals",
+    name: "Cloth Sandals",
+    rarity: "common",
+    maxStack: 1,
+    baseValue: 6,
+    icon: "🩴",
+    stats: { ac: 1 }
+  },
+  cloth_leggings: {
+    id: "cloth_leggings",
+    name: "Patched Leggings",
+    rarity: "common",
+    maxStack: 1,
+    baseValue: 9,
+    icon: "👖",
+    stats: { ac: 2 }
+  },
+
+  // --- More Rust Weapons (early drops) ---
+  rusty_axe: {
+    id: "rusty_axe",
+    name: "Rusty Axe",
+    rarity: "common",
+    maxStack: 1,
+    baseValue: 10,
+    icon: "🪓",
+    weaponType: "1h_slash",
+    delayTenths: 32,
+    stats: { dps: 2 }
+  },
+  rusty_spear: {
+    id: "rusty_spear",
+    name: "Rusty Spear",
+    rarity: "common",
+    maxStack: 1,
+    baseValue: 12,
+    icon: "🔱",
+    weaponType: "2h_pierce",
+    delayTenths: 44,
+    stats: { dps: 3 }
+  },
+  rusty_short_sword: {
+    id: "rusty_short_sword",
+    name: "Rusty Short Sword",
+    rarity: "common",
+    maxStack: 1,
+    baseValue: 10,
+    icon: "⚔️",
+    weaponType: "1h_slash",
+    delayTenths: 28,
+    stats: { dps: 2 }
+  },
 };
 
 export function getItemDef(itemId) {

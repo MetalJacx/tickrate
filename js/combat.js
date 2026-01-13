@@ -1068,6 +1068,13 @@ function onEnemyKilled(enemy, totalDPS) {
   updateCurrencyDisplay();
   state.killsThisZone += 1;
 
+  // Track total kills by zone id
+  const zid = state.activeZoneId || getZoneDef(state.zone)?.id;
+  if (zid) {
+    state.zoneKillCounts = state.zoneKillCounts || {};
+    state.zoneKillCounts[zid] = (state.zoneKillCounts[zid] || 0) + 1;
+  }
+
   // Calculate level-weighted XP distribution (only for living heroes)
   // weight = level^2
   let totalWeight = 0;
@@ -1148,9 +1155,31 @@ export function canTravel() {
   return state.killsThisZone >= killsRequiredForZone(state.zone);
 }
 
+function meetsZoneRequirement(nextZoneDef) {
+  const req = nextZoneDef?.requirements;
+  if (!req) return true;
+
+  // Map-style unlock: "kills in X zone"
+  if (req.killsIn?.zoneId && typeof req.killsIn.count === "number") {
+    const have = state.zoneKillCounts?.[req.killsIn.zoneId] ?? 0;
+    return have >= req.killsIn.count;
+  }
+
+  return true;
+}
+
 export function canTravelForward() {
-  // Allowed if zone already unlocked or kills requirement met
-  return state.zone < state.highestUnlockedZone || canTravel();
+  if (state.zone >= MAX_ZONE) return false;
+  
+  // Already unlocked by visiting before
+  if (state.zone < state.highestUnlockedZone) return true;
+
+  // Requirement for the *next* zone
+  const next = getZoneDef(state.zone + 1);
+  if (next && !meetsZoneRequirement(next)) return false;
+
+  // Still require momentum (kills in current zone)
+  return canTravel();
 }
 
 export function travelToNextZone() {

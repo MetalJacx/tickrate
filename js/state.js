@@ -76,6 +76,7 @@ export const state = {
   activeZoneId: "graveyard",
   killsThisZone: 0,
   killsForNextZone: 10,
+  zoneKillCounts: {},
   partySlotsUnlocked: 1,
   party: [],
   partyMaxHP: 0,
@@ -139,6 +140,7 @@ export function serializeState() {
     activeZoneId: state.activeZoneId,
     killsThisZone: state.killsThisZone,
     killsForNextZone: state.killsForNextZone,
+    zoneKillCounts: state.zoneKillCounts,
     partySlotsUnlocked: state.partySlotsUnlocked,
     partyHP: state.partyHP,
     partyMaxHP: state.partyMaxHP,
@@ -208,6 +210,7 @@ export function loadGame() {
     state.activeZoneId = data.activeZoneId ?? state.activeZoneId ?? "graveyard";
     state.killsThisZone = data.killsThisZone ?? 0;
     state.killsForNextZone = data.killsForNextZone ?? 10;
+    state.zoneKillCounts = data.zoneKillCounts ?? {};
     state.partySlotsUnlocked = data.partySlotsUnlocked ?? 1;
     state.sharedInventory = Array.isArray(data.sharedInventory) ? data.sharedInventory.map(i => i ? { ...i } : null) : Array(100).fill(null);
     state.party = Array.isArray(data.party) ? data.party.map(h => {

@@ -1,83 +1,43 @@
 export default {
   zoneNumber: 3,
-  id: "ruined_castle",
-  name: "Ruined Castle",
-  levelRange: [3, 6],
-  description: "An ancient stronghold in decay",
-  copperReward: { min: 16, max: 24 },
-  aggroChance: 0.05, 
+  id: "shatterbone_keep",
+  name: "Shatterbone Keep",
+  levelRange: [4, 9],
+  description: "A brutal orc-held stronghold built for war and raiding.",
+  requirements: {
+    killsIn: { zoneId: "mundane_plains", count: 100 }
+  },
+  copperReward: { min: 22, max: 38 },
+  aggroChance: 0.05,
   globalLoot: [
     { itemId: "copper_ore", dropRate: 0.25, minQty: 1, maxQty: 4 },
     { itemId: "health_potion_small", dropRate: 0.07, minQty: 1, maxQty: 2 },
-    { itemId: "mana_potion_small", dropRate: 0.08, minQty: 1, maxQty: 2 }
+    { itemId: "rusty_spear", dropRate: 0.08 },
+    { itemId: "rusty_mace", dropRate: 0.08 },
+    { itemId: "cloth_leggings", dropRate: 0.10 },
+    { itemId: "cloth_wraps", dropRate: 0.10 }
   ],
   global: {},
   enemies: [
-    { id: "skeletal_knight", weight: 1.0, loot: [{ itemId: "iron_sword", dropRate: 0.08 }] },
-    { id: "orc_centurion", weight: 1.0, loot: [{ itemId: "steel_mace", dropRate: 0.05 }] },
-    { id: "dark_wolf", weight: 1.0, loot: [{ itemId: "health_potion_small", dropRate: 0.06 }] },
-    { id: "bloodsaber_acolyte", weight: 1.0, loot: [{ itemId: "mana_potion_small", dropRate: 0.1 }] },
-    { id: "castle_specter", weight: 0, rare: true, loot: [{ itemId: "enchanted_branch", dropRate: 0.22 }] }
+    { id: "shatterbone_scout", weight: 1.2, loot: [{ itemId: "rusty_short_sword", dropRate: 0.06 }] },
+    { id: "shatterbone_legionary", weight: 1.0, loot: [{ itemId: "rusty_spear", dropRate: 0.05 }] },
+    { id: "shatterbone_brute", weight: 0.8, loot: [{ itemId: "rusty_mace", dropRate: 0.06 }] }
   ],
   subAreas: [
+    { id: "open_world", name: "Open World", discovered: true, discoveryChance: 0, mobWeightModifiers: {} },
     {
-      id: "open_world",
-      name: "Open World",
-      discovered: true,
-      discoveryChance: 0,
-      mobWeightModifiers: {}
-    },
-    {
-      id: "outer_keep",
-      name: "Outer Keep",
+      id: "outer_barricades",
+      name: "Outer Barricades",
       discovered: false,
       discoveryChance: 0,
-      mobWeightModifiers: {
-        skeletal_knight: 1.1,
-        orc_centurion: 1.1,
-        dark_wolf: 0.9,
-        bloodsaber_acolyte: 0.9,
-        castle_specter: 0
-      }
+      mobWeightModifiers: { shatterbone_scout: 1.4, shatterbone_legionary: 0.9, shatterbone_brute: 0.7 }
     },
     {
-      id: "unknown_tomb",
-      name: "Unknown Tomb",
+      id: "war_yard",
+      name: "War Yard",
       discovered: false,
       discoveryChance: 0.03,
-      mobWeightModifiers: {
-        skeletal_knight: 1.8,
-        bloodsaber_acolyte: 1.2,
-        dark_wolf: 0.8,
-        orc_centurion: 0.9,
-        castle_specter: 0.2
-      }
-    },
-    {
-      id: "forgotten_halls",
-      name: "Forgotten Halls",
-      discovered: false,
-      discoveryChance: 0.025,
-      mobWeightModifiers: {
-        dark_wolf: 1.4,
-        skeletal_knight: 1.0,
-        bloodsaber_acolyte: 1.1,
-        orc_centurion: 0.9,
-        castle_specter: 0.25
-      }
-    },
-    {
-      id: "deep_crypts",
-      name: "Deep Crypts",
-      discovered: false,
-      discoveryChance: 0.02,
-      mobWeightModifiers: {
-        bloodsaber_acolyte: 1.6,
-        skeletal_knight: 1.2,
-        dark_wolf: 0.8,
-        orc_centurion: 0.9,
-        castle_specter: 0.22
-      }
+      mobWeightModifiers: { shatterbone_legionary: 1.3, shatterbone_brute: 1.1, shatterbone_scout: 0.8 }
     }
   ]
 };

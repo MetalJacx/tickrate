@@ -2,9 +2,12 @@ import Town from "./zoneTown.js";
 import Zone1 from "./zone1.js";
 import Zone2 from "./zone2.js";
 import Zone3 from "./zone3.js";
+import Zone4 from "./zone4.js";
+import Zone5 from "./zone5.js";
+import Zone6 from "./zone6.js";
 import { getMobDef } from "../mobs.js";
 
-export const ZONES = [Town, Zone1, Zone2, Zone3];
+export const ZONES = [Town, Zone1, Zone2, Zone3, Zone4, Zone5, Zone6];
 export const MAX_ZONE = ZONES.length;
 
 export function getZoneDef(zoneNumber) {
