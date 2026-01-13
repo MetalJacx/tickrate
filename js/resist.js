@@ -14,7 +14,7 @@ import {
   RESIST_PARTIAL_STRENGTH,
   RESIST_PARTIAL_FLOOR
 } from "./defs.js";
-import { getRaceDef, DEFAULT_RACE_KEY, normalizeRaceKey } from "./races.js";
+import { getRaceDef, DEFAULT_RACE_KEY } from "./races.js";
 
 // Resist types
 export const RESIST_TYPES = {
@@ -96,13 +96,12 @@ export function resolveActionResist({ caster, target, action, rng = Math.random 
   const levelDiff = target.level - caster.level;
   const levelMod = levelDiffMod(levelDiff);
   
-  // Calculate chance (constants from defs.js)
+  // Calculate chance using centralized function
   const minChance = action.resist.minChance ?? RESIST_MIN_CHANCE;
   const maxChance = action.resist.maxChance ?? RESIST_MAX_CHANCE;
   
-  const resistScore = (targetResist - casterPen) + difficulty + levelMod;
-  const rawChance = (resistScore + RESIST_BASE) / RESIST_SCALE;
-  const chance = clamp(rawChance, minChance, maxChance);
+  let chance = calculateResistChance(targetResist, casterPen, difficulty, levelMod);
+  chance = clamp(chance, minChance, maxChance);
   
   // Roll for resist
   const roll = rng();

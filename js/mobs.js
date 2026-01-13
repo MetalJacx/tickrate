@@ -1,4 +1,9 @@
 // Central enemy definitions. Zones reference these by id.
+//
+// Optional field: resists
+// - If defined on an enemyDef, it will override racial resists from races.js
+// - Format: { magic: number, elemental: number, contagion: number, physical: number }
+// - If omitted, racial resists (if any) will be applied automatically
 
 export const MOBS = {
   // Zone 1 - Humanoids/Undead (delay 30)
