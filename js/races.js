@@ -22,7 +22,7 @@ export const RACES = [
   { key: "wood_elf", name: "Wood Elf", statMods: { str: -1, con: -1, agi: 2, dex: 1, wis: 1, int: 0, cha: 0 }, resistMods: { magic: 2, elemental: 2 } },
   { key: "high_elf", name: "High Elf", statMods: { str: -2, con: -1, agi: 1, dex: -1, wis: 2, int: 2, cha: 1 }, resistMods: { magic: 3 } },
   { key: "dark_elf", name: "Dark Elf", statMods: { str: -2, con: -1, agi: 2, dex: 0, wis: 1, int: 2, cha: -2 }, resistMods: { magic: 5 } },
-  { key: "ogre", name: "Ogre", statMods: { str: 6, con: 5, agi: -1, dex: -1, wis: -1, int: -2, cha: -4 }, resistMods: { magic: 3 } },
+  { key: "ogre", name: "Ogre", statMods: { str: 6, con: 5, agi: -1, dex: -1, wis: -1, int: -2, cha: -4 }, resistMods: { physical: 3 } },
   { key: "troll", name: "Troll", statMods: { str: 3, con: 3, agi: 1, dex: 0, wis: -2, int: -2, cha: -4 }, resistMods: { contagion: 10 } }
 ];
 
