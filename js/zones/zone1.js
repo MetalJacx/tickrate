@@ -17,7 +17,8 @@ export default {
     { id: "gnoll_scout", weight: 1.0, loot: [{ itemId: "health_potion_small", dropRate: 0.06 }] },
     { id: "young_orc", weight: 1.0, loot: [{ itemId: "stick", dropRate: 0.04 }] },
     { id: "rabid_wolf", weight: 1.0, loot: [{ itemId: "health_potion_small", dropRate: 0.05 }] },
-    { id: "phantom", weight: 0, rare: true, loot: [{ itemId: "enchanted_branch", dropRate: 0.12 }] }
+    { id: "phantom", weight: 0, rare: true, loot: [{ itemId: "enchanted_branch", dropRate: 0.12 }] },
+    { id: "groundskeeper", weight: 0.002, loot: [{ itemId: "groundskeeper_haft", dropRate: 0.22 }, { itemId: "gravebinder_wraps", dropRate: 0.20 }] }
   ],
   subAreas: [
     {
@@ -25,7 +26,7 @@ export default {
       name: "Open World",
       discovered: true,
       discoveryChance: 0,
-      mobWeightModifiers: {}
+      mobWeightModifiers: { groundskeeper: 0 }
     },
     {
       id: "open_graves",
@@ -37,7 +38,8 @@ export default {
         rabid_wolf: 0.8,
         skeleton: 1.0,
         gnoll_scout: 1.0,
-        phantom: 0
+        phantom: 0,
+        groundskeeper: 0
       }
     },
     {
@@ -50,7 +52,8 @@ export default {
         gnoll_scout: 1.1,
         young_orc: 0.9,
         rabid_wolf: 0.8,
-        phantom: 0.15
+        phantom: 0.15,
+        groundskeeper: 250
       }
     }
   ]

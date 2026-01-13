@@ -18,11 +18,12 @@ export default {
   global: {},
   enemies: [
     { id: "cornfield_raider", weight: 1.0, loot: [{ itemId: "rusty_sword", dropRate: 0.06 }] },
-    { id: "field_gnawer", weight: 0.9, loot: [{ itemId: "cloth_wraps", dropRate: 0.08 }] }
+    { id: "field_gnawer", weight: 0.9, loot: [{ itemId: "cloth_wraps", dropRate: 0.08 }] },
+    { id: "cornreaper", weight: 0.002, loot: [{ itemId: "cornreaper_sickle", dropRate: 0.40 }] }
   ],
   subAreas: [
-    { id: "open_world", name: "Open World", discovered: true, discoveryChance: 0, mobWeightModifiers: {} },
-    { id: "fenceline", name: "Fenceline", discovered: false, discoveryChance: 0, mobWeightModifiers: { cornfield_raider: 1.1, field_gnawer: 1.0 } },
-    { id: "deep_rows", name: "Deep Rows", discovered: false, discoveryChance: 0.03, mobWeightModifiers: { cornfield_raider: 1.3, field_gnawer: 0.8 } }
+    { id: "open_world", name: "Open World", discovered: true, discoveryChance: 0, mobWeightModifiers: { cornreaper: 0 } },
+    { id: "fenceline", name: "Fenceline", discovered: false, discoveryChance: 0, mobWeightModifiers: { cornfield_raider: 1.1, field_gnawer: 1.0, cornreaper: 0 } },
+    { id: "deep_rows", name: "Deep Rows", discovered: false, discoveryChance: 0.03, mobWeightModifiers: { cornfield_raider: 1.3, field_gnawer: 0.8, cornreaper: 300 } }
   ]
 };

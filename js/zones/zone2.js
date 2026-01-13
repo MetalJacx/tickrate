@@ -19,23 +19,24 @@ export default {
     { id: "plains_rat", weight: 1.1, loot: [{ itemId: "cloth_sandals", dropRate: 0.08 }] },
     { id: "plains_wolf", weight: 1.0, loot: [{ itemId: "health_potion_small", dropRate: 0.05 }] },
     { id: "plains_bandit", weight: 1.0, loot: [{ itemId: "rusty_short_sword", dropRate: 0.07 }] },
-    { id: "field_brigand", weight: 0.9, loot: [{ itemId: "tattered_robe", dropRate: 0.08 }] }
+    { id: "field_brigand", weight: 0.9, loot: [{ itemId: "tattered_robe", dropRate: 0.08 }] },
+    { id: "ravel_waylaid", weight: 0.002, loot: [{ itemId: "waylaid_ring", dropRate: 0.25 }, { itemId: "traveler_cloak", dropRate: 0.18 }] }
   ],
   subAreas: [
-    { id: "open_world", name: "Open World", discovered: true, discoveryChance: 0, mobWeightModifiers: {} },
+    { id: "open_world", name: "Open World", discovered: true, discoveryChance: 0, mobWeightModifiers: { ravel_waylaid: 0 } },
     {
       id: "broken_trade_road",
       name: "Broken Trade Road",
       discovered: false,
       discoveryChance: 0,
-      mobWeightModifiers: { plains_bandit: 1.2, plains_wolf: 0.9, plains_rat: 1.0, field_brigand: 0.8 }
+      mobWeightModifiers: { plains_bandit: 1.2, plains_wolf: 0.9, plains_rat: 1.0, field_brigand: 0.8, ravel_waylaid: 0 }
     },
     {
       id: "windworn_fields",
       name: "Windworn Fields",
       discovered: false,
       discoveryChance: 0.04,
-      mobWeightModifiers: { field_brigand: 1.3, plains_wolf: 1.0, plains_bandit: 1.0, plains_rat: 0.9 }
+      mobWeightModifiers: { field_brigand: 1.3, plains_wolf: 1.0, plains_bandit: 1.0, plains_rat: 0.9, ravel_waylaid: 250 }
     }
   ]
 };

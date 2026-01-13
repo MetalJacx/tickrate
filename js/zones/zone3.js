@@ -21,23 +21,24 @@ export default {
   enemies: [
     { id: "shatterbone_scout", weight: 1.2, loot: [{ itemId: "rusty_short_sword", dropRate: 0.06 }] },
     { id: "shatterbone_legionary", weight: 1.0, loot: [{ itemId: "rusty_spear", dropRate: 0.05 }] },
-    { id: "shatterbone_brute", weight: 0.8, loot: [{ itemId: "rusty_mace", dropRate: 0.06 }] }
+    { id: "shatterbone_brute", weight: 0.8, loot: [{ itemId: "rusty_mace", dropRate: 0.06 }] },
+    { id: "warlord_grask", weight: 0.0015, loot: [{ itemId: "shatterbone_warhelm", dropRate: 0.30 }, { itemId: "orcish_cleaver_heavy", dropRate: 0.20 }] }
   ],
   subAreas: [
-    { id: "open_world", name: "Open World", discovered: true, discoveryChance: 0, mobWeightModifiers: {} },
+    { id: "open_world", name: "Open World", discovered: true, discoveryChance: 0, mobWeightModifiers: { warlord_grask: 0 } },
     {
       id: "outer_barricades",
       name: "Outer Barricades",
       discovered: false,
       discoveryChance: 0,
-      mobWeightModifiers: { shatterbone_scout: 1.4, shatterbone_legionary: 0.9, shatterbone_brute: 0.7 }
+      mobWeightModifiers: { shatterbone_scout: 1.4, shatterbone_legionary: 0.9, shatterbone_brute: 0.7, warlord_grask: 0 }
     },
     {
       id: "war_yard",
       name: "War Yard",
       discovered: false,
       discoveryChance: 0.03,
-      mobWeightModifiers: { shatterbone_legionary: 1.3, shatterbone_brute: 1.1, shatterbone_scout: 0.8 }
+      mobWeightModifiers: { shatterbone_legionary: 1.3, shatterbone_brute: 1.1, shatterbone_scout: 0.8, warlord_grask: 300 }
     }
   ]
 };

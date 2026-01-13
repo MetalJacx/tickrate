@@ -210,6 +210,121 @@ export const ITEMS = {
     delayTenths: 28,
     stats: { dps: 2 }
   },
+
+  // --- Rare Unique Items ---
+  waylaid_ring: {
+    id: "waylaid_ring",
+    name: "Waylaid Copper Ring",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 60,
+    icon: "💍",
+    stats: { str: 1, dex: 1 }
+  },
+  traveler_cloak: {
+    id: "traveler_cloak",
+    name: "Traveler's Faded Cloak",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 75,
+    icon: "🧥",
+    stats: { ac: 2, agi: 1 }
+  },
+
+  groundskeeper_haft: {
+    id: "groundskeeper_haft",
+    name: "Groundskeeper's Rusted Haft",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 90,
+    icon: "🪚",
+    weaponType: "2h_blunt",
+    delayTenths: 46,
+    stats: { dps: 4 }
+  },
+  gravebinder_wraps: {
+    id: "gravebinder_wraps",
+    name: "Gravebinder Wraps",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 80,
+    icon: "🧤",
+    stats: { ac: 2, maxHP: 6 }
+  },
+
+  hill_captains_blade: {
+    id: "hill_captains_blade",
+    name: "Captain's Etched Hillblade",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 120,
+    icon: "⚔️",
+    weaponType: "1h_slash",
+    delayTenths: 28,
+    stats: { dps: 4 }
+  },
+  ridgewatch_vest: {
+    id: "ridgewatch_vest",
+    name: "Ridgewatch Vest",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 110,
+    icon: "🧞",
+    stats: { ac: 4, con: 1 }
+  },
+
+  shatterbone_warhelm: {
+    id: "shatterbone_warhelm",
+    name: "Shatterbone War Helm",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 140,
+    icon: "⚔️",
+    stats: { ac: 4, str: 1 }
+  },
+  orcish_cleaver_heavy: {
+    id: "orcish_cleaver_heavy",
+    name: "Heavy Orcish Cleaver",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 170,
+    icon: "🪓",
+    weaponType: "2h_slash",
+    delayTenths: 44,
+    stats: { dps: 6 }
+  },
+
+  cornreaper_sickle: {
+    id: "cornreaper_sickle",
+    name: "Cornreaper Sickle",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 180,
+    icon: "🌾",
+    weaponType: "1h_slash",
+    delayTenths: 26,
+    stats: { dps: 6 }
+  },
+
+  bonekings_talisman: {
+    id: "bonekings_talisman",
+    name: "Bone-King's Talisman",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 260,
+    icon: "💀",
+    stats: { ac: 3, wis: 2, maxHP: 10 }
+  },
+
+  ritual_robes: {
+    id: "ritual_robes",
+    name: "Ritual-Stitched Robes",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 220,
+    icon: "🧛",
+    stats: { ac: 4, int: 2 }
+  }
 };
 
 export function getItemDef(itemId) {

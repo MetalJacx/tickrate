@@ -55,7 +55,59 @@ export const MOBS = {
 
   // Hallowbone Castle (9-12)
   hallowbone_warpriest: { id: "hallowbone_warpriest", name: "Hallowbone Warpriest", baseHP: 95, baseDPS: 11, naturalDelayTenths: 32, stats: { str: 15, con: 16, dex: 13, agi: 12, ac: 18, wis: 14, int: 10 } },
-  bone_king: { id: "bone_king", name: "Bone-King Malzor", baseHP: 120, baseDPS: 13, naturalDelayTenths: 40, stats: { str: 18, con: 18, dex: 13, agi: 12, ac: 20, wis: 16, int: 12 } }
+  bone_king: { id: "bone_king", name: "Bone-King Malzor", baseHP: 160, baseDPS: 14, naturalDelayTenths: 40, stats: { str: 20, con: 20, dex: 13, agi: 12, ac: 22, wis: 16, int: 12 }, resists: { disease: 25, poison: 25, cold: 15 } },
+
+  // --- RARE MOBS (LIGHT RESISTS ~10) ---
+  ravel_waylaid: {
+    id: "ravel_waylaid",
+    name: "Ravel the Waylaid",
+    baseHP: 55,
+    baseDPS: 6,
+    naturalDelayTenths: 28,
+    stats: { str: 12, con: 12, dex: 14, agi: 14, ac: 12 },
+    resists: { poison: 10, magic: 5 }
+  },
+
+  groundskeeper: {
+    id: "groundskeeper",
+    name: "The Groundskeeper",
+    baseHP: 60,
+    baseDPS: 7,
+    naturalDelayTenths: 44,
+    stats: { str: 15, con: 14, dex: 10, agi: 10, ac: 14 },
+    resists: { disease: 15, poison: 15 }
+  },
+
+  // --- RARE MOBS (MODERATE RESISTS ~15) ---
+  captain_arvok: {
+    id: "captain_arvok",
+    name: "Captain Arvok",
+    baseHP: 95,
+    baseDPS: 10,
+    naturalDelayTenths: 32,
+    stats: { str: 16, con: 16, dex: 14, agi: 12, ac: 18 },
+    resists: { magic: 10, fear: 15 }
+  },
+
+  warlord_grask: {
+    id: "warlord_grask",
+    name: "Warlord Grask",
+    baseHP: 110,
+    baseDPS: 12,
+    naturalDelayTenths: 40,
+    stats: { str: 18, con: 18, dex: 12, agi: 10, ac: 20 },
+    resists: { magic: 15, fire: 10 }
+  },
+
+  cornreaper: {
+    id: "cornreaper",
+    name: "The Cornreaper",
+    baseHP: 120,
+    baseDPS: 12,
+    naturalDelayTenths: 30,
+    stats: { str: 18, con: 16, dex: 14, agi: 12, ac: 18 },
+    resists: { poison: 20, disease: 10 }
+  }
 };
 
 export function getMobDef(id) {
