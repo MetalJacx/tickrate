@@ -45,12 +45,10 @@ export function levelDiffMod(diff) {
  * - difficulty: action.resist.difficulty (default 0)
  * - levelMod: levelDiffMod(targetLevel - casterLevel)
  */
-export function calculateResistChance(targetResist, pen, difficulty, levelMod) {
+export function calculateResistChance(targetResist, pen, difficulty, levelMod, { minChance = RESIST_MIN_CHANCE, maxChance = RESIST_MAX_CHANCE } = {}) {
   const resistScore = (targetResist - pen) + difficulty + levelMod;
-  
   const rawChance = (resistScore + RESIST_BASE) / RESIST_SCALE;
-  
-  return clamp(rawChance, RESIST_MIN_CHANCE, RESIST_MAX_CHANCE);
+  return clamp(rawChance, minChance, maxChance);
 }
 
 /**
@@ -100,8 +98,7 @@ export function resolveActionResist({ caster, target, action, rng = Math.random 
   const minChance = action.resist.minChance ?? RESIST_MIN_CHANCE;
   const maxChance = action.resist.maxChance ?? RESIST_MAX_CHANCE;
   
-  let chance = calculateResistChance(targetResist, casterPen, difficulty, levelMod);
-  chance = clamp(chance, minChance, maxChance);
+  const chance = calculateResistChance(targetResist, casterPen, difficulty, levelMod, { minChance, maxChance });
   
   // Roll for resist
   const roll = rng();
