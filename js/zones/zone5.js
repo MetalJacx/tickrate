@@ -22,8 +22,8 @@ export default {
     { id: "cornreaper", weight: 0.002, loot: [{ itemId: "cornreaper_sickle", dropRate: 0.40 }] }
   ],
   subAreas: [
-    { id: "open_world", name: "Open World", discovered: true, discoveryChance: 0, mobWeightModifiers: { cornreaper: 0 } },
-    { id: "fenceline", name: "Fenceline", discovered: false, discoveryChance: 0, mobWeightModifiers: { cornfield_raider: 1.1, field_gnawer: 1.0, cornreaper: 0 } },
+    { id: "open_world", name: "Open World", discovered: true, discoveryChance: 0.05, mobWeightModifiers: { cornreaper: 0 } },
+    { id: "fenceline", name: "Fenceline", discovered: false, discoveryChance: 0.04, mobWeightModifiers: { cornfield_raider: 1.1, field_gnawer: 1.0, cornreaper: 0 } },
     { id: "deep_rows", name: "Deep Rows", discovered: false, discoveryChance: 0.03, mobWeightModifiers: { cornfield_raider: 1.3, field_gnawer: 0.8, cornreaper: 300 } }
   ]
 };

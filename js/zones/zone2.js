@@ -28,7 +28,7 @@ export default {
       id: "broken_trade_road",
       name: "Broken Trade Road",
       discovered: false,
-      discoveryChance: 0,
+      discoveryChance: 0.05,
       mobWeightModifiers: { plains_bandit: 1.2, plains_wolf: 0.9, plains_rat: 1.0, field_brigand: 0.8, ravel_waylaid: 0 }
     },
     {

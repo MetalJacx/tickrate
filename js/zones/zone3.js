@@ -30,7 +30,7 @@ export default {
       id: "outer_barricades",
       name: "Outer Barricades",
       discovered: false,
-      discoveryChance: 0,
+      discoveryChance: 0.05,
       mobWeightModifiers: { shatterbone_scout: 1.4, shatterbone_legionary: 0.9, shatterbone_brute: 0.7, warlord_grask: 0 }
     },
     {

@@ -32,7 +32,7 @@ export default {
       id: "open_graves",
       name: "Open Graves",
       discovered: false,
-      discoveryChance: 0,
+      discoveryChance: 0.05,
       mobWeightModifiers: {
         young_orc: 1.2,
         rabid_wolf: 0.8,
