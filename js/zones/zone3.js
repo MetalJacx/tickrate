@@ -22,7 +22,7 @@ export default {
     { id: "shatterbone_scout", weight: 1.2, loot: [{ itemId: "rusty_short_sword", dropRate: 0.06 }] },
     { id: "shatterbone_legionary", weight: 1.0, loot: [{ itemId: "rusty_spear", dropRate: 0.05 }] },
     { id: "shatterbone_brute", weight: 0.8, loot: [{ itemId: "rusty_mace", dropRate: 0.06 }] },
-    { id: "warlord_grask", weight: 0.0015, loot: [{ itemId: "shatterbone_warhelm", dropRate: 0.30 }, { itemId: "orcish_cleaver_heavy", dropRate: 0.20 }] },
+    { id: "warlord_grask", weight: 0.001, loot: [{ itemId: "shatterbone_warhelm", dropRate: 0.30 }, { itemId: "orcish_cleaver_heavy", dropRate: 0.20 }, { itemId: "grask_totem", dropRate: 0.25 }] },
     { id: "shatterbone_archer", weight: 0.9, loot: [{ itemId: "orc_tooth", dropRate: 0.25, minQty: 1, maxQty: 2 }] },
     { id: "shatterbone_shaman", weight: 0.6, loot: [{ itemId: "crude_bone_charm", dropRate: 0.05 }, { itemId: "orc_tooth", dropRate: 0.20, minQty: 1, maxQty: 2 }] }
   ],

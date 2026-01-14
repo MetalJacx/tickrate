@@ -20,7 +20,7 @@ export default {
     { id: "plains_wolf", weight: 1.0, loot: [{ itemId: "health_potion_small", dropRate: 0.05 }] },
     { id: "plains_bandit", weight: 1.0, loot: [{ itemId: "rusty_short_sword", dropRate: 0.07 }] },
     { id: "field_brigand", weight: 0.9, loot: [{ itemId: "tattered_robe", dropRate: 0.08 }] },
-    { id: "ravel_waylaid", weight: 0.002, loot: [{ itemId: "waylaid_ring", dropRate: 0.25 }, { itemId: "traveler_cloak", dropRate: 0.18 }] },
+    { id: "ravel_waylaid", weight: 0.001, loot: [{ itemId: "waylaid_ring", dropRate: 0.25 }, { itemId: "traveler_cloak", dropRate: 0.18 }] },
     { id: "plains_snake", weight: 0.9, loot: [{ itemId: "snake_fang", dropRate: 0.10 }] },
     { id: "grassland_beetle", weight: 0.8, loot: [{ itemId: "beetle_shell", dropRate: 0.35, minQty: 1, maxQty: 2 }] },
     { id: "scavenger_vulture", weight: 0.6, loot: [{ itemId: "vulture_feather", dropRate: 0.30, minQty: 1, maxQty: 2 }] },

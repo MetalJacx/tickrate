@@ -11,7 +11,17 @@ export const MOBS = {
   gnoll_scout: { id: "gnoll_scout", name: "Gnoll Scout", baseHP: 35, baseDPS: 4, naturalDelayTenths: 28, stats: { str: 9, con: 9, dex: 9, agi: 9, ac: 8, wis: 6, int: 6, cha: 6 } },
   young_orc: { id: "young_orc", name: "Young Orc", baseHP: 40, baseDPS: 4, naturalDelayTenths: 30, stats: { str: 10, con: 10, dex: 9, agi: 8, ac: 8, wis: 6, int: 6, cha: 6 } },
   rabid_wolf: { id: "rabid_wolf", name: "Rabid Wolf", baseHP: 35, baseDPS: 5, naturalDelayTenths: 28, stats: { str: 9, con: 9, dex: 10, agi: 10, ac: 7, wis: 6, int: 6, cha: 6 } },
-  phantom: { id: "phantom", name: "Phantom", baseHP: 25, baseDPS: 6, naturalDelayTenths: 25, stats: { str: 8, con: 8, dex: 9, agi: 10, ac: 9, wis: 10, int: 10, cha: 8 } },
+  phantom: { 
+    id: "phantom", 
+    name: "Phantom", 
+    baseHP: 25, 
+    baseDPS: 6, 
+    naturalDelayTenths: 25, 
+    stats: { str: 8, con: 8, dex: 9, agi: 10, ac: 9, wis: 10, int: 10, cha: 8 },
+    isNamed: true,
+    namedTier: "lesser_named",
+    resists: { magic: 10, cold: 5 }
+  },
 
   // Zone 2 - Larger creatures (delay 30-45)
   forest_ghoul: { id: "forest_ghoul", name: "Forest Ghoul", baseHP: 40, baseDPS: 4, naturalDelayTenths: 35, stats: { str: 11, con: 12, dex: 10, agi: 9, ac: 10, wis: 7, int: 7, cha: 6 } },
@@ -55,7 +65,17 @@ export const MOBS = {
 
   // Hallowbone Castle (9-12)
   hallowbone_warpriest: { id: "hallowbone_warpriest", name: "Hallowbone Warpriest", baseHP: 95, baseDPS: 11, naturalDelayTenths: 32, stats: { str: 15, con: 16, dex: 13, agi: 12, ac: 18, wis: 14, int: 10 } },
-  bone_king: { id: "bone_king", name: "Bone-King Malzor", baseHP: 160, baseDPS: 14, naturalDelayTenths: 40, stats: { str: 20, con: 20, dex: 13, agi: 12, ac: 22, wis: 16, int: 12 }, resists: { disease: 25, poison: 25, cold: 15 } },
+  bone_king: { 
+    id: "bone_king", 
+    name: "Bone-King Malzor", 
+    baseHP: 160, 
+    baseDPS: 14, 
+    naturalDelayTenths: 40, 
+    stats: { str: 20, con: 20, dex: 13, agi: 12, ac: 22, wis: 16, int: 12 },
+    isNamed: true,
+    namedTier: "apex_named",
+    resists: { disease: 25, poison: 25, cold: 15 }
+  },
 
   // --- RARE MOBS (LIGHT RESISTS ~10) ---
   ravel_waylaid: {
@@ -65,6 +85,8 @@ export const MOBS = {
     baseDPS: 6,
     naturalDelayTenths: 28,
     stats: { str: 12, con: 12, dex: 14, agi: 14, ac: 12 },
+    isNamed: true,
+    namedTier: "true_named",
     resists: { poison: 10, magic: 5 }
   },
 
@@ -75,6 +97,8 @@ export const MOBS = {
     baseDPS: 7,
     naturalDelayTenths: 44,
     stats: { str: 15, con: 14, dex: 10, agi: 10, ac: 14 },
+    isNamed: true,
+    namedTier: "true_named",
     resists: { disease: 15, poison: 15 }
   },
 
@@ -86,6 +110,8 @@ export const MOBS = {
     baseDPS: 10,
     naturalDelayTenths: 32,
     stats: { str: 16, con: 16, dex: 14, agi: 12, ac: 18 },
+    isNamed: true,
+    namedTier: "true_named",
     resists: { magic: 10, fear: 15 }
   },
 
@@ -96,6 +122,8 @@ export const MOBS = {
     baseDPS: 12,
     naturalDelayTenths: 40,
     stats: { str: 18, con: 18, dex: 12, agi: 10, ac: 20 },
+    isNamed: true,
+    namedTier: "apex_named",
     resists: { magic: 15, fire: 10 }
   },
 
@@ -106,6 +134,8 @@ export const MOBS = {
     baseDPS: 12,
     naturalDelayTenths: 30,
     stats: { str: 18, con: 16, dex: 14, agi: 12, ac: 18 },
+    isNamed: true,
+    namedTier: "apex_named",
     resists: { poison: 20, disease: 10 }
   },
 

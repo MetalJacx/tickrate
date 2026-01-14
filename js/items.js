@@ -95,6 +95,15 @@ export const ITEMS = {
     delayTenths: 28,
     stats: { dps: 4, wis: 2, int: 2 }
   },
+  phantom_essence: {
+    id: "phantom_essence",
+    name: "Phantom Essence Vial",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 50,
+    icon: "👻",
+    stats: { int: 1, wis: 1, maxMana: 10 }
+  },
   iron_mace: {
     id: "steel_mace",
     name: "Steel Mace",
@@ -324,6 +333,68 @@ export const ITEMS = {
     baseValue: 220,
     icon: "🧛",
     stats: { ac: 4, int: 2 }
+  },
+
+  grask_totem: {
+    id: "grask_totem",
+    name: "Grask's War Totem",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 150,
+    icon: "🗿",
+    stats: { str: 2, maxHP: 8 }
+  },
+
+  arvok_signet: {
+    id: "arvok_signet",
+    name: "Arvok's Command Signet",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 130,
+    icon: "💍",
+    stats: { str: 1, cha: 1, ac: 1 }
+  },
+
+  reaper_shroud: {
+    id: "reaper_shroud",
+    name: "Reaper's Shroud",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 190,
+    icon: "🧥",
+    stats: { ac: 3, agi: 2, maxHP: 5 }
+  },
+
+  stalk_woven_boots: {
+    id: "stalk_woven_boots",
+    name: "Stalk-Woven Boots",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 160,
+    icon: "🥾",
+    stats: { ac: 2, agi: 1, dex: 1 }
+  },
+
+  malzors_scepter: {
+    id: "malzors_scepter",
+    name: "Malzor's Bone Scepter",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 280,
+    icon: "🦴",
+    weaponType: "1h_blunt",
+    delayTenths: 32,
+    stats: { dps: 7, wis: 2 }
+  },
+
+  crown_of_bone: {
+    id: "crown_of_bone",
+    name: "Crown of Bone",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 300,
+    icon: "👑",
+    stats: { ac: 5, int: 2, wis: 1, maxMana: 15 }
   },
 
   /* ---------- Mundane Plains drops ---------- */
