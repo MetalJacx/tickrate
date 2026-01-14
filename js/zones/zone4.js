@@ -19,7 +19,9 @@ export default {
   enemies: [
     { id: "hill_skirmisher", weight: 1.0, loot: [{ itemId: "rusty_spear", dropRate: 0.05 }] },
     { id: "dark_wolf", weight: 0.9, loot: [{ itemId: "health_potion_small", dropRate: 0.06 }] },
-    { id: "captain_arvok", weight: 0.0015, loot: [{ itemId: "hill_captains_blade", dropRate: 0.35 }, { itemId: "ridgewatch_vest", dropRate: 0.25 }] }
+    { id: "captain_arvok", weight: 0.0015, loot: [{ itemId: "hill_captains_blade", dropRate: 0.35 }, { itemId: "ridgewatch_vest", dropRate: 0.25 }] },
+    { id: "ridge_bandit", weight: 0.8, loot: [{ itemId: "ridge_stone", dropRate: 0.12, minQty: 1, maxQty: 2 }] },
+    { id: "rock_scrabbler", weight: 0.7, loot: [{ itemId: "ridge_stone", dropRate: 0.25, minQty: 1, maxQty: 3 }] }
   ],
   subAreas: [
     { id: "open_world", name: "Open World", discovered: true, discoveryChance: 0.05, mobWeightModifiers: { captain_arvok: 0 } },

@@ -16,7 +16,9 @@ export default {
   global: {},
   enemies: [
     { id: "hallowbone_warpriest", weight: 1.0, loot: [{ itemId: "enchanted_branch", dropRate: 0.06 }] },
-    { id: "bone_king", weight: 0.0, rare: true, loot: [{ itemId: "bonekings_talisman", dropRate: 0.50 }, { itemId: "ritual_robes", dropRate: 0.30 }] }
+    { id: "bone_king", weight: 0.0, rare: true, loot: [{ itemId: "bonekings_talisman", dropRate: 0.50 }, { itemId: "ritual_robes", dropRate: 0.30 }] },
+    { id: "bone_sentinel", weight: 0.8, loot: [{ itemId: "ritual_bone_fragment", dropRate: 0.30, minQty: 1, maxQty: 2 }] },
+    { id: "sigil_cultist", weight: 0.7, loot: [{ itemId: "sigil_scrap", dropRate: 0.20, minQty: 1, maxQty: 2 }, { itemId: "mana_potion", dropRate: 0.05 }] }
   ],
   subAreas: [
     { id: "open_world", name: "Open World", discovered: true, discoveryChance: 0.03, mobWeightModifiers: { bone_king: 0 } },

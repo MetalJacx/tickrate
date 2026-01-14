@@ -19,7 +19,9 @@ export default {
   enemies: [
     { id: "cornfield_raider", weight: 1.0, loot: [{ itemId: "rusty_sword", dropRate: 0.06 }] },
     { id: "field_gnawer", weight: 0.9, loot: [{ itemId: "cloth_wraps", dropRate: 0.08 }] },
-    { id: "cornreaper", weight: 0.002, loot: [{ itemId: "cornreaper_sickle", dropRate: 0.40 }] }
+    { id: "cornreaper", weight: 0.002, loot: [{ itemId: "cornreaper_sickle", dropRate: 0.40 }] },
+    { id: "field_serpent", weight: 0.7, loot: [{ itemId: "snake_fang", dropRate: 0.12 }] },
+    { id: "stalk_scavenger", weight: 0.8, loot: [{ itemId: "stalk_husk", dropRate: 0.35, minQty: 1, maxQty: 3 }, { itemId: "gnawer_incisor", dropRate: 0.06 }] }
   ],
   subAreas: [
     { id: "open_world", name: "Open World", discovered: true, discoveryChance: 0.05, mobWeightModifiers: { cornreaper: 0 } },

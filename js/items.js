@@ -324,6 +324,156 @@ export const ITEMS = {
     baseValue: 220,
     icon: "🧛",
     stats: { ac: 4, int: 2 }
+  },
+
+  /* ---------- Mundane Plains drops ---------- */
+
+  snake_fang: {
+    id: "snake_fang",
+    name: "Snake Fang",
+    rarity: "common",
+    maxStack: 1,
+    baseValue: 12,
+    icon: "🦷",
+    weaponType: "1h_pierce",
+    delayTenths: 26,
+    stats: { dps: 2 } // low-tier piercing weapon
+  },
+  beetle_shell: {
+    id: "beetle_shell",
+    name: "Beetle Shell",
+    rarity: "common",
+    maxStack: 10,
+    baseValue: 4,
+    icon: "🪲",
+    stats: {}
+  },
+  vulture_feather: {
+    id: "vulture_feather",
+    name: "Vulture Feather",
+    rarity: "common",
+    maxStack: 25,
+    baseValue: 3,
+    icon: "🪶",
+    stats: {}
+  },
+
+  /* ---------- Graveyard drops ---------- */
+
+  bone_shard: {
+    id: "bone_shard",
+    name: "Bone Shard",
+    rarity: "common",
+    maxStack: 25,
+    baseValue: 3,
+    icon: "🦴",
+    stats: {}
+  },
+  grave_dust: {
+    id: "grave_dust",
+    name: "Grave Dust",
+    rarity: "common",
+    maxStack: 25,
+    baseValue: 4,
+    icon: "💨",
+    stats: {}
+  },
+
+  /* ---------- Shatterbone Keep drops ---------- */
+
+  orc_tooth: {
+    id: "orc_tooth",
+    name: "Orc Tooth",
+    rarity: "common",
+    maxStack: 25,
+    baseValue: 5,
+    icon: "🦷",
+    stats: {}
+  },
+  crude_bone_charm: {
+    id: "crude_bone_charm",
+    name: "Crude Bone Charm",
+    rarity: "uncommon",
+    maxStack: 1,
+    baseValue: 45,
+    icon: "🧿",
+    stats: { maxHP: 6 }
+  },
+  jagged_orc_shiv: {
+    id: "jagged_orc_shiv",
+    name: "Jagged Orc Shiv",
+    rarity: "uncommon",
+    maxStack: 1,
+    baseValue: 55,
+    icon: "🔪",
+    weaponType: "1h_pierce",
+    delayTenths: 24,
+    stats: { dps: 3 }
+  },
+
+  /* ---------- Rolling Hills drops ---------- */
+
+  wolf_pelt_patch: {
+    id: "wolf_pelt_patch",
+    name: "Wolf Pelt Patch",
+    rarity: "common",
+    maxStack: 10,
+    baseValue: 6,
+    icon: "🟤",
+    stats: {}
+  },
+  ridge_stone: {
+    id: "ridge_stone",
+    name: "Ridge Stone",
+    rarity: "common",
+    maxStack: 25,
+    baseValue: 3,
+    icon: "🪨",
+    stats: {}
+  },
+
+  /* ---------- Cornfields drops ---------- */
+
+  gnawer_incisor: {
+    id: "gnawer_incisor",
+    name: "Gnawer Incisor",
+    rarity: "common",
+    maxStack: 1,
+    baseValue: 14,
+    icon: "🦷",
+    weaponType: "1h_pierce",
+    delayTenths: 28,
+    stats: { dps: 2 }
+  },
+  stalk_husk: {
+    id: "stalk_husk",
+    name: "Stalk Husk",
+    rarity: "common",
+    maxStack: 25,
+    baseValue: 2,
+    icon: "🌾",
+    stats: {}
+  },
+
+  /* ---------- Hallowbone Castle drops ---------- */
+
+  ritual_bone_fragment: {
+    id: "ritual_bone_fragment",
+    name: "Ritual Bone Fragment",
+    rarity: "common",
+    maxStack: 25,
+    baseValue: 6,
+    icon: "🦴",
+    stats: {}
+  },
+  sigil_scrap: {
+    id: "sigil_scrap",
+    name: "Sigil Scrap",
+    rarity: "uncommon",
+    maxStack: 25,
+    baseValue: 9,
+    icon: "📜",
+    stats: {}
   }
 };
 
