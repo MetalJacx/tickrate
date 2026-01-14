@@ -172,6 +172,17 @@ export function initUI({ onRecruit, onReset, onOpenRecruitModal }) {
 
       // Check if zone changed
       if (selectedZoneForTravel !== state.zone) {
+        // Check if we can travel to this zone (meets its requirement)
+        const canTravel = selectedZone.zoneNumber <= state.highestUnlockedZone;
+        const zoneReq = selectedZone.requirements;
+        const meetsReq = !zoneReq?.killsIn?.zoneId || 
+          (state.zoneKillCounts?.[zoneReq.killsIn.zoneId] ?? 0) >= (zoneReq.killsIn.count ?? 0);
+        
+        if (!canTravel && !meetsReq) {
+          addLog("SYSTEM: You haven't met the requirements to travel to this zone.", "damage_taken");
+          return;
+        }
+        
         state.zone = selectedZoneForTravel;
         state.activeZoneId = selectedZone.id;
         state.killsThisZone = 0;
@@ -1327,6 +1338,40 @@ function zoneKey(zone) {
   return zone?.id || `zone_${zone?.zoneNumber ?? ""}`;
 }
 
+function clamp01(x) {
+  return Math.max(0, Math.min(1, x));
+}
+
+function getZoneKillProgress(req) {
+  if (!req?.killsIn?.zoneId || typeof req.killsIn.count !== "number") return null;
+
+  const zoneId = req.killsIn.zoneId;
+  const need = req.killsIn.count;
+  const have = state.zoneKillCounts?.[zoneId] ?? 0;
+  const pct = clamp01(need > 0 ? have / need : 1);
+
+  const zoneName = listZones()?.find(zz => zz.id === zoneId)?.name || zoneId;
+  return { zoneId, zoneName, have, need, pct };
+}
+
+function getMomentumProgress() {
+  // momentum toward travel forward from current zone (optional gate)
+  const need = killsRequiredForZone(state.zone);
+  const have = state.killsThisZone ?? 0;
+  const pct = clamp01(need > 0 ? have / need : 1);
+  return { have, need, pct };
+}
+
+function zoneRequirementMet(zoneDef) {
+  const req = zoneDef?.requirements;
+  if (!req) return true;
+  if (req.killsIn?.zoneId && typeof req.killsIn.count === "number") {
+    const have = state.zoneKillCounts?.[req.killsIn.zoneId] ?? 0;
+    return have >= req.killsIn.count;
+  }
+  return true;
+}
+
 function renderZones() {
   const zoneList = document.getElementById("zoneList");
   const subAreaList = document.getElementById("subAreaList");
@@ -1356,34 +1401,106 @@ function renderZones() {
   // Render zone list
   for (const z of zones) {
     const isCurrentZone = z.zoneNumber === state.zone;
-    const isPreviousZone = z.zoneNumber < state.zone;
     const isNextZone = z.zoneNumber === state.zone + 1;
-    
-    // Zone is unlocked if: it's a previously visited zone OR it's the current zone OR it's the next zone and we can travel forward
+
+    // Zone is unlocked if:
+    // 1. Already visited
+    // 2. Current zone
+    // 3. Meets its direct requirement (killsIn) OR next zone and has momentum
     let unlocked = z.zoneNumber <= highest;
-    if (isNextZone && !unlocked) {
-      unlocked = canTravelForward();
+    if (!unlocked && isCurrentZone) unlocked = true;
+    if (!unlocked && zoneRequirementMet(z)) {
+      // Has met the zone's direct requirement, show as unlocked
+      unlocked = true;
+    } else if (!unlocked && isNextZone && canTravelForward()) {
+      // Next zone and has momentum
+      unlocked = true;
     }
-    
+
     const isSelected = selectedZoneForTravel === z.zoneNumber;
-    
+
+    // Compute requirement progress (kills in specific zone)
+    const reqProg = getZoneKillProgress(z.requirements);
+
+    // If this is the next zone and it is locked, travel may also be blocked by momentum.
+    // Show momentum in tooltip (and optionally as a second bar).
+    const momentum = isNextZone ? getMomentumProgress() : null;
+
+    // Locked reason text + bar percent
+    const locked = !unlocked;
+
+    // Choose what percent to show in the bar:
+    // - If zone has a killsIn requirement AND it's NOT met, show that
+    // - Else if next zone and locked, show momentum
+    // - Else no bar
+    let barPct = null;
+    let barText = "";
+    if (locked && reqProg && reqProg.pct < 1) {
+      // Requirement not met
+      barPct = reqProg.pct;
+      barText = `${reqProg.have}/${reqProg.need} kills in ${reqProg.zoneName}`;
+    } else if (locked && isNextZone && momentum) {
+      // Requirement met (or no requirement), but momentum is missing
+      barPct = momentum.pct;
+      barText = `${momentum.have}/${momentum.need} kills in current zone`;
+    }
+
+    // Tooltip: explain exactly what's missing
+    let tooltip = `${z.name} (${z.levelRange?.[0] ?? "?"}-${z.levelRange?.[1] ?? "?"})`;
+    if (locked) {
+      const parts = [];
+      if (reqProg) parts.push(`Unlock: ${reqProg.have}/${reqProg.need} kills in ${reqProg.zoneName}`);
+      if (isNextZone && momentum) parts.push(`Momentum: ${momentum.have}/${momentum.need} kills in current zone`);
+      if (parts.length) tooltip += `\n\n${parts.join("\n")}`;
+      else tooltip += `\n\nLocked. Progress required.`;
+    }
+
     const btn = document.createElement("button");
-    btn.textContent = `${z.name} (${z.levelRange?.[0] ?? "?"}-${z.levelRange?.[1] ?? "?"})`;
+    btn.title = tooltip;
+
+    // Use HTML so we can show a progress bar on locked zones
+    const label = `${z.name} (${z.levelRange?.[0] ?? "?"}-${z.levelRange?.[1] ?? "?"})`;
+
+    btn.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <div style="font-weight:600;">${label}</div>
+        ${locked ? `<div style="font-size:11px;color:#9ca3af;">Locked</div>` : ``}
+      </div>
+      ${
+        barPct !== null
+          ? `
+        <div style="margin-top:6px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+            <div style="font-size:11px;color:#9ca3af;">${barText}</div>
+            <div style="font-size:11px;color:#9ca3af;">${Math.floor(barPct * 100)}%</div>
+          </div>
+          <div style="height:6px;background:#111;border:1px solid #333;border-radius:999px;overflow:hidden;margin-top:4px;">
+            <div style="height:100%;width:${Math.floor(barPct * 100)}%;background:#22c55e;"></div>
+          </div>
+        </div>
+        `
+          : ``
+      }
+    `;
+
     btn.style.cssText = `
       width: 100%;
       text-align: left;
       background: ${isSelected ? "#1f2937" : "#222"};
       border: 1px solid ${isSelected ? "#60a5fa" : "#444"};
       color: ${unlocked ? "#eee" : "#555"};
-      padding: 8px;
+      padding: 10px;
       border-radius: 6px;
       cursor: ${unlocked ? "pointer" : "not-allowed"};
       transition: all 0.2s;
     `;
+
     btn.disabled = !unlocked;
+
     btn.addEventListener("click", () => {
       if (!unlocked) return;
       selectedZoneForTravel = z.zoneNumber;
+
       // Reset sub-area selection when changing zones
       const zoneDef = zones.find(zz => zz.zoneNumber === z.zoneNumber);
       if (zoneDef) {
@@ -1393,7 +1510,7 @@ function renderZones() {
       }
       renderZones();
     });
-    
+
     zoneList.appendChild(btn);
   }
 

@@ -1073,6 +1073,7 @@ function onEnemyKilled(enemy, totalDPS) {
   if (zid) {
     state.zoneKillCounts = state.zoneKillCounts || {};
     state.zoneKillCounts[zid] = (state.zoneKillCounts[zid] || 0) + 1;
+    console.log(`[KILL] Zone ${state.zone} (id=${zid}): zoneKillCounts[${zid}]=${state.zoneKillCounts[zid]}, killsThisZone=${state.killsThisZone}`);
   }
 
   // Calculate level-weighted XP distribution (only for living heroes)
@@ -1162,7 +1163,9 @@ function meetsZoneRequirement(nextZoneDef) {
   // Map-style unlock: "kills in X zone"
   if (req.killsIn?.zoneId && typeof req.killsIn.count === "number") {
     const have = state.zoneKillCounts?.[req.killsIn.zoneId] ?? 0;
-    return have >= req.killsIn.count;
+    const meets = have >= req.killsIn.count;
+    console.log(`[ZONE REQ] ${nextZoneDef?.name}: need ${req.killsIn.count} kills in ${req.killsIn.zoneId}, have ${have}, meets=${meets}`);
+    return meets;
   }
 
   return true;
@@ -1176,10 +1179,15 @@ export function canTravelForward() {
 
   // Requirement for the *next* zone
   const next = getZoneDef(state.zone + 1);
-  if (next && !meetsZoneRequirement(next)) return false;
+  const reqMet = next && meetsZoneRequirement(next);
+  const momentumOk = canTravel();
+  
+  console.log(`[TRAVEL] Zone ${state.zone} -> ${state.zone + 1}: reqMet=${reqMet}, momentum=${state.killsThisZone}/${killsRequiredForZone(state.zone)} ok=${momentumOk}`);
+  
+  if (next && !reqMet) return false;
 
   // Still require momentum (kills in current zone)
-  return canTravel();
+  return momentumOk;
 }
 
 export function travelToNextZone() {
