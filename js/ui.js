@@ -188,8 +188,12 @@ export function initUI({ onRecruit, onReset, onOpenRecruitModal }) {
         state.killsThisZone = 0;
         state.currentEnemies = [];
         state.waitingToRespawn = false;
-        // Mark as unlocked when traveling so UI doesn't grey out
-        state.highestUnlockedZone = Math.max(state.highestUnlockedZone || 1, state.zone);
+        // Mark zone as unlocked when traveling (but only update sequential progression)
+        // Don't unlock all intermediate zones when jumping ahead via requirements
+        if (!state.highestUnlockedZone) state.highestUnlockedZone = 1;
+        if (state.zone === state.highestUnlockedZone || state.zone === state.highestUnlockedZone + 1) {
+          state.highestUnlockedZone = Math.max(state.highestUnlockedZone, state.zone);
+        }
         
         // Persist selected subArea when traveling
         if (selectedZone && selectedSubAreaForTravel) {

@@ -26,9 +26,6 @@ export default {
     { id: "field_overseer", weight: 0.092, loot: [{ itemId: "overseers_whip", dropRate: 0.18 }, { itemId: "field_commanders_helm", dropRate: 0.16 }] },
     { id: "plains_snake", weight: 0.9, loot: [{ itemId: "snake_fang", dropRate: 0.10 }] },
     { id: "grassland_beetle", weight: 0.8, loot: [{ itemId: "beetle_shell", dropRate: 0.35, minQty: 1, maxQty: 2 }] },
-    { id: "scavenger_vulture", weight: 0.6, loot: [{ itemId: "vulture_feather", dropRate: 0.30, minQty: 1, maxQty: 2 }] },
-    { id: "plains_snake", weight: 0.9, loot: [{ itemId: "snake_fang", dropRate: 0.10 }] },
-    { id: "grassland_beetle", weight: 0.8, loot: [{ itemId: "beetle_shell", dropRate: 0.35, minQty: 1, maxQty: 2 }] },
     { id: "scavenger_vulture", weight: 0.6, loot: [{ itemId: "vulture_feather", dropRate: 0.30, minQty: 1, maxQty: 2 }] }
   ],
   subAreas: [

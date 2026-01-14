@@ -126,10 +126,11 @@ export function onMobKilled(mobDef, zoneId) {
   const isNamed = mobDef?.isNamed === true;
   
   if (isNamed) {
-    // Named killed: handled by onNamedSpawned (called during spawn, not kill)
-    // But we still need to reset in case of edge cases
-    state.killsSinceLastNamed[zoneId] = 0;
-    state.namedCooldownKills[zoneId] = getCooldownKills(zoneId);
+    // Named killed: the named itself counts as one kill toward the cooldown
+    // Cooldown was already set when it spawned, now decrement it once
+    if (state.namedCooldownKills[zoneId] > 0) {
+      state.namedCooldownKills[zoneId] -= 1;
+    }
   } else {
     // Regular mob killed: increment counter and decrement cooldown
     state.killsSinceLastNamed[zoneId] = (state.killsSinceLastNamed[zoneId] || 0) + 1;
