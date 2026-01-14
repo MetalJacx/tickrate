@@ -74,6 +74,7 @@ export const state = {
   nowMs: 0,
   zone: 1,
   activeZoneId: "graveyard",
+  activeSubAreaIdByZone: {},  // NEW: remember chosen subArea per zoneId
   killsThisZone: 0,
   killsForNextZone: 10,
   zoneKillCounts: {},
@@ -142,6 +143,7 @@ export function serializeState() {
     accountLevelUpCost: state.accountLevelUpCost,
     zone: state.zone,
     activeZoneId: state.activeZoneId,
+    activeSubAreaIdByZone: state.activeSubAreaIdByZone || {},
     killsThisZone: state.killsThisZone,
     killsForNextZone: state.killsForNextZone,
     zoneKillCounts: state.zoneKillCounts,
@@ -214,6 +216,10 @@ export function loadGame() {
     state.accountLevelUpCost = data.accountLevelUpCost ?? 0; // Will be initialized using P99 curve
     state.zone = data.zone ?? 1;
     state.activeZoneId = data.activeZoneId ?? state.activeZoneId ?? "graveyard";
+    
+    // NEW: load chosen subArea per zoneId
+    state.activeSubAreaIdByZone = data.activeSubAreaIdByZone ?? {};
+    
     state.killsThisZone = data.killsThisZone ?? 0;
     state.killsForNextZone = data.killsForNextZone ?? 10;
     state.zoneKillCounts = data.zoneKillCounts ?? {};

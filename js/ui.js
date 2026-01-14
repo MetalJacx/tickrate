@@ -190,10 +190,23 @@ export function initUI({ onRecruit, onReset, onOpenRecruitModal }) {
         state.waitingToRespawn = false;
         // Mark as unlocked when traveling so UI doesn't grey out
         state.highestUnlockedZone = Math.max(state.highestUnlockedZone || 1, state.zone);
+        
+        // Persist selected subArea when traveling
+        if (selectedZone && selectedSubAreaForTravel) {
+          state.activeSubAreaIdByZone ??= {};
+          state.activeSubAreaIdByZone[selectedZone.id] = selectedSubAreaForTravel;
+        }
+        
         spawnEnemy();
       } else if (selectedSubAreaForTravel) {
         // Just switching sub-area in same zone
         state.activeZoneId = selectedZone.id;
+        
+        // Persist selected subArea
+        if (selectedZone && selectedSubAreaForTravel) {
+          state.activeSubAreaIdByZone ??= {};
+          state.activeSubAreaIdByZone[selectedZone.id] = selectedSubAreaForTravel;
+        }
       }
       renderAll();
     });
@@ -1529,10 +1542,22 @@ function renderZones() {
       return;
     }
 
-    // Initialize selected sub-area if not set
+    // Initialize selected sub-area if not set:
+    // Prefer state-stored selection; otherwise fallback to first discovered.
     if (!selectedSubAreaForTravel) {
-      const activeSub = getActiveSubArea(selectedZone, disc);
-      selectedSubAreaForTravel = activeSub?.id;
+      const zoneId = selectedZone.id;
+
+      const fromState = state.activeSubAreaIdByZone?.[zoneId];
+      if (fromState) {
+        selectedSubAreaForTravel = fromState;
+      } else {
+        const activeSub = getActiveSubArea(selectedZone, disc);
+        selectedSubAreaForTravel = activeSub?.id;
+        if (selectedSubAreaForTravel) {
+          state.activeSubAreaIdByZone ??= {};
+          state.activeSubAreaIdByZone[zoneId] = selectedSubAreaForTravel;
+        }
+      }
     }
 
     for (const sub of selectedZone.subAreas) {
@@ -1566,6 +1591,11 @@ function renderZones() {
         });
         row.addEventListener("click", () => {
           selectedSubAreaForTravel = sub.id;
+
+          const zoneId = selectedZone.id;
+          state.activeSubAreaIdByZone ??= {};
+          state.activeSubAreaIdByZone[zoneId] = sub.id;
+
           renderZones();
         });
       }

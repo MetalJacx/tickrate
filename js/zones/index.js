@@ -30,10 +30,13 @@ function pickWeighted(enemies, modifiers = {}) {
   
   const weighted = [];
   let total = 0;
+  
   for (const enemy of enemies) {
     const base = enemy.weight ?? 1;
     const mod = modifiers[enemy.id] ?? 1;
-    let weight = Math.max(0.01, base * mod);
+    
+    // IMPORTANT: allow true zero (used to block spawns)
+    let weight = base * mod;
     
     // Apply named spawn smoothing (cooldown + pity)
     const mobDef = getMobDef(enemy.id);
@@ -41,17 +44,62 @@ function pickWeighted(enemies, modifiers = {}) {
       weight *= namedMultiplier;
     }
     
+    // If blocked or suppressed, skip entirely
+    if (weight <= 0) continue;
+    
     total += weight;
     weighted.push({ enemy, weight });
   }
-  if (total <= 0) return enemies[0];
+  
+  // Fallback: pick first enemy that isn't blocked by modifiers
+  if (total <= 0) {
+    for (const enemy of enemies) {
+      const base = enemy.weight ?? 1;
+      const mod = modifiers[enemy.id] ?? 1;
+      if (base * mod > 0) return enemy;
+    }
+    return enemies[0];
+  }
+  
   const roll = Math.random() * total;
   let accum = 0;
   for (const entry of weighted) {
     accum += entry.weight;
     if (roll <= accum) return entry.enemy;
   }
-  return weighted[weighted.length - 1].enemy;
+  return weighted[weighted.length - 1]?.enemy ?? enemies[0];
+}
+
+function dedupeEnemiesById(enemies) {
+  const map = new Map();
+  for (const e of enemies) {
+    const existing = map.get(e.id);
+    if (!existing) {
+      map.set(e.id, { ...e });
+    } else {
+      existing.weight = (existing.weight ?? 1) + (e.weight ?? 1);
+      // Keep the first loot definition to avoid double-loot quirks
+    }
+  }
+  return [...map.values()];
+}
+
+function getSelectedSubArea(zone, discoveryState) {
+  if (!zone?.subAreas?.length) return null;
+  
+  const zoneId = zone.id;
+  const chosenId = state.activeSubAreaIdByZone?.[zoneId];
+  
+  if (chosenId) {
+    const chosen = zone.subAreas.find(s => s.id === chosenId);
+    if (chosen) {
+      const discovered = discoveryState?.[chosen.id] ?? chosen.discovered;
+      if (discovered) return { ...chosen, discovered: true };
+    }
+  }
+  
+  // Fallback to first discovered subArea (old behavior)
+  return getActiveSubArea(zone, discoveryState);
 }
 
 export function getActiveSubArea(zone, discoveryState) {
@@ -67,10 +115,13 @@ export function getEnemyForZone(zoneNumber, discoveryState = null) {
   const zone = getZoneDef(zoneNumber);
   if (!zone || !zone.enemies.length) return null;
 
+  // Use deduped enemy list to neutralize accidental duplicate entries
+  const enemies = dedupeEnemiesById(zone.enemies);
+
   const globalDefaults = zone.global || {};
-  const activeSub = getActiveSubArea(zone, discoveryState);
+  const activeSub = getSelectedSubArea(zone, discoveryState);
   const modifiers = activeSub?.mobWeightModifiers || {};
-  const enemyTemplate = pickWeighted(zone.enemies, modifiers);
+  const enemyTemplate = pickWeighted(enemies, modifiers);
   const mobDef = getMobDef(enemyTemplate.id) || {};
   return { ...mobDef, ...globalDefaults, ...enemyTemplate };
 }
