@@ -19,13 +19,39 @@ export default {
   enemies: [
     { id: "cornfield_raider", weight: 1.0, loot: [{ itemId: "rusty_sword", dropRate: 0.06 }] },
     { id: "field_gnawer", weight: 0.9, loot: [{ itemId: "cloth_wraps", dropRate: 0.08 }] },
+    { id: "stalk_hunter", weight: 0.13, loot: [{ itemId: "stalk_hunters_bow", dropRate: 0.25 }] },
+    { id: "fenceline_warden", weight: 0.092, loot: [{ itemId: "warden_cloak", dropRate: 0.19 }, { itemId: "warden_halberd", dropRate: 0.17 }] },
     { id: "cornreaper", weight: 0.010, loot: [{ itemId: "cornreaper_sickle", dropRate: 0.40 }, { itemId: "reaper_shroud", dropRate: 0.30 }, { itemId: "stalk_woven_boots", dropRate: 0.25 }] },
     { id: "field_serpent", weight: 0.7, loot: [{ itemId: "snake_fang", dropRate: 0.12 }] },
     { id: "stalk_scavenger", weight: 0.8, loot: [{ itemId: "stalk_husk", dropRate: 0.35, minQty: 1, maxQty: 3 }, { itemId: "gnawer_incisor", dropRate: 0.06 }] }
   ],
   subAreas: [
-    { id: "open_world", name: "Open World", discovered: true, discoveryChance: 0.05, mobWeightModifiers: { cornreaper: 0 } },
-    { id: "fenceline", name: "Fenceline", discovered: false, discoveryChance: 0.04, mobWeightModifiers: { cornfield_raider: 1.1, field_gnawer: 1.0, cornreaper: 0 } },
-    { id: "deep_rows", name: "Deep Rows", discovered: false, discoveryChance: 0.03, mobWeightModifiers: { cornfield_raider: 1.3, field_gnawer: 0.8, cornreaper: 300 } }
+    { id: "open_world", name: "Open World", discovered: true, discoveryChance: 0.05, mobWeightModifiers: { cornreaper: 0, stalk_hunter: 0, fenceline_warden: 0 } },
+    { 
+      id: "fenceline", 
+      name: "Fenceline", 
+      discovered: false, 
+      discoveryChance: 0.04, 
+      mobWeightModifiers: { 
+        cornfield_raider: 1.1, 
+        field_gnawer: 1.0, 
+        cornreaper: 0,
+        stalk_hunter: 0,
+        fenceline_warden: 280
+      } 
+    },
+    { 
+      id: "deep_rows", 
+      name: "Deep Rows", 
+      discovered: false, 
+      discoveryChance: 0.03, 
+      mobWeightModifiers: { 
+        cornfield_raider: 1.3, 
+        field_gnawer: 0.8, 
+        cornreaper: 300,
+        stalk_hunter: 270,
+        fenceline_warden: 0
+      } 
+    }
   ]
 };

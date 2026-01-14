@@ -18,7 +18,9 @@ export default {
     { id: "young_orc", weight: 1.0, loot: [{ itemId: "stick", dropRate: 0.04 }] },
     { id: "rabid_wolf", weight: 1.0, loot: [{ itemId: "health_potion_small", dropRate: 0.05 }] },
     { id: "phantom", weight: 0.13, loot: [{ itemId: "phantom_essence", dropRate: 0.30 }] },
+    { id: "crypt_watcher", weight: 0.13, loot: [{ itemId: "crypt_key", dropRate: 0.25 }] },
     { id: "groundskeeper", weight: 0.054, loot: [{ itemId: "groundskeeper_haft", dropRate: 0.22 }, { itemId: "gravebinder_wraps", dropRate: 0.20 }] },
+    { id: "forgotten_one", weight: 0.054, loot: [{ itemId: "forgotten_shroud", dropRate: 0.20 }] },
     { id: "bone_mite", weight: 0.8, loot: [{ itemId: "bone_shard", dropRate: 0.30, minQty: 1, maxQty: 2 }] },
     { id: "grave_wisp", weight: 0.5, loot: [{ itemId: "grave_dust", dropRate: 0.25, minQty: 1, maxQty: 2 }] }
   ],
@@ -28,7 +30,7 @@ export default {
       name: "Open World",
       discovered: true,
       discoveryChance: 0,
-      mobWeightModifiers: { phantom: 0, groundskeeper: 0 }
+      mobWeightModifiers: { phantom: 0, groundskeeper: 0, crypt_watcher: 0, forgotten_one: 0 }
     },
     {
       id: "open_graves",
@@ -41,7 +43,9 @@ export default {
         skeleton: 1.0,
         gnoll_scout: 1.0,
         phantom: 0,
-        groundskeeper: 0
+        groundskeeper: 0,
+        crypt_watcher: 280,
+        forgotten_one: 270
       }
     },
     {
@@ -55,7 +59,9 @@ export default {
         young_orc: 0.9,
         rabid_wolf: 0.8,
         phantom: 300,
-        groundskeeper: 250
+        groundskeeper: 250,
+        crypt_watcher: 0,
+        forgotten_one: 0
       }
     }
   ]

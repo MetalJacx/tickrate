@@ -20,7 +20,10 @@ export const MOBS = {
     stats: { str: 8, con: 8, dex: 9, agi: 10, ac: 9, wis: 10, int: 10, cha: 8 },
     isNamed: true,
     namedTier: "lesser_named",
-    resists: { magic: 10, cold: 5 }
+    resists: { magic: 10, cold: 5 },
+    drops: [
+      { id: "phantom_essence", chance: 0.30 }
+    ]
   },
 
   // Zone 2 - Larger creatures (delay 30-45)
@@ -74,7 +77,74 @@ export const MOBS = {
     stats: { str: 20, con: 20, dex: 13, agi: 12, ac: 22, wis: 16, int: 12 },
     isNamed: true,
     namedTier: "apex_named",
-    resists: { disease: 25, poison: 25, cold: 15 }
+    resists: { disease: 25, poison: 25, cold: 15 },
+    drops: [
+      { id: "malzors_scepter", chance: 0.20 },
+      { id: "crown_of_bone", chance: 0.15 }
+    ]
+  },
+
+  // Zone 6 additional named
+  ritual_keeper: {
+    id: "ritual_keeper",
+    name: "Ritual Keeper",
+    baseHP: 88,
+    baseDPS: 10,
+    naturalDelayTenths: 30,
+    stats: { str: 14, con: 15, dex: 13, agi: 12, ac: 17, wis: 16, int: 14 },
+    isNamed: true,
+    namedTier: "lesser_named",
+    resists: { magic: 12, disease: 10 },
+    drops: [
+      { id: "ritual_dagger", chance: 0.23 }
+    ]
+  },
+
+  bone_adjutant: {
+    id: "bone_adjutant",
+    name: "Bone Adjutant",
+    baseHP: 92,
+    baseDPS: 11,
+    naturalDelayTenths: 32,
+    stats: { str: 16, con: 16, dex: 12, agi: 11, ac: 18, wis: 13, int: 11 },
+    isNamed: true,
+    namedTier: "lesser_named",
+    resists: { disease: 15, cold: 10 },
+    drops: [
+      { id: "adjutant_armor", chance: 0.24 }
+    ]
+  },
+
+  high_sigil_master: {
+    id: "high_sigil_master",
+    name: "High Sigil Master",
+    baseHP: 100,
+    baseDPS: 11,
+    naturalDelayTenths: 28,
+    stats: { str: 14, con: 16, dex: 14, agi: 13, ac: 19, wis: 17, int: 16 },
+    isNamed: true,
+    namedTier: "true_named",
+    resists: { magic: 18, disease: 12 },
+    drops: [
+      { id: "sigil_orb", chance: 0.18 },
+      { id: "sigil_tome", chance: 0.16 }
+    ]
+  },
+
+  deathknight_maloth: {
+    id: "deathknight_maloth",
+    name: "Deathknight Maloth",
+    baseHP: 110,
+    baseDPS: 12,
+    naturalDelayTenths: 35,
+    stats: { str: 18, con: 18, dex: 13, agi: 11, ac: 21, wis: 14, int: 12 },
+    isNamed: true,
+    namedTier: "true_named",
+    resists: { disease: 15, cold: 15, physical: 10 },
+    drops: [
+      { id: "maloth_sword", chance: 0.19 },
+      { id: "deathknight_plate", chance: 0.17 }
+    ]
   },
 
   // --- RARE MOBS (LIGHT RESISTS ~10) ---
@@ -87,7 +157,57 @@ export const MOBS = {
     stats: { str: 12, con: 12, dex: 14, agi: 14, ac: 12 },
     isNamed: true,
     namedTier: "true_named",
-    resists: { poison: 10, magic: 5 }
+    resists: { poison: 10, magic: 5 },
+    drops: [
+      { id: "stalk_woven_boots", chance: 0.22 }
+    ]
+  },
+
+  // Zone 2 additional named
+  dusthoof_alpha: {
+    id: "dusthoof_alpha",
+    name: "Dusthoof Alpha",
+    baseHP: 48,
+    baseDPS: 5,
+    naturalDelayTenths: 36,
+    stats: { str: 12, con: 13, dex: 9, agi: 8, ac: 10 },
+    isNamed: true,
+    namedTier: "lesser_named",
+    resists: { physical: 10 },
+    drops: [
+      { id: "dusthoof_horn", chance: 0.28 }
+    ]
+  },
+
+  roadwarden_thane: {
+    id: "roadwarden_thane",
+    name: "Roadwarden Thane",
+    baseHP: 52,
+    baseDPS: 6,
+    naturalDelayTenths: 30,
+    stats: { str: 13, con: 12, dex: 12, agi: 11, ac: 12 },
+    isNamed: true,
+    namedTier: "lesser_named",
+    resists: { physical: 8, magic: 5 },
+    drops: [
+      { id: "roadwarden_badge", chance: 0.26 }
+    ]
+  },
+
+  field_overseer: {
+    id: "field_overseer",
+    name: "Field Overseer",
+    baseHP: 58,
+    baseDPS: 6,
+    naturalDelayTenths: 32,
+    stats: { str: 14, con: 13, dex: 13, agi: 12, ac: 13 },
+    isNamed: true,
+    namedTier: "true_named",
+    resists: { magic: 10, fire: 8 },
+    drops: [
+      { id: "overseers_whip", chance: 0.18 },
+      { id: "field_commanders_helm", chance: 0.16 }
+    ]
   },
 
   groundskeeper: {
@@ -99,7 +219,42 @@ export const MOBS = {
     stats: { str: 15, con: 14, dex: 10, agi: 10, ac: 14 },
     isNamed: true,
     namedTier: "true_named",
-    resists: { disease: 15, poison: 15 }
+    resists: { disease: 15, poison: 15 },
+    drops: [
+      { id: "reaper_shroud", chance: 0.18 },
+      { id: "deathward_charm", chance: 0.15 }
+    ]
+  },
+
+  // Zone 1 additional named
+  crypt_watcher: {
+    id: "crypt_watcher",
+    name: "Crypt Watcher",
+    baseHP: 50,
+    baseDPS: 5,
+    naturalDelayTenths: 32,
+    stats: { str: 11, con: 12, dex: 10, agi: 9, ac: 11 },
+    isNamed: true,
+    namedTier: "lesser_named",
+    resists: { disease: 10, cold: 5 },
+    drops: [
+      { id: "crypt_key", chance: 0.25 }
+    ]
+  },
+
+  forgotten_one: {
+    id: "forgotten_one",
+    name: "The Forgotten One",
+    baseHP: 65,
+    baseDPS: 7,
+    naturalDelayTenths: 38,
+    stats: { str: 14, con: 13, dex: 11, agi: 10, ac: 13 },
+    isNamed: true,
+    namedTier: "true_named",
+    resists: { magic: 12, disease: 10 },
+    drops: [
+      { id: "forgotten_shroud", chance: 0.20 }
+    ]
   },
 
   // --- RARE MOBS (MODERATE RESISTS ~15) ---
@@ -112,7 +267,59 @@ export const MOBS = {
     stats: { str: 16, con: 16, dex: 14, agi: 12, ac: 18 },
     isNamed: true,
     namedTier: "true_named",
-    resists: { magic: 10, fear: 15 }
+    resists: { magic: 10, fear: 15 },
+    drops: [
+      { id: "arvok_signet", chance: 0.22 }
+    ]
+  },
+
+  // Zone 4 additional named
+  stone_hurler: {
+    id: "stone_hurler",
+    name: "Stone Hurler",
+    baseHP: 64,
+    baseDPS: 7,
+    naturalDelayTenths: 34,
+    stats: { str: 15, con: 14, dex: 11, agi: 10, ac: 14 },
+    isNamed: true,
+    namedTier: "lesser_named",
+    resists: { physical: 12 },
+    drops: [
+      { id: "stone_hurler_sling", chance: 0.24 }
+    ]
+  },
+
+  ridgewatch_commander: {
+    id: "ridgewatch_commander",
+    name: "Ridgewatch Commander",
+    baseHP: 88,
+    baseDPS: 9,
+    naturalDelayTenths: 34,
+    stats: { str: 16, con: 15, dex: 13, agi: 12, ac: 17 },
+    isNamed: true,
+    namedTier: "true_named",
+    resists: { physical: 10, magic: 10 },
+    drops: [
+      { id: "ridgewatch_banner", chance: 0.19 },
+      { id: "commander_insignia", chance: 0.17 }
+    ]
+  },
+
+  ancient_earthshaker: {
+    id: "ancient_earthshaker",
+    name: "Ancient Earthshaker",
+    baseHP: 105,
+    baseDPS: 11,
+    naturalDelayTenths: 42,
+    stats: { str: 19, con: 18, dex: 10, agi: 9, ac: 19 },
+    isNamed: true,
+    namedTier: "apex_named",
+    resists: { physical: 20, magic: 12 },
+    drops: [
+      { id: "earthshaker_hammer", chance: 0.18 },
+      { id: "earthshaker_girdle", chance: 0.16 },
+      { id: "stone_ward_amulet", chance: 0.14 }
+    ]
   },
 
   warlord_grask: {
@@ -124,7 +331,73 @@ export const MOBS = {
     stats: { str: 18, con: 18, dex: 12, agi: 10, ac: 20 },
     isNamed: true,
     namedTier: "apex_named",
-    resists: { magic: 15, fire: 10 }
+    resists: { magic: 15, fire: 10 },
+    drops: [
+      { id: "grask_totem", chance: 0.25 }
+    ]
+  },
+
+  // Zone 3 additional named
+  bonecrusher: {
+    id: "bonecrusher",
+    name: "Bonecrusher",
+    baseHP: 68,
+    baseDPS: 8,
+    naturalDelayTenths: 38,
+    stats: { str: 16, con: 15, dex: 10, agi: 9, ac: 15 },
+    isNamed: true,
+    namedTier: "lesser_named",
+    resists: { physical: 10, disease: 8 },
+    drops: [
+      { id: "bonecrusher_maul", chance: 0.24 }
+    ]
+  },
+
+  skullsplitter: {
+    id: "skullsplitter",
+    name: "Skullsplitter the Cruel",
+    baseHP: 72,
+    baseDPS: 9,
+    naturalDelayTenths: 35,
+    stats: { str: 17, con: 15, dex: 11, agi: 10, ac: 16 },
+    isNamed: true,
+    namedTier: "lesser_named",
+    resists: { physical: 12, poison: 8 },
+    drops: [
+      { id: "skullsplitter_axe", chance: 0.26 }
+    ]
+  },
+
+  shaman_grimtooth: {
+    id: "shaman_grimtooth",
+    name: "Shaman Grimtooth",
+    baseHP: 78,
+    baseDPS: 9,
+    naturalDelayTenths: 32,
+    stats: { str: 14, con: 16, dex: 12, agi: 11, ac: 17, wis: 15, int: 13 },
+    isNamed: true,
+    namedTier: "true_named",
+    resists: { magic: 15, disease: 10 },
+    drops: [
+      { id: "grimtooth_fetish", chance: 0.20 },
+      { id: "grimtooth_staff", chance: 0.18 }
+    ]
+  },
+
+  captain_boneclaw: {
+    id: "captain_boneclaw",
+    name: "Captain Boneclaw",
+    baseHP: 85,
+    baseDPS: 10,
+    naturalDelayTenths: 36,
+    stats: { str: 17, con: 17, dex: 13, agi: 11, ac: 18 },
+    isNamed: true,
+    namedTier: "true_named",
+    resists: { physical: 12, disease: 12 },
+    drops: [
+      { id: "boneclaw_pauldrons", chance: 0.18 },
+      { id: "boneclaw_blade", chance: 0.16 }
+    ]
   },
 
   cornreaper: {
@@ -136,7 +409,42 @@ export const MOBS = {
     stats: { str: 18, con: 16, dex: 14, agi: 12, ac: 18 },
     isNamed: true,
     namedTier: "apex_named",
-    resists: { poison: 20, disease: 10 }
+    resists: { poison: 20, disease: 10 },
+    drops: [
+      { id: "malzors_scepter", chance: 0.20 }
+    ]
+  },
+
+  // Zone 5 additional named
+  stalk_hunter: {
+    id: "stalk_hunter",
+    name: "Stalk Hunter",
+    baseHP: 74,
+    baseDPS: 8,
+    naturalDelayTenths: 28,
+    stats: { str: 15, con: 14, dex: 14, agi: 13, ac: 15 },
+    isNamed: true,
+    namedTier: "lesser_named",
+    resists: { poison: 10, disease: 8 },
+    drops: [
+      { id: "stalk_hunters_bow", chance: 0.25 }
+    ]
+  },
+
+  fenceline_warden: {
+    id: "fenceline_warden",
+    name: "Fenceline Warden",
+    baseHP: 82,
+    baseDPS: 9,
+    naturalDelayTenths: 32,
+    stats: { str: 16, con: 15, dex: 13, agi: 12, ac: 16 },
+    isNamed: true,
+    namedTier: "true_named",
+    resists: { physical: 12, poison: 10 },
+    drops: [
+      { id: "warden_cloak", chance: 0.19 },
+      { id: "warden_halberd", chance: 0.17 }
+    ]
   },
 
   /* ---------- Mundane Plains mobs ---------- */

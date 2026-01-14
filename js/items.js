@@ -397,6 +397,314 @@ export const ITEMS = {
     stats: { ac: 5, int: 2, wis: 1, maxMana: 15 }
   },
 
+  // Zone 1 additional named loot
+  crypt_key: {
+    id: "crypt_key",
+    name: "Ancient Crypt Key",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 45,
+    icon: "🔑",
+    stats: { agi: 1, maxHP: 5 }
+  },
+
+  forgotten_shroud: {
+    id: "forgotten_shroud",
+    name: "Forgotten Shroud",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 85,
+    icon: "🧥",
+    stats: { ac: 3, int: 1, maxMana: 8 }
+  },
+
+  deathward_charm: {
+    id: "deathward_charm",
+    name: "Deathward Charm",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 75,
+    icon: "✨",
+    stats: { wis: 1, diseaseResist: 5 }
+  },
+
+  // Zone 2 additional named loot
+  dusthoof_horn: {
+    id: "dusthoof_horn",
+    name: "Dusthoof War Horn",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 50,
+    icon: "📯",
+    stats: { str: 1, maxHP: 6 }
+  },
+
+  roadwarden_badge: {
+    id: "roadwarden_badge",
+    name: "Roadwarden's Badge",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 55,
+    icon: "🛡️",
+    stats: { ac: 2, cha: 1 }
+  },
+
+  overseers_whip: {
+    id: "overseers_whip",
+    name: "Overseer's Lash",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 95,
+    icon: "🔗",
+    weaponType: "1h_slash",
+    delayTenths: 25,
+    stats: { dps: 4 }
+  },
+
+  field_commanders_helm: {
+    id: "field_commanders_helm",
+    name: "Field Commander's Helm",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 90,
+    icon: "⚔️",
+    stats: { ac: 3, str: 1 }
+  },
+
+  // Zone 3 additional named loot
+  bonecrusher_maul: {
+    id: "bonecrusher_maul",
+    name: "Bonecrusher's Maul",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 115,
+    icon: "🔨",
+    weaponType: "2h_blunt",
+    delayTenths: 48,
+    stats: { dps: 5 }
+  },
+
+  skullsplitter_axe: {
+    id: "skullsplitter_axe",
+    name: "Skullsplitter Axe",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 120,
+    icon: "🪓",
+    weaponType: "1h_slash",
+    delayTenths: 30,
+    stats: { dps: 5 }
+  },
+
+  grimtooth_fetish: {
+    id: "grimtooth_fetish",
+    name: "Grimtooth's Fetish",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 135,
+    icon: "🗿",
+    stats: { wis: 2, int: 1, maxMana: 10 }
+  },
+
+  grimtooth_staff: {
+    id: "grimtooth_staff",
+    name: "Grimtooth's Cursed Staff",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 145,
+    icon: "🪄",
+    weaponType: "2h_blunt",
+    delayTenths: 38,
+    stats: { dps: 5, wis: 1 }
+  },
+
+  boneclaw_pauldrons: {
+    id: "boneclaw_pauldrons",
+    name: "Boneclaw Pauldrons",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 140,
+    icon: "🦴",
+    stats: { ac: 4, str: 1, con: 1 }
+  },
+
+  boneclaw_blade: {
+    id: "boneclaw_blade",
+    name: "Boneclaw's Jagged Blade",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 155,
+    icon: "⚔️",
+    weaponType: "1h_slash",
+    delayTenths: 29,
+    stats: { dps: 6 }
+  },
+
+  // Zone 4 additional named loot
+  stone_hurler_sling: {
+    id: "stone_hurler_sling",
+    name: "Stone Hurler's Sling",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 105,
+    icon: "🪨",
+    weaponType: "1h_blunt",
+    delayTenths: 26,
+    stats: { dps: 5 }
+  },
+
+  ridgewatch_banner: {
+    id: "ridgewatch_banner",
+    name: "Ridgewatch Banner",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 145,
+    icon: "🚩",
+    stats: { str: 1, cha: 2, maxHP: 8 }
+  },
+
+  commander_insignia: {
+    id: "commander_insignia",
+    name: "Commander's Insignia",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 140,
+    icon: "💍",
+    stats: { ac: 2, str: 1, cha: 1 }
+  },
+
+  earthshaker_hammer: {
+    id: "earthshaker_hammer",
+    name: "Earthshaker's Hammer",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 195,
+    icon: "🔨",
+    weaponType: "2h_blunt",
+    delayTenths: 50,
+    stats: { dps: 7 }
+  },
+
+  earthshaker_girdle: {
+    id: "earthshaker_girdle",
+    name: "Earthshaker's Girdle",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 185,
+    icon: "⚔️",
+    stats: { ac: 3, str: 2, maxHP: 12 }
+  },
+
+  stone_ward_amulet: {
+    id: "stone_ward_amulet",
+    name: "Stone Ward Amulet",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 175,
+    icon: "📿",
+    stats: { ac: 2, con: 1, physicalResist: 5 }
+  },
+
+  // Zone 5 additional named loot
+  stalk_hunters_bow: {
+    id: "stalk_hunters_bow",
+    name: "Stalk Hunter's Bow",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 125,
+    icon: "🏹",
+    weaponType: "1h_pierce",
+    delayTenths: 24,
+    stats: { dps: 6 }
+  },
+
+  warden_cloak: {
+    id: "warden_cloak",
+    name: "Fenceline Warden's Cloak",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 155,
+    icon: "🧥",
+    stats: { ac: 3, agi: 1, dex: 1, maxHP: 6 }
+  },
+
+  warden_halberd: {
+    id: "warden_halberd",
+    name: "Warden's Halberd",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 165,
+    icon: "🪓",
+    weaponType: "2h_slash",
+    delayTenths: 42,
+    stats: { dps: 6 }
+  },
+
+  // Zone 6 additional named loot
+  ritual_dagger: {
+    id: "ritual_dagger",
+    name: "Ritual Keeper's Dagger",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 170,
+    icon: "🗡️",
+    weaponType: "1h_pierce",
+    delayTenths: 24,
+    stats: { dps: 7 }
+  },
+
+  adjutant_armor: {
+    id: "adjutant_armor",
+    name: "Bone Adjutant's Armor",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 180,
+    icon: "🦴",
+    stats: { ac: 5, con: 1, diseaseResist: 8 }
+  },
+
+  sigil_orb: {
+    id: "sigil_orb",
+    name: "High Sigil Orb",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 210,
+    icon: "🔮",
+    stats: { int: 2, wis: 1, maxMana: 20, magicResist: 5 }
+  },
+
+  sigil_tome: {
+    id: "sigil_tome",
+    name: "Tome of High Sigils",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 200,
+    icon: "📖",
+    stats: { int: 3, maxMana: 15 }
+  },
+
+  maloth_sword: {
+    id: "maloth_sword",
+    name: "Maloth's Deathblade",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 225,
+    icon: "⚔️",
+    weaponType: "2h_slash",
+    delayTenths: 40,
+    stats: { dps: 8 }
+  },
+
+  deathknight_plate: {
+    id: "deathknight_plate",
+    name: "Deathknight's Plate",
+    rarity: "rare",
+    maxStack: 1,
+    baseValue: 240,
+    icon: "🛡️",
+    stats: { ac: 6, str: 1, con: 1, maxHP: 15 }
+  },
+
   /* ---------- Mundane Plains drops ---------- */
 
   snake_fang: {
