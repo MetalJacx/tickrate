@@ -862,6 +862,8 @@ function start() {
       state.campThresholds = { health: 80, mana: 50, endurance: 30 };
       state.lastCampLogTick = 0;
       state.lastCampLogTime = 0;
+      state.killsSinceLastNamed = {};
+      state.namedCooldownKills = {};
       state.nowMs = 0;
       selectedClassKey = null;
       selectedRaceKey = DEFAULT_RACE_KEY;

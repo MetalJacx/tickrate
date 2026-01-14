@@ -106,6 +106,10 @@ export const state = {
   lastCampLogTick: 0, // Counter for periodic camping messages
   lastCampLogTime: 0, // Timestamp of last camping log (ms)
 
+  // Named spawn tracking (Phase 3: spawn smoothing)
+  killsSinceLastNamed: {}, // { zoneId: killCount }
+  namedCooldownKills: {}, // { zoneId: remainingCooldownKills }
+
   // Shared inventory (all characters use this)
   sharedInventory: Array(100).fill(null)
 };
@@ -163,6 +167,8 @@ export function serializeState() {
     campThresholds: state.campThresholds || { health: 80, mana: 50, endurance: 30 },
     lastCampLogTick: state.lastCampLogTick ?? 0,
     lastCampLogTime: state.lastCampLogTime ?? 0,
+    killsSinceLastNamed: state.killsSinceLastNamed || {},
+    namedCooldownKills: state.namedCooldownKills || {},
     nowMs: state.nowMs ?? 0,
     lastSavedAt: state.nowMs ?? 0
   };
@@ -380,6 +386,8 @@ export function loadGame() {
     state.campThresholds = data.campThresholds ?? { health: 80, mana: 50, endurance: 30 };
     state.lastCampLogTick = data.lastCampLogTick ?? 0;
     state.lastCampLogTime = data.lastCampLogTime ?? 0;
+    state.killsSinceLastNamed = data.killsSinceLastNamed ?? {};
+    state.namedCooldownKills = data.namedCooldownKills ?? {};
     state.nowMs = Math.max(0, data.nowMs ?? 0);
 
     const maxId = state.party.reduce((m, h) => Math.max(m, h.id || 0), 0);

@@ -7,6 +7,7 @@ import { getItemDef } from "./items.js";
 import { getRaceDef, DEFAULT_RACE_KEY } from "./races.js";
 import { ACTIONS } from "./actions.js";
 import { tryWeaponSkillUp, getEquippedWeaponType, ensureWeaponSkills } from "./weaponSkills.js";
+import { onNamedSpawned, onMobKilled } from "./namedSpawns.js";
 import {
   startCast,
   tickCasting,
@@ -862,6 +863,11 @@ export function spawnEnemy() {
   state.waitingToRespawn = false;
   addLog(`A level ${level} ${enemyDef.name} appears in Zone ${z}.`);
   
+  // Track named spawn for smoothing system
+  if (enemyDef.isNamed) {
+    onNamedSpawned(state.activeZoneId || zoneDef?.id);
+  }
+  
   // Check for immediate reinforcement chance
   checkForReinforcement();
 }
@@ -891,6 +897,11 @@ function spawnEnemyToList() {
 
   state.currentEnemies.push(enemy);
   addLog(`Oh no! Your luck is not on your side - another ${enemyDef.name} takes notice of your presence!`, "damage_taken");
+  
+  // Track named spawn for smoothing system
+  if (enemyDef.isNamed) {
+    onNamedSpawned(state.activeZoneId || zoneDef?.id);
+  }
 }
 
 export { spawnEnemyToList };
@@ -1074,6 +1085,9 @@ function onEnemyKilled(enemy, totalDPS) {
     state.zoneKillCounts = state.zoneKillCounts || {};
     state.zoneKillCounts[zid] = (state.zoneKillCounts[zid] || 0) + 1;
     console.log(`[KILL] Zone ${state.zone} (id=${zid}): zoneKillCounts[${zid}]=${state.zoneKillCounts[zid]}, killsThisZone=${state.killsThisZone}`);
+    
+    // Track named spawn smoothing (Phase 3)
+    onMobKilled(enemy, zid);
   }
 
   // Calculate level-weighted XP distribution (only for living heroes)

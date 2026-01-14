@@ -6,6 +6,8 @@ import Zone4 from "./zone4.js";
 import Zone5 from "./zone5.js";
 import Zone6 from "./zone6.js";
 import { getMobDef } from "../mobs.js";
+import { getNamedSmoothingMultiplier } from "../namedSpawns.js";
+import { state } from "../state.js";
 
 export const ZONES = [Town, Zone1, Zone2, Zone3, Zone4, Zone5, Zone6];
 export const MAX_ZONE = ZONES.length;
@@ -23,12 +25,22 @@ export function listZones() {
 }
 
 function pickWeighted(enemies, modifiers = {}) {
+  const zoneId = state.activeZoneId;
+  const namedMultiplier = getNamedSmoothingMultiplier(zoneId);
+  
   const weighted = [];
   let total = 0;
   for (const enemy of enemies) {
     const base = enemy.weight ?? 1;
     const mod = modifiers[enemy.id] ?? 1;
-    const weight = Math.max(0.01, base * mod);
+    let weight = Math.max(0.01, base * mod);
+    
+    // Apply named spawn smoothing (cooldown + pity)
+    const mobDef = getMobDef(enemy.id);
+    if (mobDef?.isNamed) {
+      weight *= namedMultiplier;
+    }
+    
     total += weight;
     weighted.push({ enemy, weight });
   }
