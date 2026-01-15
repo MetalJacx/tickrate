@@ -112,7 +112,12 @@ export const state = {
   namedCooldownKills: {}, // { zoneId: remainingCooldownKills }
 
   // Shared inventory (all characters use this)
-  sharedInventory: Array(100).fill(null)
+  sharedInventory: Array(100).fill(null),
+
+  // Settings (persisted)
+  settings: {
+    debugLogs: false  // Global debug logging toggle
+  }
 };
 
 export function nextHeroId() {
@@ -172,7 +177,8 @@ export function serializeState() {
     killsSinceLastNamed: state.killsSinceLastNamed || {},
     namedCooldownKills: state.namedCooldownKills || {},
     nowMs: state.nowMs ?? 0,
-    lastSavedAt: state.nowMs ?? 0
+    lastSavedAt: state.nowMs ?? 0,
+    settings: state.settings || { debugLogs: false }
   };
 }
 
@@ -395,6 +401,7 @@ export function loadGame() {
     state.killsSinceLastNamed = data.killsSinceLastNamed ?? {};
     state.namedCooldownKills = data.namedCooldownKills ?? {};
     state.nowMs = Math.max(0, data.nowMs ?? 0);
+    state.settings = data.settings ?? { debugLogs: false };
 
     const maxId = state.party.reduce((m, h) => Math.max(m, h.id || 0), 0);
     bumpHeroIdCounterToAtLeast(maxId + 1);

@@ -3,6 +3,7 @@
 
 import { state } from "./state.js";
 import { getZoneDef } from "./zones/index.js";
+import { debugLog } from "./debug.js";
 
 // Cooldown kills after a named spawn (prevents back-to-back)
 const COOLDOWN_KILLS_OUTDOOR = 10;
@@ -105,7 +106,7 @@ export function onNamedSpawned(zoneId) {
   state.killsSinceLastNamed[zoneId] = 0;
   state.namedCooldownKills[zoneId] = getCooldownKills(zoneId);
   
-  console.log(`[NAMED SPAWN] Zone ${zoneId}: cooldown started (${getCooldownKills(zoneId)} kills)`);
+  debugLog(state, `[NAMED SPAWN] Zone ${zoneId}: cooldown started (${getCooldownKills(zoneId)} kills)`);
 }
 
 /**
@@ -142,7 +143,7 @@ export function onMobKilled(mobDef, zoneId) {
     // Log pity status if getting close to cap
     const multiplier = getNamedSmoothingMultiplier(zoneId);
     if (multiplier > 1.5) {
-      console.log(`[PITY] Zone ${zoneId}: ${state.killsSinceLastNamed[zoneId]} kills since last named, multiplier: ${multiplier.toFixed(2)}x`);
+      debugLog(state, `[PITY] Zone ${zoneId}: ${state.killsSinceLastNamed[zoneId]} kills since last named, multiplier: ${multiplier.toFixed(2)}x`);
     }
   }
 }

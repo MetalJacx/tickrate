@@ -8,6 +8,7 @@ import { getRaceDef, DEFAULT_RACE_KEY } from "./races.js";
 import { ACTIONS } from "./actions.js";
 import { tryWeaponSkillUp, getEquippedWeaponType, ensureWeaponSkills } from "./weaponSkills.js";
 import { onNamedSpawned, onMobKilled } from "./namedSpawns.js";
+import { debugLog } from "./debug.js";
 import {
   startCast,
   tickCasting,
@@ -1084,7 +1085,7 @@ function onEnemyKilled(enemy, totalDPS) {
   if (zid) {
     state.zoneKillCounts = state.zoneKillCounts || {};
     state.zoneKillCounts[zid] = (state.zoneKillCounts[zid] || 0) + 1;
-    console.log(`[KILL] Zone ${state.zone} (id=${zid}): zoneKillCounts[${zid}]=${state.zoneKillCounts[zid]}, killsThisZone=${state.killsThisZone}`);
+    debugLog(state, `[KILL] Zone ${state.zone} (id=${zid}): zoneKillCounts[${zid}]=${state.zoneKillCounts[zid]}, killsThisZone=${state.killsThisZone}`);
     
     // Track named spawn smoothing (Phase 3)
     onMobKilled(enemy, zid);
@@ -1178,7 +1179,7 @@ function meetsZoneRequirement(nextZoneDef) {
   if (req.killsIn?.zoneId && typeof req.killsIn.count === "number") {
     const have = state.zoneKillCounts?.[req.killsIn.zoneId] ?? 0;
     const meets = have >= req.killsIn.count;
-    console.log(`[ZONE REQ] ${nextZoneDef?.name}: need ${req.killsIn.count} kills in ${req.killsIn.zoneId}, have ${have}, meets=${meets}`);
+    debugLog(state, `[ZONE REQ] ${nextZoneDef?.name}: need ${req.killsIn.count} kills in ${req.killsIn.zoneId}, have ${have}, meets=${meets}`);
     return meets;
   }
 
@@ -1196,7 +1197,7 @@ export function canTravelForward() {
   const reqMet = next && meetsZoneRequirement(next);
   const momentumOk = canTravel();
   
-  console.log(`[TRAVEL] Zone ${state.zone} -> ${state.zone + 1}: reqMet=${reqMet}, momentum=${state.killsThisZone}/${killsRequiredForZone(state.zone)} ok=${momentumOk}`);
+  debugLog(state, `[TRAVEL] Zone ${state.zone} -> ${state.zone + 1}: reqMet=${reqMet}, momentum=${state.killsThisZone}/${killsRequiredForZone(state.zone)} ok=${momentumOk}`);
   
   if (next && !reqMet) return false;
 

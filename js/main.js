@@ -8,6 +8,7 @@ import { CLASSES, getClassDef } from "./classes/index.js"
 import { RACES, getRaceDef, DEFAULT_RACE_KEY } from "./races.js";
 import { initSettings } from "./settings.js";
 import { ITEMS } from "./items.js";
+import { debugLog } from "./debug.js";
 
 let tickTimer = null; // requestAnimationFrame id
 let saveTimer = null;
@@ -436,7 +437,7 @@ function wireStartScreen(onContinue) {
     state.accountName = account;
     // reset selection and proceed to class choice
     selectedClassKey = null;
-    console.log("Calling onContinue callback");
+    debugLog(state, "Calling onContinue callback");
     onContinue();
   });
 }
@@ -886,7 +887,7 @@ function start() {
   // Retroactively recalculate account level based on total XP with current reduction
   if (state.totalXP > 0) {
     const recalc = calculateLevelFromTotalXP(state.totalXP);
-    console.log("Recalculating account level from total XP:", {
+    debugLog(state, "Recalculating account level from total XP:", {
       totalXP: state.totalXP,
       oldLevel: state.accountLevel,
       newLevel: recalc.level,
@@ -904,7 +905,7 @@ function start() {
   }
 
   // Debug logging
-  console.log("Game Load State:", {
+  debugLog(state, "Game Load State:", {
     loaded,
     accountName: state.accountName,
     characterName: state.characterName,
@@ -938,3 +939,23 @@ function start() {
 }
 
 start();
+
+// ============================================
+// Debug helpers (runtime-only toggles)
+// ============================================
+window.debugOn = function() {
+  window.DEBUG = true;
+  console.log("Debug logging ENABLED (runtime-only, not persisted)");
+};
+
+window.debugOff = function() {
+  window.DEBUG = false;
+  console.log("Debug logging DISABLED");
+};
+
+window.debugToggle = function() {
+  window.DEBUG = !window.DEBUG;
+  console.log(`Debug logging ${window.DEBUG ? "ENABLED" : "DISABLED"} (runtime-only)`);
+};
+
+console.log("Debug helpers available: debugOn(), debugOff(), debugToggle()");
