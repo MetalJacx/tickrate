@@ -2919,27 +2919,97 @@ function createGridSlotTile(hero, slotKey, slotLabel) {
 function populateCenterDollPane(hero) {
   const statsArea = document.getElementById("centerStatsArea");
   statsArea.innerHTML = "";
-  
-  const stats = [
-    { label: "AC", value: hero.ac || 0, color: "#4ade80" },
-    { label: "HP", value: `${Math.floor(hero.health)}/${Math.floor(hero.maxHP)}`, color: "#ef4444" },
-    { label: "Mana", value: hero.maxMana > 0 ? `${Math.floor(hero.mana)}/${Math.floor(hero.maxMana)}` : "-", color: "#60a5fa" },
-    { label: "End", value: hero.maxEndurance > 0 ? `${Math.floor(hero.endurance)}/${Math.floor(hero.maxEndurance)}` : "-", color: "#fbbf24" }
-  ];
-  
-  for (const stat of stats) {
-    const line = document.createElement("div");
-    line.style.cssText = "display:flex;justify-content:space-between;gap:4px;";
-    const label = document.createElement("span");
-    label.style.cssText = "color:#888;";
-    label.textContent = stat.label;
-    const value = document.createElement("span");
-    value.style.cssText = `color:${stat.color};font-weight:bold;`;
-    value.textContent = stat.value;
-    line.appendChild(label);
-    line.appendChild(value);
-    statsArea.appendChild(line);
+  // Ensure layout matches single-column spec
+  statsArea.style.display = "flex";
+  statsArea.style.flexDirection = "column";
+  statsArea.style.gap = "3px";
+  statsArea.style.fontSize = "10px";
+  statsArea.style.lineHeight = "1.25";
+  statsArea.style.overflowY = "auto";
+  statsArea.style.minHeight = "0";
+
+  const addDivider = () => {
+    const hr = document.createElement("div");
+    hr.style.cssText = "border-top:1px solid #2a2a2a;margin:4px 0;";
+    statsArea.appendChild(hr);
+  };
+
+  const addRow = (label, value) => {
+    if (value === undefined || value === null || value === "") return;
+    const row = document.createElement("div");
+    row.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:8px;white-space:nowrap;";
+
+    const left = document.createElement("span");
+    left.style.cssText = "color:#9ca3af;overflow:hidden;text-overflow:ellipsis;";
+    left.textContent = label;
+
+    const right = document.createElement("span");
+    right.style.cssText = "color:#e5e7eb;font-weight:600;font-family:'Courier New', monospace;";
+    right.textContent = value;
+
+    row.appendChild(left);
+    row.appendChild(right);
+    statsArea.appendChild(row);
+  };
+
+  const cls = getClassDef(hero.classKey);
+  const className = cls?.name || hero.classKey || "-";
+  const raceDef = getRaceDef(hero.raceKey || hero.race || state.playerRaceKey);
+  const raceName = hero.raceName || raceDef?.name || (hero.raceKey || "-");
+  const stats = hero.stats || {};
+  const resists = hero.resists || {};
+
+  const hastePct = Math.round((getTotalHastePct(hero) || 0) * 100);
+  const baseDelayTenths = getBaseDelayTenths(hero) || 30;
+  const swingTicks = computeSwingTicks(baseDelayTenths, getTotalHastePct(hero) || 0);
+  const baseDelaySeconds = (baseDelayTenths / 10).toFixed(2);
+
+  addRow("Level", hero.level ?? "-");
+  addRow("Class", className);
+  addRow("Race", raceName);
+  if (hero.primaryStat) addRow("Primary", hero.primaryStat.toUpperCase());
+
+  addDivider();
+
+  addRow("AC", hero.ac ?? 0);
+  addRow("HP", `${Math.floor(hero.health ?? 0)}/${Math.floor(hero.maxHP ?? 0)}`);
+  addRow("Mana", hero.maxMana > 0 ? `${Math.floor(hero.mana ?? 0)}/${Math.floor(hero.maxMana ?? 0)}` : "-");
+  addRow("End", hero.maxEndurance > 0 ? `${Math.floor(hero.endurance ?? 0)}/${Math.floor(hero.maxEndurance ?? 0)}` : "-");
+
+  addDivider();
+
+  addRow("STR", stats.str ?? 0);
+  addRow("DEX", stats.dex ?? 0);
+  addRow("CON", stats.con ?? 0);
+  addRow("AGI", stats.agi ?? 0);
+  addRow("WIS", stats.wis ?? 0);
+  addRow("INT", stats.int ?? 0);
+  addRow("CHA", stats.cha ?? 0);
+
+  addDivider();
+
+  addRow("Haste", `${hastePct}%`);
+  addRow("Delay", `${baseDelaySeconds}s`);
+  addRow("Swing", `${swingTicks} tick${swingTicks === 1 ? "" : "s"}`);
+  if (hero.dps != null) addRow("DPS", hero.dps.toFixed ? hero.dps.toFixed(1) : hero.dps);
+  if (hero.healing != null) addRow("Healing", hero.healing.toFixed ? hero.healing.toFixed(1) : hero.healing);
+  if (hero.doubleAttackSkill != null) {
+    const cap = doubleAttackCap(hero.level || 1);
+    addRow("Double Atk", `${Math.floor(hero.doubleAttackSkill || 0)} / ${cap}`);
   }
+
+  addDivider();
+
+  addRow("Magic Resist", resists.magic ?? 0);
+  addRow("Elemental", resists.elemental ?? 0);
+  addRow("Contagion", resists.contagion ?? 0);
+  addRow("Physical", resists.physical ?? 0);
+
+  addDivider();
+
+  const xpCurrent = Math.floor(hero.xp ?? 0);
+  const xpToNext = heroLevelUpCost(hero) || 0;
+  addRow("XP", `${xpCurrent} / ${xpToNext}`);
 }
 
 function populateSkillsSection(hero) {
