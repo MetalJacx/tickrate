@@ -293,6 +293,9 @@
     --equipTile: 50px;
     --equipGap: 6px;
     --equipCol: var(--equipTile);
+    --equipSideCols: 2;
+    --equipSideW: calc((var(--equipCol) * var(--equipSideCols)) + (var(--equipGap) * (var(--equipSideCols) - 1)));
+    --equipCenterW: 132px;
   }
   #inventoryModal, #inventoryModal *, #inventoryModal *::before, #inventoryModal *::after {
     box-sizing: border-box;
@@ -306,16 +309,16 @@
     </div>
     
     <div style="flex:1;display:flex;gap:8px;overflow:hidden;min-height:0;">
-      <!-- Equipment Region (fixed budget) -->
-      <div style="flex:0 0 auto;width:clamp(440px, 38vw, 516px);display:grid;grid-template-columns:112px 132px 112px;gap:6px;overflow:hidden;min-height:0;margin:0;">
+      <!-- Equipment Region (fit-content, no dead space) -->
+      <div id="equipRegion" style="flex:0 0 auto;width:max-content;display:grid;grid-template-columns:var(--equipSideW) var(--equipCenterW) var(--equipSideW);gap:6px;overflow:hidden;min-height:0;margin:0;min-width:0;">
         <!-- Left Panel: Armor Only -->
-        <div style="display:flex;flex-direction:column;overflow:hidden;min-width:0;margin:0;padding:0;">
+        <div style="display:flex;flex-direction:column;overflow:hidden;min-width:0;margin:0;padding:0;width:100%;">
           <div style="font-size:12px;color:#aaa;margin-bottom:4px;font-weight:bold;">ARMOR</div>
           <div id="armorGridContainer" style="overflow:hidden;flex:1;"></div>
         </div>
         
         <!-- Center Panel: Doll + Stats -->
-        <div id="centerDollPane" style="display:flex;flex-direction:column;background:#0f0f0f;border:1px solid #333;border-radius:6px;padding:8px;overflow:hidden;gap:6px;margin:0;flex:0 0 auto;width:132px;">
+        <div id="centerDollPane" style="display:flex;flex-direction:column;background:#0f0f0f;border:1px solid #333;border-radius:6px;padding:8px;overflow:hidden;gap:6px;margin:0;flex:0 0 auto;width:var(--equipCenterW);">
           <div id="silhouetteArea" style="flex:0 0 auto;height:90px;display:flex;align-items:center;justify-content:center;font-size:46px;color:#333;opacity:0.82;margin:0 auto 4px auto;">⚔️</div>
           <div id="centerStatsArea" style="display:flex;flex-direction:column;gap:3px;font-size:10px;line-height:1.25;border-top:1px solid #333;padding-top:6px;flex:1 1 auto;overflow-y:auto;min-height:0;">
             <!-- Stats populated by JS -->
@@ -323,9 +326,9 @@
         </div>
 
         <!-- Equipment Right Column: Jewelry / Weapons / Utility -->
-        <div style="display:flex;flex-direction:column;overflow:hidden;min-width:0;margin:0;padding:0;">
+        <div style="display:flex;flex-direction:column;overflow:hidden;min-width:0;margin:0;padding:0;width:100%;">
           <div style="font-size:12px;color:#aaa;margin-bottom:4px;font-weight:bold;">EQUIPMENT</div>
-          <div id="equipmentRightContainer" style="overflow:hidden;flex:1;display:flex;flex-direction:column;gap:8px;"></div>
+          <div id="equipmentRightContainer" style="overflow:hidden;flex:1;display:flex;flex-direction:column;gap:6px;"></div>
         </div>
       </div>
       

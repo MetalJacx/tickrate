@@ -42,6 +42,28 @@ const SPEC_ICON_SVG = {
   utility: `<svg viewBox="0 0 16 16" style="width:14px;height:14px;vertical-align:middle;margin-right:6px;color:#ffa94d;" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2"><path d="M 5 4 L 3.5 5.5 C 2.5 6.5 2.5 8 3.5 9 L 5 10.5"/><path d="M 11 4 L 12.5 5.5 C 13.5 6.5 13.5 8 12.5 9 L 11 10.5"/><path d="M 8 2 L 8 14"/></g></svg>`
 };
 
+// Debug: log inventory layout dimensions to console
+window.DEBUG_INV_LAYOUT = false;
+function debugInventoryLayout() {
+  if (!window.DEBUG_INV_LAYOUT) return;
+  const ids = [
+    "inventoryModal",
+    "equipRegion",
+    "armorGridContainer",
+    "centerDollPane",
+    "equipmentRightContainer",
+    "inventoryGridContainer",
+    "inventoryConsumableStrip"
+  ];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.outline = "1px solid #ef4444";
+    const r = el.getBoundingClientRect();
+    console.log(`[INV_LAYOUT] ${id}`, { w: Math.round(r.width), h: Math.round(r.height), left: Math.round(r.left), right: Math.round(r.right) });
+  });
+}
+
 export function initUI({ onRecruit, onReset, onOpenRecruitModal }) {
   const travelBtn = document.getElementById("travelBtn");
   if (travelBtn) {
@@ -1646,6 +1668,7 @@ function openInventoryModal(hero) {
   populateCenterDollPane(hero);
   
   modal.style.display = "flex";
+  debugInventoryLayout();
 }
 
 function addItemToInventory(hero, itemId, quantity) {
@@ -2291,9 +2314,9 @@ function populateEquipmentSection(hero) {
   // RIGHT EQUIPMENT COLUMN (jewelry, weapons, utility)
   const createSection = (title, contentEl) => {
     const section = document.createElement("div");
-    section.style.cssText = "display:flex;flex-direction:column;gap:6px;margin-top:10px;padding:0;";
+    section.style.cssText = "display:flex;flex-direction:column;gap:4px;margin-top:6px;padding:0;";
     const header = document.createElement("div");
-    header.style.cssText = "font-size:11px;font-weight:bold;color:#aaa;border-bottom:1px solid #333;padding-bottom:4px;margin-bottom:4px;";
+    header.style.cssText = "font-size:11px;font-weight:bold;color:#aaa;border-bottom:1px solid #333;padding-bottom:2px;margin-bottom:2px;";
     header.textContent = title;
     section.appendChild(header);
     section.appendChild(contentEl);
