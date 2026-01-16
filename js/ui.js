@@ -1643,7 +1643,7 @@ function openInventoryModal(hero) {
   renderConsumableStrip(hero);
   populateInventoryGrid(hero);
   populateEquipmentSection(hero);
-  populateInventoryStats(hero);
+  populateCenterDollPane(hero);
   
   modal.style.display = "flex";
 }
@@ -2238,6 +2238,11 @@ function populateInventoryGrid(hero) {
   }
 }
 
+// Placeholder: inventory stats UI not yet implemented; keep hook for future use
+function populateInventoryStats(hero) {
+  // no-op to preserve callers; add UI here when designed
+}
+
 function openAbilitiesModal(hero) {
   const modal = document.getElementById("abilitiesModal");
   const title = document.getElementById("abilitiesModalTitle");
@@ -2251,344 +2256,689 @@ function openAbilitiesModal(hero) {
 }
 
 function populateEquipmentSection(hero) {
-  const equipmentGrid = document.getElementById("characterEquipmentGrid");
-  equipmentGrid.innerHTML = "";
+  const armorGrid = document.getElementById("armorGridContainer");
+  const equipRight = document.getElementById("equipmentRightContainer");
+  if (!armorGrid || !equipRight) return;
+
+  armorGrid.innerHTML = "";
+  equipRight.innerHTML = "";
+
+  // ARMOR GRID (left) - 2 columns, 6 rows
+  const armorGridEl = document.createElement("div");
+  armorGridEl.style.cssText = "display:grid;grid-template-columns:repeat(2, var(--equipCol));gap:var(--equipGap);justify-content:start;";
+
+  armorGridEl.appendChild(createGridSlotTile(hero, "head", "Head"));
+  armorGridEl.appendChild(createGridSlotTile(hero, "face", "Face"));
+
+  armorGridEl.appendChild(createGridSlotTile(hero, "neck", "Neck"));
+  armorGridEl.appendChild(createGridSlotTile(hero, "shoulders", "Shoulders"));
+
+  armorGridEl.appendChild(createGridSlotTile(hero, "back", "Back"));
+  armorGridEl.appendChild(createGridSlotTile(hero, "chest", "Chest"));
+
+  armorGridEl.appendChild(createGridSlotTile(hero, "arms", "Arms"));
+  armorGridEl.appendChild(createGridSlotTile(hero, "hands", "Hands"));
+
+  armorGridEl.appendChild(createGridSlotTile(hero, "waist", "Waist"));
+  armorGridEl.appendChild(createGridSlotTile(hero, "legs", "Legs"));
+
+  armorGridEl.appendChild(createGridSlotTile(hero, "feet", "Feet"));
+  const emptySlot = document.createElement("div");
+  armorGridEl.appendChild(emptySlot);
+
+  armorGrid.appendChild(armorGridEl);
+
+  // RIGHT EQUIPMENT COLUMN (jewelry, weapons, utility)
+  const createSection = (title, contentEl) => {
+    const section = document.createElement("div");
+    section.style.cssText = "display:flex;flex-direction:column;gap:6px;margin-top:10px;padding:0;";
+    const header = document.createElement("div");
+    header.style.cssText = "font-size:11px;font-weight:bold;color:#aaa;border-bottom:1px solid #333;padding-bottom:4px;margin-bottom:4px;";
+    header.textContent = title;
+    section.appendChild(header);
+    section.appendChild(contentEl);
+    return section;
+  };
+
+  // Jewelry
+  const jewelryGrid = document.createElement("div");
+  jewelryGrid.style.cssText = "display:grid;grid-template-columns:repeat(2, var(--equipCol));gap:var(--equipGap);justify-content:start;";
+  jewelryGrid.appendChild(createGridSlotTile(hero, "ear1", "Ear 1"));
+  jewelryGrid.appendChild(createGridSlotTile(hero, "ear2", "Ear 2"));
+  jewelryGrid.appendChild(createGridSlotTile(hero, "wrist1", "Wrist 1"));
+  jewelryGrid.appendChild(createGridSlotTile(hero, "wrist2", "Wrist 2"));
+  jewelryGrid.appendChild(createGridSlotTile(hero, "finger1", "Ring 1"));
+  jewelryGrid.appendChild(createGridSlotTile(hero, "finger2", "Ring 2"));
+  equipRight.appendChild(createSection("JEWELRY", jewelryGrid));
+
+  // Weapons
+  const weaponsGrid = document.createElement("div");
+  weaponsGrid.style.cssText = "display:grid;grid-template-columns:repeat(2, var(--equipCol));gap:var(--equipGap);justify-content:start;";
+  weaponsGrid.appendChild(createGridSlotTile(hero, "main", "Main"));
+  weaponsGrid.appendChild(createGridSlotTile(hero, "off", "Off"));
+  weaponsGrid.appendChild(createGridSlotTile(hero, "ranged", "Ranged"));
+  weaponsGrid.appendChild(createGridSlotTile(hero, "ammo", "Ammo"));
+  equipRight.appendChild(createSection("WEAPONS", weaponsGrid));
+
+  // Utility
+  const utilityGrid = document.createElement("div");
+  utilityGrid.style.cssText = "display:grid;grid-template-columns:var(--equipCol);gap:var(--equipGap);justify-content:start;";
+  utilityGrid.appendChild(createGridSlotTile(hero, "charm", "Charm"));
+  utilityGrid.appendChild(createGridSlotTile(hero, "power", "Power"));
+  equipRight.appendChild(createSection("UTILITY", utilityGrid));
+}
+
+// Helper: Create a large equipment slot tile (64px, label below)
+function createLargeSlotTile(hero, slotKey, slotLabel) {
+  const container = document.createElement("div");
+  container.style.cssText = "display:flex;flex-direction:column;align-items:center;gap:6px;";
   
-  // Create 4-column grid layout (EQ-style)
-  equipmentGrid.style.display = "grid";
-  equipmentGrid.style.gridTemplateColumns = "repeat(4, 1fr)";
-  equipmentGrid.style.gap = "8px";
+  const slotDiv = document.createElement("div");
+  slotDiv.id = `equip-slot-${slotKey}`;
+  slotDiv.style.cssText = `
+    width: 64px;
+    height: 64px;
+    padding: 6px;
+    background: #1a1a1a;
+    border: 1px solid #444;
+    border-radius: 6px;
+    font-size: 10px;
+    color: #666;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+    flex-shrink: 0;
+  `;
   
-  // Render all equipment slots
-  for (const slotDef of EQUIP_SLOTS) {
-    const slotKey = slotDef.key;
-    const slotLabel = slotDef.label;
+  const equippedItem = hero.equipment[slotKey];
+  const itemDef = equippedItem ? getItemDef(equippedItem.id) : null;
+  
+  // Check if this weapon slot is on cooldown
+  const isWeaponSlot = slotKey === "main" || slotKey === "off";
+  const equipCd = hero.equipCd || 0;
+  const hasCooldown = isWeaponSlot && equipCd > 0;
+  
+  if (equippedItem && !itemDef) {
+    // Missing item definition
+    slotDiv.innerHTML = `<div style="font-size:28px;color:#ef4444;">⚠</div>`;
+    slotDiv.style.cursor = "not-allowed";
+  } else if (itemDef) {
+    // Item equipped
+    const cooldownBadge = hasCooldown 
+      ? `<div style="position:absolute;top:2px;right:2px;background:#ef4444;color:#fff;border-radius:3px;padding:1px 4px;font-size:9px;font-weight:bold;line-height:1;">🔒${equipCd}</div>`
+      : '';
     
-    const slotDiv = document.createElement("div");
-    slotDiv.id = `equip-slot-${slotKey}`;
-    slotDiv.style.cssText = `
-      padding: 8px;
-      background: #1a1a1a;
-      border: 2px solid #444;
-      border-radius: 4px;
-      font-size: 11px;
-      color: #aaa;
-      text-align: center;
-      min-height: 60px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-      cursor: pointer;
-      transition: all 0.2s;
-      position: relative;
+    slotDiv.innerHTML = `
+      <div style="position:relative;width:100%;">
+        ${cooldownBadge}
+        <div style="font-size:32px;${hasCooldown ? 'opacity:0.4;' : ''}">${itemDef.icon}</div>
+      </div>
     `;
     
-    const equippedItem = hero.equipment[slotKey];
-    const itemDef = equippedItem ? getItemDef(equippedItem.id) : null;
-    
-    // Check if this weapon slot is on cooldown
-    const isWeaponSlot = slotKey === "main" || slotKey === "off";
-    const equipCd = hero.equipCd || 0;
-    const hasCooldown = isWeaponSlot && equipCd > 0;
-    
-    if (equippedItem && !itemDef) {
-      // Missing item definition - show placeholder
-      slotDiv.innerHTML = `
-        <div style="font-size:18px;color:#ef4444;">⚠</div>
-        <div style="font-size:10px;color:#ef4444;">[${equippedItem.id}]</div>
-      `;
+    if (hasCooldown) {
+      slotDiv.style.opacity = "0.6";
       slotDiv.style.cursor = "not-allowed";
-    } else if (itemDef) {
-      // Check for cooldown overlay
-      const cooldownBadge = hasCooldown 
-        ? `<div style="position:absolute;top:4px;right:4px;background:#ef4444;color:#fff;border-radius:4px;padding:2px 6px;font-size:10px;font-weight:bold;line-height:1;">🔒 ${equipCd}</div>`
-        : '';
-      
-      slotDiv.innerHTML = `
-        <div style="position:relative;width:100%;">
-          ${cooldownBadge}
-          <div style="font-size:18px;${hasCooldown ? 'opacity:0.4;' : ''}">${itemDef.icon}</div>
-          <div style="font-size:10px;color:${hasCooldown ? '#888' : '#4ade80'};">${itemDef.name}</div>
-        </div>
-      `;
-      
-      // Gray out the slot if on cooldown
-      if (hasCooldown) {
-        slotDiv.style.opacity = "0.6";
-        slotDiv.style.cursor = "not-allowed";
-        slotDiv.style.borderColor = "#ef4444";
-      }
-      
-      // Add tooltip on hover
-      slotDiv.addEventListener("mouseenter", (e) => {
-        showItemTooltip(itemDef, e);
-      });
-      slotDiv.addEventListener("mouseleave", () => {
-        hideItemTooltip();
-      });
-      // Make equipped items draggable so they can be removed (unless on cooldown)
-      slotDiv.draggable = !hasCooldown;
-      if (!hasCooldown) {
-        slotDiv.style.cursor = "grab";
-      }
-      slotDiv.addEventListener("dragstart", (e) => {
-        e.dataTransfer.effectAllowed = "move";
-        e.dataTransfer.setData("application/json", JSON.stringify({
-          fromEquipment: true,
-          slotKey: slotKey,
-          itemId: equippedItem.id
-        }));
-        slotDiv.style.opacity = "0.6";
-        hideItemTooltip();
-      });
-      slotDiv.addEventListener("dragend", (e) => {
-        slotDiv.style.opacity = "1";
-      });
-    } else {
-      // Empty slot
-      slotDiv.innerHTML = `
-        <div style="font-size:12px;color:#888;">${slotLabel}</div>
-        <div style="font-size:9px;color:#666;">Empty</div>
-      `;
+      slotDiv.style.borderColor = "#ef4444";
     }
     
-    // Drag over effect
-    slotDiv.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      slotDiv.style.borderColor = "#f57f17";
-      slotDiv.style.backgroundColor = "#2a2a2a";
+    // Tooltip
+    slotDiv.addEventListener("mouseenter", (e) => {
+      showItemTooltip(itemDef, e);
+    });
+    slotDiv.addEventListener("mouseleave", () => {
+      hideItemTooltip();
     });
     
-    slotDiv.addEventListener("dragleave", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      slotDiv.style.borderColor = "#444";
-      slotDiv.style.backgroundColor = "#1a1a1a";
+    // Draggable
+    slotDiv.draggable = !hasCooldown;
+    if (!hasCooldown) {
+      slotDiv.style.cursor = "grab";
+    }
+    slotDiv.addEventListener("dragstart", (e) => {
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("application/json", JSON.stringify({
+        fromEquipment: true,
+        slotKey: slotKey,
+        itemId: equippedItem.id
+      }));
+      slotDiv.style.opacity = "0.6";
+      hideItemTooltip();
     });
+    slotDiv.addEventListener("dragend", (e) => {
+      slotDiv.style.opacity = "1";
+    });
+  } else {
+    // Empty slot - no text, just placeholder icon
+    slotDiv.innerHTML = `<div style="font-size:24px;color:#333;">+</div>`;
+  }
+  
+  // Drag over effect
+  slotDiv.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    slotDiv.style.borderColor = "#f57f17";
+    slotDiv.style.backgroundColor = "#2a2a2a";
+  });
+  
+  slotDiv.addEventListener("dragleave", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    slotDiv.style.borderColor = "#444";
+    slotDiv.style.backgroundColor = "#1a1a1a";
+  });
+  
+  slotDiv.addEventListener("drop", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    slotDiv.style.borderColor = "#444";
+    slotDiv.style.backgroundColor = "#1a1a1a";
     
-    slotDiv.addEventListener("drop", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      slotDiv.style.borderColor = "#444";
-      slotDiv.style.backgroundColor = "#1a1a1a";
-      
-      const data = e.dataTransfer.getData("application/json");
-      if (!data) return;
-      
-      const parsed = JSON.parse(data);
-      
-      // If dragging from equipment, attempt to move to target slot
-      if (parsed.fromEquipment) {
-        const sourceSlotKey = parsed.slotKey;
-        // Ignore drops onto the same slot
-        if (sourceSlotKey === slotKey) return;
+    const data = e.dataTransfer.getData("application/json");
+    if (!data) return;
+    
+    const parsed = JSON.parse(data);
+    
+    // If dragging from equipment, attempt to move to target slot
+    if (parsed.fromEquipment) {
+      const sourceSlotKey = parsed.slotKey;
+      if (sourceSlotKey === slotKey) return;
 
-        const equipped = hero.equipment[sourceSlotKey];
-        if (!equipped) return;
+      const equipped = hero.equipment[sourceSlotKey];
+      if (!equipped) return;
 
-        const movingItemDef = getItemDef(equipped.id);
-        if (!movingItemDef) {
-          showInvalidEquipFeedback(slotDiv, "Item not found");
-          return;
-        }
-
-        // Respect weapon swap cooldown in combat
-        const isWeaponSlotTarget = slotKey === "main" || slotKey === "off";
-        const inCombat = hero.inCombat && state.currentEnemies.length > 0;
-        const equipCd = hero.equipCd || 0;
-        if (isWeaponSlotTarget && inCombat && equipCd > 0) {
-          addLog(`Cannot swap weapons yet (${equipCd} tick${equipCd > 1 ? 's' : ''}).`, "error");
-          return;
-        }
-
-        // Validate target slot compatibility
-        const validation = validateSlotForItem(movingItemDef, slotKey);
-        if (!validation.valid) {
-          // Special-case clearer messaging for 2H → off-hand attempts
-          const reason = (slotKey === "off" && isTwoHanded(movingItemDef))
-            ? "Cannot equip 2H here"
-            : validation.reason || "Wrong slot";
-          showInvalidEquipFeedback(slotDiv, reason);
-          return;
-        }
-
-        // Off-hand cannot be used if main is 2H
-        if (slotKey === "off") {
-          const mainHandItemDef = hero.equipment.main ? getItemDef(hero.equipment.main.id) : null;
-          if (mainHandItemDef && isTwoHanded(mainHandItemDef)) {
-            showInvalidEquipFeedback(slotDiv, "Main hand is 2H");
-            return;
-          }
-        }
-
-        // If moving a 2H weapon into main, auto-unequip off-hand
-        if (slotKey === "main" && isTwoHanded(movingItemDef)) {
-          const offItemObj = hero.equipment.off;
-          if (offItemObj) {
-            const offDef = getItemDef(offItemObj.id);
-            const qty = offItemObj.quantity || 1;
-            hero.equipment.off = null;
-            addItemToInventory(hero, offDef.id, qty);
-            addLog(`Unequipped ${offDef.name} to make room for 2H weapon.`, "normal");
-          }
-        }
-
-        // Move between equipment slots (no inventory consumption)
-        hero.equipment[slotKey] = equipped;
-        hero.equipment[sourceSlotKey] = null;
-
-        // Apply derived updates and re-render
-        refreshHeroDerived(hero);
-        populateEquipmentSection(hero);
-        renderAll();
-        return;
-      }
-      
-      const { slotIndex, itemId, fromInventory } = parsed;
-      if (!fromInventory) return;
-      const itemDef = getItemDef(itemId);
-      
-      if (!itemDef) {
+      const movingItemDef = getItemDef(equipped.id);
+      if (!movingItemDef) {
         showInvalidEquipFeedback(slotDiv, "Item not found");
         return;
       }
-      if (!isEquippable(itemDef)) {
-        showInvalidEquipFeedback(slotDiv, "Not equippable");
-        return;
-      }
-      
-      // Validate slot compatibility
-      const validation = validateSlotForItem(itemDef, slotKey);
-      if (!validation.valid) {
-        showInvalidEquipFeedback(slotDiv, validation.reason);
-        return;
-      }
-      
-      // Check equip cooldown for weapon swaps during combat
+
+      // Respect weapon swap cooldown in combat
+      const isWeaponSlotTarget = slotKey === "main" || slotKey === "off";
       const inCombat = hero.inCombat && state.currentEnemies.length > 0;
       const equipCd = hero.equipCd || 0;
-      
-      if (isWeaponSlot && inCombat && equipCd > 0) {
+      if (isWeaponSlotTarget && inCombat && equipCd > 0) {
         addLog(`Cannot swap weapons yet (${equipCd} tick${equipCd > 1 ? 's' : ''}).`, "error");
         return;
       }
 
-      // Check weapon type unlocks
-      if (isWeaponSlot && itemDef.weaponType) {
-        if (!canEquipWeapon(hero, itemDef)) {
-          addLog(`${hero.name} cannot equip ${itemDef.name} (locked weapon type).`, "error");
-          return;
-        }
+      // Validate target slot compatibility
+      const validation = validateSlotForItem(movingItemDef, slotKey);
+      if (!validation.valid) {
+        const reason = (slotKey === "off" && isTwoHanded(movingItemDef))
+          ? "Cannot equip 2H here"
+          : validation.reason || "Wrong slot";
+        showInvalidEquipFeedback(slotDiv, reason);
+        return;
       }
-      
-      // Handle 2H weapon logic
-      if (slotKey === "main" && isTwoHanded(itemDef)) {
-        const offHandItem = hero.equipment.off ? getItemDef(hero.equipment.off.id) : null;
-        const twoHCheck = validate2HMainHand(itemDef, offHandItem);
-        if (twoHCheck.mustClearOffHand && offHandItem) {
-          hero.equipment.off = null;
-          const qty = hero.equipment.off?.quantity || 1;
-          addItemToInventory(hero, offHandItem.id, qty);
-          addLog(`Unequipped ${offHandItem.name} to make room for 2H weapon.`, "normal");
-        }
-      }
-      
-      // Cannot equip off-hand item if main is 2H
+
+      // Off-hand cannot be used if main is 2H
       if (slotKey === "off") {
-        const mainHandItem = hero.equipment.main ? getItemDef(hero.equipment.main.id) : null;
-        if (mainHandItem && isTwoHanded(mainHandItem)) {
+        const mainHandItemDef = hero.equipment.main ? getItemDef(hero.equipment.main.id) : null;
+        if (mainHandItemDef && isTwoHanded(mainHandItemDef)) {
           showInvalidEquipFeedback(slotDiv, "Main hand is 2H");
           return;
         }
       }
-      
-      // Consume one from shared inventory
-      const source = state.sharedInventory[slotIndex];
-      if (!source || source.id !== itemId) return;
-      source.quantity = (source.quantity || 1) - 1;
-      if (source.quantity <= 0) {
-        state.sharedInventory[slotIndex] = null;
-      }
-      
-      // Equip the item
-      const oldEquipped = hero.equipment[slotKey];
-      hero.equipment[slotKey] = { id: itemId, quantity: 1 };
-      
-      // If there was an old equipped item, return it to inventory
-      if (oldEquipped) {
-        const qty = oldEquipped.quantity || 1;
-        const added = addItemToInventory(hero, oldEquipped.id, qty);
-        const leftover = qty - added;
-        if (leftover > 0) {
-          addItemToStash(oldEquipped.id, leftover);
+
+      // If moving a 2H weapon into main, auto-unequip off-hand
+      if (slotKey === "main" && isTwoHanded(movingItemDef)) {
+        const offItemObj = hero.equipment.off;
+        if (offItemObj) {
+          const offDef = getItemDef(offItemObj.id);
+          const qty = offItemObj.quantity || 1;
+          hero.equipment.off = null;
+          addItemToInventory(hero, offDef.id, qty);
+          addLog(`Unequipped ${offDef.name} to make room for 2H weapon.`, "normal");
         }
       }
-      
-      // Recalculate hero stats (applies item stats etc.)
+
+      // Move between equipment slots
+      hero.equipment[slotKey] = equipped;
+      hero.equipment[sourceSlotKey] = null;
+
       refreshHeroDerived(hero);
-
-      // If weapon slot changed while in combat, hard reset swing timer immediately
-      if (isWeaponSlot && inCombat) {
-        const baseDelay = getBaseDelayTenths(hero);
-        const hastePct = getTotalHastePct(hero);
-        const newSwingTicks = computeSwingTicks(baseDelay, hastePct);
-        hero.swingTicks = newSwingTicks;
-        hero.swingCd = newSwingTicks; // Hard reset on swap
-        
-        // Set equip cooldown to prevent spam
-        hero.equipCd = 2;
-
-        const newItemDef = getItemDef(itemId);
-        const newItemName = newItemDef ? newItemDef.name : itemId;
-        addLog(`${hero.name} swaps to ${newItemName} and resets their swing timer!`, "normal");
-      }
-      
-      // Update display
       populateEquipmentSection(hero);
-      populateInventoryGrid(hero);
-      populateInventoryStats(hero);
-      saveGame();
-    });
+      renderAll();
+      return;
+    }
     
-    equipmentGrid.appendChild(slotDiv);
-  }
+    const { slotIndex, itemId, fromInventory } = parsed;
+    if (!fromInventory) return;
+    const incomingItemDef = getItemDef(itemId);
+    
+    if (!incomingItemDef) {
+      showInvalidEquipFeedback(slotDiv, "Item not found");
+      return;
+    }
+    if (!isEquippable(incomingItemDef)) {
+      showInvalidEquipFeedback(slotDiv, "Not equippable");
+      return;
+    }
+    
+    // Validate slot compatibility
+    const validation = validateSlotForItem(incomingItemDef, slotKey);
+    if (!validation.valid) {
+      showInvalidEquipFeedback(slotDiv, validation.reason);
+      return;
+    }
+    
+    // Check equip cooldown for weapon swaps during combat
+    const inCombat = hero.inCombat && state.currentEnemies.length > 0;
+    const equipCd = hero.equipCd || 0;
+    
+    if (isWeaponSlot && inCombat && equipCd > 0) {
+      addLog(`Cannot swap weapons yet (${equipCd} tick${equipCd > 1 ? 's' : ''}).`, "error");
+      return;
+    }
+
+    // Check weapon type unlocks
+    if (isWeaponSlot && incomingItemDef.weaponType) {
+      if (!canEquipWeapon(hero, incomingItemDef)) {
+        addLog(`${hero.name} cannot equip ${incomingItemDef.name} (locked weapon type).`, "error");
+        return;
+      }
+    }
+    
+    // Handle 2H weapon logic
+    if (slotKey === "main" && isTwoHanded(incomingItemDef)) {
+      const offHandItem = hero.equipment.off ? getItemDef(hero.equipment.off.id) : null;
+      const twoHCheck = validate2HMainHand(incomingItemDef, offHandItem);
+      if (twoHCheck.mustClearOffHand && offHandItem) {
+        hero.equipment.off = null;
+        const qty = hero.equipment.off?.quantity || 1;
+        addItemToInventory(hero, offHandItem.id, qty);
+        addLog(`Unequipped ${offHandItem.name} to make room for 2H weapon.`, "normal");
+      }
+    }
+    
+    // Cannot equip off-hand item if main is 2H
+    if (slotKey === "off") {
+      const mainHandItem = hero.equipment.main ? getItemDef(hero.equipment.main.id) : null;
+      if (mainHandItem && isTwoHanded(mainHandItem)) {
+        showInvalidEquipFeedback(slotDiv, "Main hand is 2H");
+        return;
+      }
+    }
+    
+    // Consume one from shared inventory
+    const source = state.sharedInventory[slotIndex];
+    if (!source || source.id !== itemId) return;
+    source.quantity = (source.quantity || 1) - 1;
+    if (source.quantity <= 0) {
+      state.sharedInventory[slotIndex] = null;
+    }
+    
+    // Equip the item
+    const oldEquipped = hero.equipment[slotKey];
+    hero.equipment[slotKey] = { id: itemId, quantity: 1 };
+    
+    // If there was an old equipped item, return it to inventory
+    if (oldEquipped) {
+      const qty = oldEquipped.quantity || 1;
+      const added = addItemToInventory(hero, oldEquipped.id, qty);
+      const leftover = qty - added;
+      if (leftover > 0) {
+        addItemToStash(oldEquipped.id, leftover);
+      }
+    }
+    
+    // Recalculate hero stats
+    refreshHeroDerived(hero);
+
+    // If weapon slot changed while in combat, hard reset swing timer
+    if (isWeaponSlot && inCombat) {
+      const baseDelay = getBaseDelayTenths(hero);
+      const hastePct = getTotalHastePct(hero);
+      const newSwingTicks = computeSwingTicks(baseDelay, hastePct);
+      hero.swingTicks = newSwingTicks;
+      hero.swingCd = newSwingTicks;
+      
+      hero.equipCd = 2;
+
+      const newItemDef = getItemDef(itemId);
+      const newItemName = newItemDef ? newItemDef.name : itemId;
+      addLog(`${hero.name} swaps to ${newItemName} and resets their swing timer!`, "normal");
+    }
+    
+    // Update display
+    populateEquipmentSection(hero);
+    populateCenterDollPane(hero);
+    populateInventoryGrid(hero);
+    populateInventoryStats(hero);
+    saveGame();
+  });
+  
+  // Add label below tile
+  const label = document.createElement("div");
+  label.style.cssText = "font-size:11px;color:#666;text-align:center;line-height:1.2;max-width:70px;";
+  label.textContent = slotLabel;
+  
+  container.appendChild(slotDiv);
+  container.appendChild(label);
+  
+  return container;
 }
 
-function populateInventoryStats(hero) {
-  const statsContainer = document.getElementById("inventoryStatsContainer");
-  statsContainer.innerHTML = "";
+// Helper: Create a slot tile optimized for fixed-height grid (no vertical expansion)
+function createGridSlotTile(hero, slotKey, slotLabel) {
+  const slotDiv = document.createElement("div");
+  slotDiv.id = `equip-slot-${slotKey}`;
+  slotDiv.style.cssText = `
+    width: var(--equipTile);
+    height: var(--equipTile);
+    padding: 4px;
+    background: #1a1a1a;
+    border: 1.5px solid #444;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+    flex-shrink: 0;
+    overflow: hidden;
+    box-sizing: border-box;
+  `;
+  
+  const equippedItem = hero.equipment[slotKey];
+  const itemDef = equippedItem ? getItemDef(equippedItem.id) : null;
+  
+  // Check if this weapon slot is on cooldown
+  const isWeaponSlot = slotKey === "main" || slotKey === "off";
+  const equipCd = hero.equipCd || 0;
+  const hasCooldown = isWeaponSlot && equipCd > 0;
+  
+  if (equippedItem && !itemDef) {
+    // Missing item definition
+    slotDiv.innerHTML = `<div style="font-size:24px;color:#ef4444;">⚠</div><div style="font-size:8px;color:#aaa;margin-top:2px;">${slotLabel}</div>`;
+    slotDiv.style.cursor = "not-allowed";
+  } else if (itemDef) {
+    // Item equipped
+    const cooldownBadge = hasCooldown 
+      ? `<div style="position:absolute;top:1px;right:1px;background:#ef4444;color:#fff;border-radius:2px;padding:0px 3px;font-size:7px;font-weight:bold;line-height:1;">🔒${equipCd}</div>`
+      : '';
+    
+    slotDiv.innerHTML = `
+      <div style="position:relative;width:100%;display:flex;align-items:center;justify-content:center;">
+        ${cooldownBadge}
+        <div style="font-size:24px;${hasCooldown ? 'opacity:0.4;' : ''}">${itemDef.icon}</div>
+      </div>
+      <div style="font-size:10px;color:#aaa;margin-top:2px;text-align:center;line-height:1;">${slotLabel}</div>
+    `;
+    
+    if (hasCooldown) {
+      slotDiv.style.opacity = "0.6";
+      slotDiv.style.cursor = "not-allowed";
+      slotDiv.style.borderColor = "#ef4444";
+    }
+    
+    // Tooltip
+    slotDiv.addEventListener("mouseenter", (e) => {
+      showItemTooltip(itemDef, e);
+    });
+    slotDiv.addEventListener("mouseleave", () => {
+      hideItemTooltip();
+    });
+    
+    // Draggable
+    slotDiv.draggable = !hasCooldown;
+    if (!hasCooldown) {
+      slotDiv.style.cursor = "grab";
+    }
+    slotDiv.addEventListener("dragstart", (e) => {
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("application/json", JSON.stringify({
+        fromEquipment: true,
+        slotKey: slotKey,
+        itemId: equippedItem.id
+      }));
+      slotDiv.style.opacity = "0.6";
+      hideItemTooltip();
+    });
+    slotDiv.addEventListener("dragend", (e) => {
+      slotDiv.style.opacity = "1";
+    });
+  } else {
+    // Empty slot - show + and label
+    slotDiv.innerHTML = `
+      <div style="font-size:18px;color:#555;">+</div>
+      <div style="font-size:10px;color:#888;margin-top:2px;text-align:center;line-height:1;">${slotLabel}</div>
+    `;
+    slotDiv.style.borderColor = "#555";
+    slotDiv.style.backgroundColor = "#0f0f0f";
+  }
+  
+  // Drag over effect
+  slotDiv.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    slotDiv.style.borderColor = "#f57f17";
+    slotDiv.style.backgroundColor = "#2a2a2a";
+  });
+  
+  slotDiv.addEventListener("dragleave", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    slotDiv.style.borderColor = itemDef ? "#444" : "#555";
+    slotDiv.style.backgroundColor = itemDef ? "#1a1a1a" : "#0f0f0f";
+  });
+  
+  slotDiv.addEventListener("drop", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    slotDiv.style.borderColor = itemDef ? "#444" : "#555";
+    slotDiv.style.backgroundColor = itemDef ? "#1a1a1a" : "#0f0f0f";
+    
+    const data = e.dataTransfer.getData("application/json");
+    if (!data) return;
+    
+    const parsed = JSON.parse(data);
+    
+    // If dragging from equipment, attempt to move to target slot
+    if (parsed.fromEquipment) {
+      const sourceSlotKey = parsed.slotKey;
+      if (sourceSlotKey === slotKey) return;
+
+      const equipped = hero.equipment[sourceSlotKey];
+      if (!equipped) return;
+
+      const movingItemDef = getItemDef(equipped.id);
+      if (!movingItemDef) {
+        showInvalidEquipFeedback(slotDiv, "Item not found");
+        return;
+      }
+
+      // Respect weapon swap cooldown in combat
+      const isWeaponSlotTarget = slotKey === "main" || slotKey === "off";
+      const inCombat = hero.inCombat && state.currentEnemies.length > 0;
+      const equipCd = hero.equipCd || 0;
+      if (isWeaponSlotTarget && inCombat && equipCd > 0) {
+        addLog(`Cannot swap weapons yet (${equipCd} tick${equipCd > 1 ? 's' : ''}).`, "error");
+        return;
+      }
+
+      // Validate target slot compatibility
+      const validation = validateSlotForItem(movingItemDef, slotKey);
+      if (!validation.valid) {
+        const reason = (slotKey === "off" && isTwoHanded(movingItemDef))
+          ? "Cannot equip 2H here"
+          : validation.reason || "Wrong slot";
+        showInvalidEquipFeedback(slotDiv, reason);
+        return;
+      }
+
+      // Off-hand cannot be used if main is 2H
+      if (slotKey === "off") {
+        const mainHandItemDef = hero.equipment.main ? getItemDef(hero.equipment.main.id) : null;
+        if (mainHandItemDef && isTwoHanded(mainHandItemDef)) {
+          showInvalidEquipFeedback(slotDiv, "Main hand is 2H");
+          return;
+        }
+      }
+
+      // If moving a 2H weapon into main, auto-unequip off-hand
+      if (slotKey === "main" && isTwoHanded(movingItemDef)) {
+        const offItemObj = hero.equipment.off;
+        if (offItemObj) {
+          const offDef = getItemDef(offItemObj.id);
+          const qty = offItemObj.quantity || 1;
+          hero.equipment.off = null;
+          addItemToInventory(hero, offDef.id, qty);
+          addLog(`Unequipped ${offDef.name} to make room for 2H weapon.`, "normal");
+        }
+      }
+
+      // Move between equipment slots
+      hero.equipment[slotKey] = equipped;
+      hero.equipment[sourceSlotKey] = null;
+
+      refreshHeroDerived(hero);
+      populateEquipmentSection(hero);
+      renderAll();
+      return;
+    }
+    
+    const { slotIndex, itemId, fromInventory } = parsed;
+    if (!fromInventory) return;
+    const incomingItemDef = getItemDef(itemId);
+    
+    if (!incomingItemDef) {
+      showInvalidEquipFeedback(slotDiv, "Item not found");
+      return;
+    }
+    if (!isEquippable(incomingItemDef)) {
+      showInvalidEquipFeedback(slotDiv, "Not equippable");
+      return;
+    }
+    
+    // Validate slot compatibility
+    const validation = validateSlotForItem(incomingItemDef, slotKey);
+    if (!validation.valid) {
+      showInvalidEquipFeedback(slotDiv, validation.reason);
+      return;
+    }
+    
+    // Check equip cooldown for weapon swaps during combat
+    const inCombat = hero.inCombat && state.currentEnemies.length > 0;
+    const equipCd = hero.equipCd || 0;
+    
+    if (isWeaponSlot && inCombat && equipCd > 0) {
+      addLog(`Cannot swap weapons yet (${equipCd} tick${equipCd > 1 ? 's' : ''}).`, "error");
+      return;
+    }
+
+    // Check weapon type unlocks
+    if (isWeaponSlot && incomingItemDef.weaponType) {
+      if (!canEquipWeapon(hero, incomingItemDef)) {
+        addLog(`${hero.name} cannot equip ${incomingItemDef.name} (locked weapon type).`, "error");
+        return;
+      }
+    }
+    
+    // Handle 2H weapon logic
+    if (slotKey === "main" && isTwoHanded(incomingItemDef)) {
+      const offHandItem = hero.equipment.off ? getItemDef(hero.equipment.off.id) : null;
+      const twoHCheck = validate2HMainHand(incomingItemDef, offHandItem);
+      if (twoHCheck.mustClearOffHand && offHandItem) {
+        hero.equipment.off = null;
+        const qty = hero.equipment.off?.quantity || 1;
+        addItemToInventory(hero, offHandItem.id, qty);
+        addLog(`Unequipped ${offHandItem.name} to make room for 2H weapon.`, "normal");
+      }
+    }
+    
+    // Cannot equip off-hand item if main is 2H
+    if (slotKey === "off") {
+      const mainHandItem = hero.equipment.main ? getItemDef(hero.equipment.main.id) : null;
+      if (mainHandItem && isTwoHanded(mainHandItem)) {
+        showInvalidEquipFeedback(slotDiv, "Main hand is 2H");
+        return;
+      }
+    }
+    
+    // Consume one from shared inventory
+    const source = state.sharedInventory[slotIndex];
+    if (!source || source.id !== itemId) return;
+    source.quantity = (source.quantity || 1) - 1;
+    if (source.quantity <= 0) {
+      state.sharedInventory[slotIndex] = null;
+    }
+    
+    // Equip the item
+    const oldEquipped = hero.equipment[slotKey];
+    hero.equipment[slotKey] = { id: itemId, quantity: 1 };
+    
+    // If there was an old equipped item, return it to inventory
+    if (oldEquipped) {
+      const qty = oldEquipped.quantity || 1;
+      const added = addItemToInventory(hero, oldEquipped.id, qty);
+      const leftover = qty - added;
+      if (leftover > 0) {
+        addItemToStash(oldEquipped.id, leftover);
+      }
+    }
+    
+    // Recalculate hero stats
+    refreshHeroDerived(hero);
+
+    // If weapon slot changed while in combat, hard reset swing timer
+    if (isWeaponSlot && inCombat) {
+      const baseDelay = getBaseDelayTenths(hero);
+      const hastePct = getTotalHastePct(hero);
+      const newSwingTicks = computeSwingTicks(baseDelay, hastePct);
+      hero.swingTicks = newSwingTicks;
+      hero.swingCd = newSwingTicks;
+      
+      hero.equipCd = 2;
+
+      const newItemDef = getItemDef(itemId);
+      const newItemName = newItemDef ? newItemDef.name : itemId;
+      addLog(`${hero.name} swaps to ${newItemName} and resets their swing timer!`, "normal");
+    }
+    
+    // Update display
+    populateEquipmentSection(hero);
+    populateCenterDollPane(hero);
+    populateInventoryGrid(hero);
+    populateInventoryStats(hero);
+    saveGame();
+  });
+  
+  return slotDiv;
+}
+
+// Populate the center doll pane with character stats
+function populateCenterDollPane(hero) {
+  const statsArea = document.getElementById("centerStatsArea");
+  statsArea.innerHTML = "";
   
   const stats = [
-    { label: "HP", value: hero.maxHP },
-    { label: "Mana", value: hero.maxMana },
-    { label: "Endurance", value: hero.maxEndurance },
-    { label: "DPS", value: hero.dps.toFixed(1) },
-    { label: "Healing", value: hero.healing.toFixed(1) },
-    { label: "STR", value: hero.stats?.str || 0 },
-    { label: "CON", value: hero.stats?.con || 0 },
-    { label: "DEX", value: hero.stats?.dex || 0 },
-    { label: "AGI", value: hero.stats?.agi || 0 },
-    { label: "AC", value: hero.ac || 0 },
-    { label: "WIS", value: hero.stats?.wis || 0 },
-    { label: "INT", value: hero.stats?.int || 0 },
-    { label: "CHA", value: hero.stats?.cha || 0 }
+    { label: "AC", value: hero.ac || 0, color: "#4ade80" },
+    { label: "HP", value: `${Math.floor(hero.health)}/${Math.floor(hero.maxHP)}`, color: "#ef4444" },
+    { label: "Mana", value: hero.maxMana > 0 ? `${Math.floor(hero.mana)}/${Math.floor(hero.maxMana)}` : "-", color: "#60a5fa" },
+    { label: "End", value: hero.maxEndurance > 0 ? `${Math.floor(hero.endurance)}/${Math.floor(hero.maxEndurance)}` : "-", color: "#fbbf24" }
   ];
   
   for (const stat of stats) {
     const line = document.createElement("div");
-    line.style.cssText = "display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #222;";
+    line.style.cssText = "display:flex;justify-content:space-between;gap:4px;";
     const label = document.createElement("span");
-    label.style.cssText = "color:#aaa;";
+    label.style.cssText = "color:#888;";
     label.textContent = stat.label;
     const value = document.createElement("span");
-    value.style.cssText = "color:#4ade80;font-weight:bold;";
+    value.style.cssText = `color:${stat.color};font-weight:bold;`;
     value.textContent = stat.value;
     line.appendChild(label);
     line.appendChild(value);
-    statsContainer.appendChild(line);
+    statsArea.appendChild(line);
   }
 }
 
