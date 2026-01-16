@@ -71,6 +71,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 14,
     icon: "🛡️",
+    equipSlots: ["off"],
     stats: { ac: 2 }
   },
   stick: {
@@ -102,6 +103,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 50,
     icon: "👻",
+    equipSlots: ["neck"],
     stats: { int: 1, wis: 1, maxMana: 10 }
   },
   iron_mace: {
@@ -146,6 +148,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 6,
     icon: "🧢",
+    equipSlots: ["head"],
     stats: { ac: 1 }
   },
   tattered_robe: {
@@ -155,6 +158,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 10,
     icon: "🥻",
+    equipSlots: ["chest"],
     stats: { ac: 2 }
   },
   cloth_wraps: {
@@ -164,6 +168,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 6,
     icon: "🧤",
+    equipSlots: ["hands"],
     stats: { ac: 1 }
   },
   cloth_sandals: {
@@ -173,6 +178,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 6,
     icon: "🩴",
+    equipSlots: ["feet"],
     stats: { ac: 1 }
   },
   cloth_leggings: {
@@ -182,6 +188,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 9,
     icon: "👖",
+    equipSlots: ["legs"],
     stats: { ac: 2 }
   },
 
@@ -228,6 +235,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 60,
     icon: "💍",
+    equipSlots: ["finger1", "finger2"],
     stats: { str: 1, dex: 1 }
   },
   traveler_cloak: {
@@ -237,6 +245,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 75,
     icon: "🧥",
+    equipSlots: ["back"],
     stats: { ac: 2, agi: 1 }
   },
 
@@ -258,6 +267,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 80,
     icon: "🧤",
+    equipSlots: ["hands"],
     stats: { ac: 2, maxHP: 6 }
   },
 
@@ -279,6 +289,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 110,
     icon: "🧞",
+    equipSlots: ["chest"],
     stats: { ac: 4, con: 1 }
   },
 
@@ -289,6 +300,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 140,
     icon: "⚔️",
+    equipSlots: ["head"],
     stats: { ac: 4, str: 1 }
   },
   orcish_cleaver_heavy: {
@@ -322,6 +334,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 260,
     icon: "💀",
+    equipSlots: ["neck"],
     stats: { ac: 3, wis: 2, maxHP: 10 }
   },
 
@@ -332,6 +345,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 220,
     icon: "🧛",
+    equipSlots: ["chest"],
     stats: { ac: 4, int: 2 }
   },
 
@@ -342,6 +356,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 150,
     icon: "🗿",
+    equipSlots: ["charm"],
     stats: { str: 2, maxHP: 8 }
   },
 
@@ -352,6 +367,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 130,
     icon: "💍",
+    equipSlots: ["finger1", "finger2"],
     stats: { str: 1, cha: 1, ac: 1 }
   },
 
@@ -362,6 +378,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 190,
     icon: "🧥",
+    equipSlots: ["back"],
     stats: { ac: 3, agi: 2, maxHP: 5 }
   },
 
@@ -372,6 +389,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 160,
     icon: "🥾",
+    equipSlots: ["feet"],
     stats: { ac: 2, agi: 1, dex: 1 }
   },
 
@@ -394,6 +412,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 300,
     icon: "👑",
+    equipSlots: ["head"],
     stats: { ac: 5, int: 2, wis: 1, maxMana: 15 }
   },
 
@@ -405,6 +424,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 45,
     icon: "🔑",
+    equipSlots: ["charm"],
     stats: { agi: 1, maxHP: 5 }
   },
 
@@ -415,6 +435,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 85,
     icon: "🧥",
+    equipSlots: ["back"],
     stats: { ac: 3, int: 1, maxMana: 8 }
   },
 
@@ -425,6 +446,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 75,
     icon: "✨",
+    equipSlots: ["charm"],
     stats: { wis: 1, diseaseResist: 5 }
   },
 
@@ -436,6 +458,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 50,
     icon: "📯",
+    equipSlots: ["charm"],
     stats: { str: 1, maxHP: 6 }
   },
 
@@ -446,6 +469,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 55,
     icon: "🛡️",
+    equipSlots: ["neck"],
     stats: { ac: 2, cha: 1 }
   },
 
@@ -468,6 +492,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 90,
     icon: "⚔️",
+    equipSlots: ["head"],
     stats: { ac: 3, str: 1 }
   },
 
@@ -503,6 +528,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 135,
     icon: "🗿",
+    equipSlots: ["charm"],
     stats: { wis: 2, int: 1, maxMana: 10 }
   },
 
@@ -525,6 +551,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 140,
     icon: "🦴",
+    equipSlots: ["shoulders"],
     stats: { ac: 4, str: 1, con: 1 }
   },
 
@@ -570,6 +597,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 140,
     icon: "💍",
+    equipSlots: ["waist"],
     stats: { ac: 2, str: 1, cha: 1 }
   },
 
@@ -592,6 +620,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 185,
     icon: "⚔️",
+    equipSlots: ["waist"],
     stats: { ac: 3, str: 2, maxHP: 12 }
   },
 
@@ -602,6 +631,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 175,
     icon: "📿",
+    equipSlots: ["neck"],
     stats: { ac: 2, con: 1, physicalResist: 5 }
   },
 
@@ -625,6 +655,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 155,
     icon: "🧥",
+    equipSlots: ["back"],
     stats: { ac: 3, agi: 1, dex: 1, maxHP: 6 }
   },
 
@@ -660,6 +691,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 180,
     icon: "🦴",
+    equipSlots: ["chest"],
     stats: { ac: 5, con: 1, diseaseResist: 8 }
   },
 
@@ -670,6 +702,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 210,
     icon: "🔮",
+    equipSlots: ["charm"],
     stats: { int: 2, wis: 1, maxMana: 20, magicResist: 5 }
   },
 
@@ -702,6 +735,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 240,
     icon: "🛡️",
+    equipSlots: ["chest"],
     stats: { ac: 6, str: 1, con: 1, maxHP: 15 }
   },
 
@@ -776,6 +810,7 @@ export const ITEMS = {
     maxStack: 1,
     baseValue: 45,
     icon: "🧿",
+    equipSlots: ["charm"],
     stats: { maxHP: 6 }
   },
   jagged_orc_shiv: {

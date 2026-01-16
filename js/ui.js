@@ -5,7 +5,7 @@ import { CLASSES, getClassDef } from "./classes/index.js";
 import { getZoneDef, listZones, ensureZoneDiscovery, getActiveSubArea } from "./zones/index.js";
 import { addLog, isExpiredEffect } from "./util.js";
 import { formatPGSC, saveGame, updateCurrencyDisplay } from "./state.js";
-import { MAX_PARTY_SIZE, ACCOUNT_SLOT_UNLOCKS, CONSUMABLE_SLOT_UNLOCK_LEVELS } from "./defs.js";
+import { MAX_PARTY_SIZE, ACCOUNT_SLOT_UNLOCKS, CONSUMABLE_SLOT_UNLOCK_LEVELS, EQUIP_SLOTS } from "./defs.js";
 import { getItemDef } from "./items.js";
 import { canEquipWeapon, getEquippedWeaponType, getWeaponSkillCap, WEAPON_TYPE_NAMES, getUnlockedWeaponTypes } from "./weaponSkills.js";
 import {
@@ -21,6 +21,7 @@ import {
 import { computeSellValue } from "./combatMath.js";
 import { ACTIONS } from "./actions.js";
 import { getRaceDef } from "./races.js";
+import { isEquippable, getAllowedEquipSlots, validateSlotForItem, validate2HMainHand, isTwoHanded, getSlotLabelsForItem } from "./equip.js";
 
 // Specialization icons and labels (defined inline to avoid import issues)
 const SPEC_LABEL = {
@@ -1759,6 +1760,18 @@ function showItemTooltip(itemDef, event) {
     html += `</div>`;
   }
 
+  // Add equipment slot information if equippable
+  if (isEquippable(itemDef)) {
+    const slotLabels = getSlotLabelsForItem(itemDef);
+    html += `<div style="border-top:1px solid #333;padding-top:8px;margin-top:6px;color:#f57f17;font-weight:bold;">`;
+    if (slotLabels.includes(",")) {
+      html += `Slots: ${slotLabels}`;
+    } else {
+      html += `Slot: ${slotLabels}`;
+    }
+    html += `</div>`;
+  }
+
   tooltip.innerHTML = html;
   document.body.appendChild(tooltip);
 
@@ -1783,6 +1796,64 @@ function showItemTooltip(itemDef, event) {
 function hideItemTooltip() {
   const tooltip = document.getElementById("itemTooltip");
   if (tooltip) tooltip.remove();
+}
+
+/**
+ * Show invalid equip feedback: flash slot red and display warning bubble
+ * @param {HTMLElement} slotElement - The slot div that was dropped on
+ * @param {string} reason - Error reason (e.g., "Wrong slot", "Main hand is 2H")
+ */
+function showInvalidEquipFeedback(slotElement, reason) {
+  // Flash red briefly
+  const originalBorder = slotElement.style.borderColor;
+  const originalBg = slotElement.style.backgroundColor;
+  
+  slotElement.style.borderColor = "#ef4444";
+  slotElement.style.backgroundColor = "#2d0f0f";
+  
+  setTimeout(() => {
+    slotElement.style.borderColor = originalBorder;
+    slotElement.style.backgroundColor = originalBg;
+  }, 400);
+  
+  // Show warning bubble
+  const warning = document.createElement("div");
+  warning.style.cssText = `
+    position: absolute;
+    top: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #ef4444;
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: bold;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 1000;
+    animation: fadeOut 2s forwards;
+  `;
+  warning.textContent = reason;
+  
+  // Add fadeOut animation if not already in stylesheet
+  if (!document.getElementById("equipFeedbackStyles")) {
+    const style = document.createElement("style");
+    style.id = "equipFeedbackStyles";
+    style.textContent = `
+      @keyframes fadeOut {
+        0% { opacity: 1; transform: translateX(-50%) translateY(0); }
+        100% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+  
+  slotElement.appendChild(warning);
+  
+  setTimeout(() => {
+    warning.remove();
+  }, 2000);
 }
 
 function showItemContextMenu(x, y, slotIndex, item, itemDef) {
@@ -2183,17 +2254,22 @@ function populateEquipmentSection(hero) {
   const equipmentGrid = document.getElementById("characterEquipmentGrid");
   equipmentGrid.innerHTML = "";
   
-  const slotKeys = ["head", "chest", "legs", "feet", "main", "off"];
-  const slotLabels = ["Head", "Chest", "Legs", "Feet", "Main", "Off"];
+  // Create 4-column grid layout (EQ-style)
+  equipmentGrid.style.display = "grid";
+  equipmentGrid.style.gridTemplateColumns = "repeat(4, 1fr)";
+  equipmentGrid.style.gap = "8px";
   
-  for (let i = 0; i < slotKeys.length; i++) {
-    const slotKey = slotKeys[i];
-    const slotLabel = slotLabels[i];
+  // Render all equipment slots
+  for (const slotDef of EQUIP_SLOTS) {
+    const slotKey = slotDef.key;
+    const slotLabel = slotDef.label;
+    
     const slotDiv = document.createElement("div");
+    slotDiv.id = `equip-slot-${slotKey}`;
     slotDiv.style.cssText = `
       padding: 8px;
       background: #1a1a1a;
-      border: 1px solid #444;
+      border: 2px solid #444;
       border-radius: 4px;
       font-size: 11px;
       color: #aaa;
@@ -2205,7 +2281,8 @@ function populateEquipmentSection(hero) {
       justify-content: center;
       gap: 4px;
       cursor: pointer;
-      transition: border-color 0.2s;
+      transition: all 0.2s;
+      position: relative;
     `;
     
     const equippedItem = hero.equipment[slotKey];
@@ -2270,7 +2347,11 @@ function populateEquipmentSection(hero) {
         slotDiv.style.opacity = "1";
       });
     } else {
-      slotDiv.textContent = `${slotLabel}\n(Empty)`;
+      // Empty slot
+      slotDiv.innerHTML = `
+        <div style="font-size:12px;color:#888;">${slotLabel}</div>
+        <div style="font-size:9px;color:#666;">Empty</div>
+      `;
     }
     
     // Drag over effect
@@ -2299,20 +2380,94 @@ function populateEquipmentSection(hero) {
       
       const parsed = JSON.parse(data);
       
-      // If dragging from equipment, don't allow re-equipping to same slot
-      if (parsed.fromEquipment) return;
+      // If dragging from equipment, attempt to move to target slot
+      if (parsed.fromEquipment) {
+        const sourceSlotKey = parsed.slotKey;
+        // Ignore drops onto the same slot
+        if (sourceSlotKey === slotKey) return;
+
+        const equipped = hero.equipment[sourceSlotKey];
+        if (!equipped) return;
+
+        const movingItemDef = getItemDef(equipped.id);
+        if (!movingItemDef) {
+          showInvalidEquipFeedback(slotDiv, "Item not found");
+          return;
+        }
+
+        // Respect weapon swap cooldown in combat
+        const isWeaponSlotTarget = slotKey === "main" || slotKey === "off";
+        const inCombat = hero.inCombat && state.currentEnemies.length > 0;
+        const equipCd = hero.equipCd || 0;
+        if (isWeaponSlotTarget && inCombat && equipCd > 0) {
+          addLog(`Cannot swap weapons yet (${equipCd} tick${equipCd > 1 ? 's' : ''}).`, "error");
+          return;
+        }
+
+        // Validate target slot compatibility
+        const validation = validateSlotForItem(movingItemDef, slotKey);
+        if (!validation.valid) {
+          // Special-case clearer messaging for 2H → off-hand attempts
+          const reason = (slotKey === "off" && isTwoHanded(movingItemDef))
+            ? "Cannot equip 2H here"
+            : validation.reason || "Wrong slot";
+          showInvalidEquipFeedback(slotDiv, reason);
+          return;
+        }
+
+        // Off-hand cannot be used if main is 2H
+        if (slotKey === "off") {
+          const mainHandItemDef = hero.equipment.main ? getItemDef(hero.equipment.main.id) : null;
+          if (mainHandItemDef && isTwoHanded(mainHandItemDef)) {
+            showInvalidEquipFeedback(slotDiv, "Main hand is 2H");
+            return;
+          }
+        }
+
+        // If moving a 2H weapon into main, auto-unequip off-hand
+        if (slotKey === "main" && isTwoHanded(movingItemDef)) {
+          const offItemObj = hero.equipment.off;
+          if (offItemObj) {
+            const offDef = getItemDef(offItemObj.id);
+            const qty = offItemObj.quantity || 1;
+            hero.equipment.off = null;
+            addItemToInventory(hero, offDef.id, qty);
+            addLog(`Unequipped ${offDef.name} to make room for 2H weapon.`, "normal");
+          }
+        }
+
+        // Move between equipment slots (no inventory consumption)
+        hero.equipment[slotKey] = equipped;
+        hero.equipment[sourceSlotKey] = null;
+
+        // Apply derived updates and re-render
+        refreshHeroDerived(hero);
+        populateEquipmentSection(hero);
+        renderAll();
+        return;
+      }
+      
       const { slotIndex, itemId, fromInventory } = parsed;
       if (!fromInventory) return;
       const itemDef = getItemDef(itemId);
       
       if (!itemDef) {
-        addLog(`Cannot equip unknown item [${itemId}].`, "normal");
+        showInvalidEquipFeedback(slotDiv, "Item not found");
         return;
       }
-      if (!itemDef.stats) return; // Only gear can be equipped
+      if (!isEquippable(itemDef)) {
+        showInvalidEquipFeedback(slotDiv, "Not equippable");
+        return;
+      }
       
-      // Check equip cooldown for weapon swaps during combat (BEFORE consuming item)
-      const isWeaponSlot = slotKey === "main" || slotKey === "off";
+      // Validate slot compatibility
+      const validation = validateSlotForItem(itemDef, slotKey);
+      if (!validation.valid) {
+        showInvalidEquipFeedback(slotDiv, validation.reason);
+        return;
+      }
+      
+      // Check equip cooldown for weapon swaps during combat
       const inCombat = hero.inCombat && state.currentEnemies.length > 0;
       const equipCd = hero.equipCd || 0;
       
@@ -2321,10 +2476,31 @@ function populateEquipmentSection(hero) {
         return;
       }
 
-      // Check weapon type unlocks (BEFORE consuming item)
+      // Check weapon type unlocks
       if (isWeaponSlot && itemDef.weaponType) {
         if (!canEquipWeapon(hero, itemDef)) {
           addLog(`${hero.name} cannot equip ${itemDef.name} (locked weapon type).`, "error");
+          return;
+        }
+      }
+      
+      // Handle 2H weapon logic
+      if (slotKey === "main" && isTwoHanded(itemDef)) {
+        const offHandItem = hero.equipment.off ? getItemDef(hero.equipment.off.id) : null;
+        const twoHCheck = validate2HMainHand(itemDef, offHandItem);
+        if (twoHCheck.mustClearOffHand && offHandItem) {
+          hero.equipment.off = null;
+          const qty = hero.equipment.off?.quantity || 1;
+          addItemToInventory(hero, offHandItem.id, qty);
+          addLog(`Unequipped ${offHandItem.name} to make room for 2H weapon.`, "normal");
+        }
+      }
+      
+      // Cannot equip off-hand item if main is 2H
+      if (slotKey === "off") {
+        const mainHandItem = hero.equipment.main ? getItemDef(hero.equipment.main.id) : null;
+        if (mainHandItem && isTwoHanded(mainHandItem)) {
+          showInvalidEquipFeedback(slotDiv, "Main hand is 2H");
           return;
         }
       }
@@ -2395,7 +2571,7 @@ function populateInventoryStats(hero) {
     { label: "CON", value: hero.stats?.con || 0 },
     { label: "DEX", value: hero.stats?.dex || 0 },
     { label: "AGI", value: hero.stats?.agi || 0 },
-    { label: "AC", value: hero.stats?.ac || 0 },
+    { label: "AC", value: hero.ac || 0 },
     { label: "WIS", value: hero.stats?.wis || 0 },
     { label: "INT", value: hero.stats?.int || 0 },
     { label: "CHA", value: hero.stats?.cha || 0 }
@@ -2959,7 +3135,7 @@ function populateStatsSection(hero) {
 
   leftColumn.appendChild(document.createElement("hr"));
   const coreStats = [
-    ["AC", stats.ac ?? 0],
+    ["AC", hero.ac ?? 0],
     ["STR", stats.str ?? 0],
     ["CON", stats.con ?? 0],
     ["DEX", stats.dex ?? 0],

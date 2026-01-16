@@ -5,6 +5,7 @@ import { isExpiredEffect, purgeExpiredActive } from "./util.js";
 import { ensureWeaponSkills, applyWeaponUnlocks } from "./weaponSkills.js";
 import { ensureMagicSkills, applyMagicUnlocks } from "./magicSkills.js";
 import { ensureActorResists, applyRacialResists } from "./resist.js";
+import { ensureEquipmentSlots } from "./equip.js";
 
 // ===== Currency conversion helpers =====
 export function normalizePGSC(pgsc = {}) {
@@ -281,13 +282,33 @@ export function loadGame() {
       // Initialize equipment
       if (h.equipment === undefined) {
         h.equipment = {
+          charm: null,
+          ear1: null,
           head: null,
+          face: null,
+          ear2: null,
+          neck: null,
+          shoulders: null,
+          arms: null,
+          back: null,
+          wrist1: null,
+          wrist2: null,
+          ranged: null,
+          hands: null,
+          main: null,
+          off: null,
+          finger1: null,
+          finger2: null,
           chest: null,
           legs: null,
           feet: null,
-          main: null,
-          off: null
+          waist: null,
+          power: null,
+          ammo: null
         };
+      } else {
+        // Ensure all slots exist for saves missing some
+        ensureEquipmentSlots(h);
       }
       // Initialize per-hero consumable slots (4 total)
       if (!Array.isArray(h.consumableSlots)) {

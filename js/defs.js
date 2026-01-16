@@ -45,3 +45,33 @@ export const ACCOUNT_SLOT_UNLOCKS = [
 
 // Per-hero consumable slots unlock at these hero levels
 export const CONSUMABLE_SLOT_UNLOCK_LEVELS = [1, 15, 30, 50];
+
+// ===== EQ-STYLE EQUIPMENT SLOTS (Single Source of Truth) =====
+// Ordered for 4-column grid layout (EQ-inspired)
+export const EQUIP_SLOTS = [
+  { key: "charm",      label: "Charm" },
+  { key: "ear1",       label: "Ear 1" },
+  { key: "head",       label: "Head" },
+  { key: "face",       label: "Face" },
+  { key: "ear2",       label: "Ear 2" },
+  { key: "neck",       label: "Neck" },
+  { key: "shoulders",  label: "Shoulders" },
+  { key: "arms",       label: "Arms" },
+  { key: "back",       label: "Back" },
+  { key: "wrist1",     label: "Wrist 1" },
+  { key: "wrist2",     label: "Wrist 2" },
+  { key: "ranged",     label: "Ranged" },
+  { key: "hands",      label: "Hands" },
+  { key: "main",       label: "Main Hand" },
+  { key: "off",        label: "Off Hand" },
+  { key: "finger1",    label: "Finger 1" },
+  { key: "finger2",    label: "Finger 2" },
+  { key: "chest",      label: "Chest" },
+  { key: "legs",       label: "Legs" },
+  { key: "feet",       label: "Feet" },
+  { key: "waist",      label: "Waist" },
+  { key: "power",      label: "Power" },
+  { key: "ammo",       label: "Ammo" }
+];
+
+export const EQUIP_SLOT_KEYS = EQUIP_SLOTS.map(s => s.key);

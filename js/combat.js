@@ -378,7 +378,7 @@ export function refreshHeroDerived(hero) {
   // Always reset baseDamage to class base before applying equipment
   hero.baseDamage = hero.classBaseDamage;
   
-  // Reset AC too
+  // Reset derived AC (will add base stats.ac + equipment AC)
   hero.ac = 0;
   
   // APPLY ADDITIVE LEVEL BONUSES to base values
@@ -392,6 +392,9 @@ export function refreshHeroDerived(hero) {
   hero.baseMana = hero.baseMana + bonus.mana;
   
   hero.primaryStat = primaryStatKey(hero, cls);
+
+  // Start with base AC from class/race stats
+  hero.ac = hero.stats.ac || 0;
 
   // Apply equipment bonuses to stats
   if (hero.equipment) {
