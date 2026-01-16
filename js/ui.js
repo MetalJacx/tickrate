@@ -1,5 +1,29 @@
 import { state } from "./state.js";
 import { heroLevelUpCost, applyHeroLevelUp, canTravelForward, travelToNextZone, travelToPreviousZone, recalcPartyTotals, killsRequiredForZone, spawnEnemy, doubleAttackCap, doubleAttackProcChance, refreshHeroDerived, getMeditateCap, hasBuff, toggleTargetDummy, getTotalHastePct, getBaseDelayTenths, computeSwingTicks } from "./combat.js";
+
+// Constants for inventory unlock system
+const INVENTORY_MAX_SLOTS = 100;
+const CHARACTER_TIER_SLOTS = 10;
+const CHARACTER_TIERS_MAX = 5;
+const PAID_SLOT_START_INDEX = CHARACTER_TIERS_MAX * CHARACTER_TIER_SLOTS; // 50
+
+// Get total unlocked slots based on character count and paid unlocks
+function getTotalUnlockedSlots() {
+  const characterCount = state.party?.length || 0;
+  const characterUnlockedSlots = Math.min(characterCount, CHARACTER_TIERS_MAX) * CHARACTER_TIER_SLOTS;
+  const paidUnlockedSlots = state.inventoryPaidSlotsUnlocked || 0;
+  return Math.min(characterUnlockedSlots + paidUnlockedSlots, INVENTORY_MAX_SLOTS);
+}
+
+// Get unlock requirement text for a locked slot
+function getLockTooltip(slotIndex) {
+  if (slotIndex < PAID_SLOT_START_INDEX) {
+    const tier = Math.floor(slotIndex / CHARACTER_TIER_SLOTS) + 1;
+    return `Unlocks with Character ${tier}`;
+  } else {
+    return 'Unlock with Gold or Purchase';
+  }
+}
 import { spawnEnemyToList } from "./combat.js";
 import { CLASSES, getClassDef } from "./classes/index.js";
 import { getZoneDef, listZones, ensureZoneDiscovery, getActiveSubArea } from "./zones/index.js";
@@ -2095,9 +2119,12 @@ function populateInventoryGrid(hero) {
     return;
   }
   
+  // Calculate total unlocked slots
+  const totalUnlockedSlots = getTotalUnlockedSlots();
+  
   for (let i = 0; i < 100; i++) {
     const slot = document.createElement("div");
-    const isLocked = i >= 30;
+    const isLocked = i >= totalUnlockedSlots;
     
     slot.style.cssText = `
       width: 77px;
@@ -2255,6 +2282,15 @@ function populateInventoryGrid(hero) {
         populateInventoryStats(hero);
         saveGame();
       });
+    } else if (isLocked) {
+      // Locked slot: show lock icon with tooltip
+      const lockIcon = document.createElement("div");
+      lockIcon.style.cssText = "font-size: 22px; color: #666; opacity: 0.6;";
+      lockIcon.textContent = "🔒";
+      slot.appendChild(lockIcon);
+      
+      // Add tooltip showing unlock requirement
+      slot.title = getLockTooltip(i);
     }
     
     container.appendChild(slot);

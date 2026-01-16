@@ -1,0 +1,282 @@
+// Debug mode - set to true to visualize overlay alignment
+const DEBUG_OVERLAY_ALIGNMENT = false;
+
+// Inventory Lock Overlay Bands System
+// Displays range-highlighting overlays for locked inventory slots
+
+import { state } from "./state.js";
+
+// Constants (should match those in inventoryUnlock.js or import them)
+const INVENTORY_MAX_SLOTS = 100;
+const CHARACTER_TIER_SLOTS = 10;
+const CHARACTER_TIERS_MAX = 5;
+const PAID_SLOT_START_INDEX = CHARACTER_TIERS_MAX * CHARACTER_TIER_SLOTS; // 50
+
+/**
+ * Get the lock group for a given slot index
+ * @param {number} slotIndex - The inventory slot index
+ * @returns {{groupKey: string, label: string, kind: 'char'|'paid'}}
+ */
+function getLockGroup(slotIndex) {
+  if (slotIndex < PAID_SLOT_START_INDEX) {
+    const tier = Math.floor(slotIndex / CHARACTER_TIER_SLOTS) + 1;
+    return {
+      groupKey: `char_${tier}`,
+      label: `Unlocked with Character ${tier}`,
+      kind: 'char'
+    };
+  } else {
+    return {
+      groupKey: 'paid',
+      label: 'Unlock with Gold or Purchase',
+      kind: 'paid'
+    };
+  }
+}
+
+/**
+ * Compute locked ranges from the current state
+ * @param {number} totalUnlockedSlots - Number of currently unlocked slots
+ * @returns {Array<{start: number, end: number, groupKey: string, label: string, kind: string}>}
+ */
+function computeLockedRanges(totalUnlockedSlots) {
+  const ranges = [];
+  
+  if (totalUnlockedSlots >= INVENTORY_MAX_SLOTS) {
+    return ranges; // Everything is unlocked
+  }
+  
+  let i = totalUnlockedSlots;
+  
+  while (i < INVENTORY_MAX_SLOTS) {
+    const group = getLockGroup(i);
+    const start = i;
+    
+    // Find the end of this contiguous group
+    while (i + 1 < INVENTORY_MAX_SLOTS && getLockGroup(i + 1).groupKey === group.groupKey) {
+      i++;
+    }
+    
+    const end = i;
+    ranges.push({
+      start,
+      end,
+      groupKey: group.groupKey,
+      label: group.label,
+      kind: group.kind
+    });
+    
+    i++;
+  }
+  
+  return ranges;
+}
+
+/**
+ * Calculate pixel coordinates for a slot index
+ * @param {number} idx - Slot index
+ * @param {Object} layout - Layout parameters {cols, tileW, tileH, gap, paddingLeft, paddingTop}
+ * @returns {{row: number, col: number, x: number, y: number}}
+ */
+function getSlotCoords(idx, layout) {
+  const { cols, tileW, tileH, gap, paddingLeft, paddingTop } = layout;
+  const row = Math.floor(idx / cols);
+  const col = idx % cols;
+  const x = paddingLeft + col * (tileW + gap);
+  const y = paddingTop + row * (tileH + gap);
+  
+  return { row, col, x, y };
+}
+
+/**
+ * Create an overlay band element for a range
+ * @param {Object} range - Range object {start, end, groupKey, label, kind}
+ * @param {Object} layout - Layout parameters
+ * @returns {HTMLElement}
+ */
+function createOverlayBand(range, layout) {
+  const { cols, tileW, tileH, gap } = layout;
+  const container = document.createElement('div');
+  container.className = 'inventory-overlay-range';
+  container.style.position = 'absolute';
+  container.style.pointerEvents = 'none';
+  
+  const startCoords = getSlotCoords(range.start, layout);
+  const endCoords = getSlotCoords(range.end, layout);
+  
+  // Determine which rows this range spans
+  const startRow = startCoords.row;
+  const endRow = endCoords.row;
+  
+  // Create overlay rectangles for each row segment
+  let firstSegment = true;
+  
+  for (let row = startRow; row <= endRow; row++) {
+    const segStartCol = (row === startRow) ? startCoords.col : 0;
+    const segEndCol = (row === endRow) ? endCoords.col : cols - 1;
+    
+    // Calculate rectangle dimensions
+    let rectX = layout.paddingLeft + segStartCol * (tileW + gap);
+    let rectY = layout.paddingTop + row * (tileH + gap);
+    let rectW = (segEndCol - segStartCol + 1) * tileW + (segEndCol - segStartCol) * gap;
+    let rectH = tileH;
+    
+    // Minimal expansion to create subtle "band" effect
+    rectX -= 2;
+    rectY -= 2;
+    rectW += 4;
+    rectH += 4;
+    
+    // Create the band element
+    const band = document.createElement('div');
+    band.className = `inventory-overlay-band inventory-overlay-${range.kind}`;
+    band.style.position = 'absolute';
+    band.style.left = `${rectX}px`;
+    band.style.top = `${rectY}px`;
+    band.style.width = `${rectW}px`;
+    band.style.height = `${rectH}px`;
+    band.style.borderRadius = '6px';
+    band.style.pointerEvents = 'none';
+    
+    // Debug mode: add visible outline to overlay bands
+    if (DEBUG_OVERLAY_ALIGNMENT) {
+      band.style.outline = '2px dashed red';
+      band.style.zIndex = '1000';
+    }
+    
+    // Set colors based on kind
+    if (range.kind === 'char') {
+      band.style.background = 'rgba(0, 255, 0, 0.08)';
+      band.style.border = '1px solid rgba(0, 255, 0, 0.35)';
+    } else {
+      band.style.background = 'rgba(255, 200, 0, 0.07)';
+      band.style.border = '1px solid rgba(255, 200, 0, 0.35)';
+    }
+    
+    // Add label text only to the first segment
+    if (firstSegment) {
+      const label = document.createElement('div');
+      label.className = 'inventory-overlay-label';
+      label.textContent = range.label;
+      label.style.position = 'absolute';
+      label.style.left = '12px'; // Align slightly left instead of centered
+      label.style.top = '50%';
+      label.style.transform = 'translateY(-50%)';
+      label.style.pointerEvents = 'none';
+      
+      band.appendChild(label);
+      firstSegment = false;
+    }
+    
+    container.appendChild(band);
+  }
+  
+  return container;
+}
+
+/**
+ * Calculate layout parameters from the inventory grid
+ * @param {HTMLElement} gridContainer - The inventory grid element (not scroll container)
+ * @returns {Object} Layout parameters
+ */
+function calculateLayout(gridContainer) {
+  const firstSlot = gridContainer.querySelector('div');
+  if (!firstSlot) {
+    // Default fallback values
+    return {
+      cols: 10,
+      tileW: 77,
+      tileH: 77,
+      gap: 6,
+      paddingLeft: 0,
+      paddingTop: 0
+    };
+  }
+  
+  const gridStyle = window.getComputedStyle(gridContainer);
+  const gap = parseFloat(gridStyle.gap) || 6;
+  
+  const slotStyle = window.getComputedStyle(firstSlot);
+  const tileW = parseFloat(slotStyle.width) || 77;
+  const tileH = parseFloat(slotStyle.height) || 77;
+  
+  // Calculate columns based on actual grid width (excludes scrollbar)
+  const containerWidth = gridContainer.clientWidth;
+  const cols = Math.max(1, Math.floor((containerWidth + gap) / (tileW + gap)));
+  
+  // No padding offset needed since grid has padding: 0
+  return { cols, tileW, tileH, gap, paddingLeft: 0, paddingTop: 0 };
+}
+
+/**
+ * Render overlay bands for locked inventory slots
+ * @param {HTMLElement} contentWrapper - The position: relative wrapper element
+ * @param {HTMLElement} gridContainer - The grid element containing tiles
+ * @param {number} totalUnlockedSlots - Number of currently unlocked slots
+ */
+export function renderInventoryOverlays(contentWrapper, gridContainer, totalUnlockedSlots) {
+  // Remove existing overlays
+  const existingOverlay = contentWrapper.querySelector('.inventory-overlays');
+  if (existingOverlay) {
+    existingOverlay.remove();
+  }
+  
+  // Compute locked ranges
+  const ranges = computeLockedRanges(totalUnlockedSlots);
+  
+  if (ranges.length === 0) {
+    return; // No locked slots to overlay
+  }
+  
+  // Calculate layout from the actual grid
+  const layout = calculateLayout(gridContainer);
+  
+  // Create overlay container (absolute positioned, same size as grid)
+  const overlayContainer = document.createElement('div');
+  overlayContainer.className = 'inventory-overlays';
+  overlayContainer.style.position = 'absolute';
+  overlayContainer.style.top = '0';
+  overlayContainer.style.left = '0';
+  overlayContainer.style.right = '0';
+  overlayContainer.style.bottom = '0';
+  overlayContainer.style.pointerEvents = 'none';
+  overlayContainer.style.overflow = 'hidden';
+  
+  // Create and append overlay bands for each range
+  ranges.forEach(range => {
+    const band = createOverlayBand(range, layout);
+    overlayContainer.appendChild(band);
+  });
+  
+  // Debug mode: highlight corresponding grid tiles
+  if (DEBUG_OVERLAY_ALIGNMENT) {
+    ranges.forEach(range => {
+      const gridTiles = gridContainer.querySelectorAll('div');
+      for (let i = range.start; i <= range.end; i++) {
+        if (gridTiles[i]) {
+          gridTiles[i].style.outline = '2px solid blue';
+        }
+      }
+    });
+  }
+  
+  // Insert overlay container as sibling of grid (inside wrapper)
+  contentWrapper.appendChild(overlayContainer);
+}
+
+/**
+ * Get total unlocked slots from state
+ * This should match the logic in inventoryUnlock.js
+ * @returns {number}
+ */
+export function getTotalUnlockedSlots() {
+  // Calculate character-contributed slots (count party members as created characters)
+  const characterCount = state.party?.length || 0;
+  const characterUnlockedSlots = Math.min(characterCount, CHARACTER_TIERS_MAX) * CHARACTER_TIER_SLOTS;
+  
+  // Add paid slots
+  const paidUnlockedSlots = state.inventoryPaidSlotsUnlocked || 0;
+  
+  // Total unlocked (capped at max)
+  return Math.min(characterUnlockedSlots + paidUnlockedSlots, INVENTORY_MAX_SLOTS);
+}

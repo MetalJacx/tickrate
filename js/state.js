@@ -114,6 +114,9 @@ export const state = {
 
   // Shared inventory (all characters use this)
   sharedInventory: Array(100).fill(null),
+  
+  // Inventory unlock system
+  inventoryPaidSlotsUnlocked: 0, // Number of paid slots unlocked beyond character unlocks
 
   // Settings (persisted)
   settings: {
@@ -159,6 +162,7 @@ export function serializeState() {
     currentEnemies: state.currentEnemies.map(e => ({ ...e })),
     party: state.party.map(h => ({ ...h })),
     sharedInventory: state.sharedInventory?.map(i => i ? { ...i } : null) || [],
+    inventoryPaidSlotsUnlocked: state.inventoryPaidSlotsUnlocked || 0,
     huntRemaining: state.huntRemaining,
     highestUnlockedZone: state.highestUnlockedZone,
     zoneDiscoveries: state.zoneDiscoveries,
@@ -232,6 +236,7 @@ export function loadGame() {
     state.zoneKillCounts = data.zoneKillCounts ?? {};
     state.partySlotsUnlocked = data.partySlotsUnlocked ?? 1;
     state.sharedInventory = Array.isArray(data.sharedInventory) ? data.sharedInventory.map(i => i ? { ...i } : null) : Array(100).fill(null);
+    state.inventoryPaidSlotsUnlocked = data.inventoryPaidSlotsUnlocked ?? 0;
     state.party = Array.isArray(data.party) ? data.party.map(h => {
       // Initialize health for old saves that don't have it
       if (!h.raceKey) {
