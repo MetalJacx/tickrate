@@ -2317,12 +2317,9 @@ function populateInventoryGrid(hero) {
   const container = document.getElementById("inventoryGridContainer");
   container.innerHTML = "";
   
-  if (!state.sharedInventory || state.sharedInventory.length === 0) {
-    const empty = document.createElement("div");
-    empty.style.cssText = "color:#777;grid-column:1/-1;text-align:center;padding:20px;";
-    empty.textContent = "No items";
-    container.appendChild(empty);
-    return;
+  // Always initialize shared inventory if needed
+  if (!state.sharedInventory) {
+    state.sharedInventory = [];
   }
   
   // Calculate total unlocked slots
