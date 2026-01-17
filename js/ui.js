@@ -1852,6 +1852,102 @@ function hideItemTooltip() {
   if (tooltip) tooltip.remove();
 }
 
+/**
+ * Equip an item from inventory to a specific equipment slot
+ * Reusable for both drag/drop and double-click
+ * @param {Object} hero - Hero object
+ * @param {string} itemId - Item ID to equip
+ * @param {number} inventorySlotIndex - Inventory slot index
+ * @param {string} targetSlotKey - Equipment slot key ("main", "head", etc)
+ * @returns {boolean} True if equipped successfully
+ */
+function equipItemToSlot(hero, itemId, inventorySlotIndex, targetSlotKey) {
+  const incomingItemDef = getItemDef(itemId);
+  if (!incomingItemDef || !isEquippable(incomingItemDef)) return false;
+
+  // Validate slot compatibility
+  const validation = validateSlotForItem(incomingItemDef, targetSlotKey);
+  if (!validation.valid) return false;
+
+  const isWeaponSlot = targetSlotKey === "main" || targetSlotKey === "off";
+  const inCombat = hero.inCombat && state.currentEnemies.length > 0;
+  const equipCd = hero.equipCd || 0;
+
+  // Check equip cooldown for weapon swaps during combat
+  if (isWeaponSlot && inCombat && equipCd > 0) {
+    addLog(`Cannot swap weapons yet (${equipCd} tick${equipCd > 1 ? 's' : ''}).`, "error");
+    return false;
+  }
+
+  // Check weapon type unlocks
+  if (isWeaponSlot && incomingItemDef.weaponType) {
+    if (!canEquipWeapon(hero, incomingItemDef)) {
+      addLog(`${hero.name} cannot equip ${incomingItemDef.name} (locked weapon type).`, "error");
+      return false;
+    }
+  }
+
+  // Handle 2H weapon logic
+  if (targetSlotKey === "main" && isTwoHanded(incomingItemDef)) {
+    const offHandItem = hero.equipment.off ? getItemDef(hero.equipment.off.id) : null;
+    const twoHCheck = validate2HMainHand(incomingItemDef, offHandItem);
+    if (twoHCheck.mustClearOffHand && offHandItem) {
+      hero.equipment.off = null;
+      const qty = hero.equipment.off?.quantity || 1;
+      addItemToInventory(hero, offHandItem.id, qty);
+      addLog(`Unequipped ${offHandItem.name} to make room for 2H weapon.`, "normal");
+    }
+  }
+
+  // Cannot equip off-hand item if main is 2H
+  if (targetSlotKey === "off") {
+    const mainHandItem = hero.equipment.main ? getItemDef(hero.equipment.main.id) : null;
+    if (mainHandItem && isTwoHanded(mainHandItem)) {
+      return false;
+    }
+  }
+
+  // Consume one from shared inventory
+  const source = state.sharedInventory[inventorySlotIndex];
+  if (!source || source.id !== itemId) return false;
+  source.quantity = (source.quantity || 1) - 1;
+  if (source.quantity <= 0) {
+    state.sharedInventory[inventorySlotIndex] = null;
+  }
+
+  // Equip the item
+  const oldEquipped = hero.equipment[targetSlotKey];
+  hero.equipment[targetSlotKey] = { id: itemId, quantity: 1 };
+
+  // If there was an old equipped item, return it to inventory
+  if (oldEquipped) {
+    const qty = oldEquipped.quantity || 1;
+    const added = addItemToInventory(hero, oldEquipped.id, qty);
+    const leftover = qty - added;
+    if (leftover > 0) {
+      addItemToStash(oldEquipped.id, leftover);
+    }
+  }
+
+  // Recalculate hero stats
+  refreshHeroDerived(hero);
+
+  // If weapon slot changed while in combat, hard reset swing timer
+  if (isWeaponSlot && inCombat) {
+    const baseDelay = getBaseDelayTenths(hero);
+    const hastePct = getTotalHastePct(hero);
+    const newSwingTicks = computeSwingTicks(baseDelay, hastePct);
+    hero.swingTicks = newSwingTicks;
+    hero.swingCd = newSwingTicks;
+    hero.equipCd = 2;
+
+    const newItemName = incomingItemDef.name;
+    addLog(`${hero.name} swaps to ${newItemName} and resets their swing timer!`, "normal");
+  }
+
+  return true;
+}
+
 // Highlight equipment slots that can accept an item while hovering it in inventory
 function clearEquipSlotHighlights() {
   document.querySelectorAll(".equip-slot-highlight").forEach((el) => {
@@ -2219,6 +2315,42 @@ function populateInventoryGrid(hero) {
         slot.addEventListener("mouseleave", () => {
           hideItemTooltip();
           clearEquipSlotHighlights();
+        });
+
+        // Double-click to equip: find first empty valid slot
+        slot.addEventListener("dblclick", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          hideItemTooltip();
+          clearEquipSlotHighlights();
+
+          if (!isEquippable(itemDef)) return;
+
+          const allowedSlots = getAllowedEquipSlots(itemDef);
+          if (!allowedSlots || allowedSlots.length === 0) return;
+
+          // Find first empty slot
+          let targetSlot = null;
+          for (const slotKey of allowedSlots) {
+            if (!hero.equipment[slotKey]) {
+              targetSlot = slotKey;
+              break;
+            }
+          }
+
+          if (!targetSlot) {
+            // All valid slots occupied, do nothing
+            return;
+          }
+
+          const success = equipItemToSlot(hero, item.id, i, targetSlot);
+          if (success) {
+            populateEquipmentSection(hero);
+            populateCenterDollPane(hero);
+            populateInventoryGrid(hero);
+            populateInventoryStats(hero);
+            saveGame();
+          }
         });
 
         // Make it draggable
