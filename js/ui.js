@@ -1852,6 +1852,30 @@ function hideItemTooltip() {
   if (tooltip) tooltip.remove();
 }
 
+// Highlight equipment slots that can accept an item while hovering it in inventory
+function clearEquipSlotHighlights() {
+  document.querySelectorAll(".equip-slot-highlight").forEach((el) => {
+    el.classList.remove("equip-slot-highlight");
+  });
+}
+
+function highlightEquipSlotsForItem(itemDef, hero) {
+  clearEquipSlotHighlights();
+  if (!itemDef || !isEquippable(itemDef)) return;
+
+  const allowed = getAllowedEquipSlots(itemDef);
+  if (!allowed || allowed.length === 0) return;
+
+  for (const slotKey of allowed) {
+    const el = document.getElementById(`equip-slot-${slotKey}`);
+    if (!el) continue;
+    // Treat locked/disabled slots as non-highlightable
+    const isDisabled = el.style.cursor === "not-allowed";
+    if (isDisabled) continue;
+    el.classList.add("equip-slot-highlight");
+  }
+}
+
 /**
  * Show invalid equip feedback: flash slot red and display warning bubble
  * @param {HTMLElement} slotElement - The slot div that was dropped on
@@ -2190,9 +2214,11 @@ function populateInventoryGrid(hero) {
         // Add tooltip on hover
         slot.addEventListener("mouseenter", (e) => {
           showItemTooltip(itemDef, e);
+          highlightEquipSlotsForItem(itemDef, hero);
         });
         slot.addEventListener("mouseleave", () => {
           hideItemTooltip();
+          clearEquipSlotHighlights();
         });
 
         // Make it draggable
