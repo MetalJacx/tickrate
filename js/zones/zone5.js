@@ -12,6 +12,7 @@ export default {
   globalLoot: [
     { itemId: "copper_ore", dropRate: 0.18, minQty: 1, maxQty: 5 },
     { itemId: "health_potion", dropRate: 0.06, minQty: 1, maxQty: 2 },
+    { itemId: "mana_potion", dropRate: 0.03, minQty: 1, maxQty: 1 },
     { itemId: "tattered_robe", dropRate: 0.08 },
     { itemId: "rusty_sword", dropRate: 0.06 }
   ],
