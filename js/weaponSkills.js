@@ -115,7 +115,9 @@ const WEAPON_UNLOCKS = {
     8: ["archery"]
   },
   cleric: {
-    1: ["1h_blunt","hand_to_hand"]
+    1: ["1h_blunt","hand_to_hand"],
+    // Progression unlocks: allow 2H weapons at level 10
+    10: ["2h_blunt","2h_pierce"]
   },
   paladin: {
     1: ["1h_slash","1h_blunt","2h_slash","hand_to_hand"]
@@ -139,7 +141,9 @@ const WEAPON_UNLOCKS = {
     1: ["hand_to_hand","1h_blunt"]
   },
   shaman: {
-    1: ["hand_to_hand","1h_blunt"]
+    1: ["hand_to_hand","1h_blunt"],
+    // Progression unlocks: allow 2H weapons at level 10
+    10: ["2h_blunt","2h_pierce"]
   },
   shadowknight: {
     1: ["1h_slash","1h_blunt","2h_slash","hand_to_hand"]

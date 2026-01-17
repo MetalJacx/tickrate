@@ -1,5 +1,13 @@
 import { state } from "./state.js";
 import { heroLevelUpCost, applyHeroLevelUp, canTravelForward, travelToNextZone, travelToPreviousZone, recalcPartyTotals, killsRequiredForZone, spawnEnemy, doubleAttackCap, doubleAttackProcChance, refreshHeroDerived, getMeditateCap, hasBuff, toggleTargetDummy, getTotalHastePct, getBaseDelayTenths, computeSwingTicks } from "./combat.js";
+import { spawnEnemyToList } from "./combat.js";
+import { CLASSES, getClassDef } from "./classes/index.js";
+import { getZoneDef, listZones, ensureZoneDiscovery, getActiveSubArea } from "./zones/index.js";
+import { addLog, isExpiredEffect } from "./util.js";
+import { formatPGSC, saveGame, updateCurrencyDisplay } from "./state.js";
+import { MAX_PARTY_SIZE, ACCOUNT_SLOT_UNLOCKS, CONSUMABLE_SLOT_UNLOCK_LEVELS, EQUIP_SLOTS } from "./defs.js";
+import { getItemDef } from "./items.js";
+import { WEAPON_TYPE_NAMES } from "./weaponSkills.js";
 
 // Constants for inventory unlock system
 const INVENTORY_MAX_SLOTS = 100;
@@ -24,14 +32,7 @@ function getLockTooltip(slotIndex) {
     return 'Unlock with Gold or Purchase';
   }
 }
-import { spawnEnemyToList } from "./combat.js";
-import { CLASSES, getClassDef } from "./classes/index.js";
-import { getZoneDef, listZones, ensureZoneDiscovery, getActiveSubArea } from "./zones/index.js";
-import { addLog, isExpiredEffect } from "./util.js";
-import { formatPGSC, saveGame, updateCurrencyDisplay } from "./state.js";
-import { MAX_PARTY_SIZE, ACCOUNT_SLOT_UNLOCKS, CONSUMABLE_SLOT_UNLOCK_LEVELS, EQUIP_SLOTS } from "./defs.js";
-import { getItemDef } from "./items.js";
-import { canEquipWeapon, getEquippedWeaponType, getWeaponSkillCap, WEAPON_TYPE_NAMES, getUnlockedWeaponTypes } from "./weaponSkills.js";
+import { canEquipWeapon, getEquippedWeaponType, getWeaponSkillCap, getUnlockedWeaponTypes } from "./weaponSkills.js";
 import {
   getMagicSkillCap,
   getMagicSkillValue,
@@ -1792,6 +1793,12 @@ function showItemTooltip(itemDef, event) {
 
   if (itemDef.baseValue) {
     html += `<div style="color:#ffd700;margin-bottom:6px;">Value: ${formatPGSC(itemDef.baseValue)}</div>`;
+  }
+
+  // Add weapon type if this is a weapon
+  if (itemDef.weaponType) {
+    const weaponTypeName = WEAPON_TYPE_NAMES[itemDef.weaponType] || itemDef.weaponType;
+    html += `<div style="color:#87ceeb;margin-bottom:6px;font-weight:bold;">${weaponTypeName}</div>`;
   }
 
   if (itemDef.stats && Object.keys(itemDef.stats).length > 0) {
