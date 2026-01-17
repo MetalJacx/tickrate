@@ -450,6 +450,11 @@ export function startCast(hero, spellDef, targetId, nowMs, gameTickMs, opts = {}
   // - hasManaFn(hero, cost): optional
   // - spendManaFn(hero, amount): optional
 
+  // GATE: Safety check to prevent double-cast
+  if (hero.casting && hero.casting.endsAtMs > nowMs) {
+    return { ok: false, reason: "already_casting" };
+  }
+
   const castTimeTicks = Math.max(1, spellDef.castTimeTicks ?? 1);
   const endsAtMs = nowMs + castTimeTicks * gameTickMs;
 

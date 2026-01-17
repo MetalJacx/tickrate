@@ -1980,6 +1980,11 @@ export function resolveActionUse({ actor, actionId, target = null, context = {} 
 
   // Only route into casting for mana-based or explicit spell actions
   if (hasCastTime && actor.classKey && (usesMana || isSpellKind)) {
+    // GATE: Prevent double-cast (already casting)
+    if (actor.casting && actor.casting.endsAtMs > state.nowMs) {
+      return { cast: false, reason: "already_casting", attempted: false };
+    }
+
     // Optional hard gating: block casting if magic category is locked
     const category = actionDef.specialization;
     if (category && !isMagicCategoryUnlocked(actor, category)) {
