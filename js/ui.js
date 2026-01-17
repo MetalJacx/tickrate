@@ -1948,6 +1948,85 @@ function equipItemToSlot(hero, itemId, inventorySlotIndex, targetSlotKey) {
   return true;
 }
 
+/**
+ * Compute stat delta between two items
+ * @param {Object} newItemDef - Item being considered
+ * @param {Object} currentItemDef - Currently equipped item (or null)
+ * @returns {Object} { statKey: delta, ... } where delta is numeric change
+ */
+function computeStatDelta(newItemDef, currentItemDef) {
+  const delta = {};
+  const newStats = newItemDef?.stats || {};
+  const currentStats = currentItemDef?.stats || {};
+
+  const allStats = new Set([...Object.keys(newStats), ...Object.keys(currentStats)]);
+  for (const stat of allStats) {
+    const newVal = newStats[stat] || 0;
+    const currentVal = currentStats[stat] || 0;
+    const diff = newVal - currentVal;
+    if (diff !== 0) {
+      delta[stat] = diff;
+    }
+  }
+  return delta;
+}
+
+/**
+ * Preview stat changes by injecting delta indicators into center stats panel
+ * @param {Object} hero - Hero object
+ * @param {Object} itemDef - Item being previewed
+ */
+function previewEquipDelta(hero, itemDef) {
+  clearEquipDeltaPreview();
+  if (!itemDef || !isEquippable(itemDef)) return;
+
+  const allowedSlots = getAllowedEquipSlots(itemDef);
+  if (!allowedSlots || allowedSlots.length === 0) return;
+
+  // Use first valid slot for preview
+  const targetSlot = allowedSlots[0];
+  const currentEquipped = hero.equipment?.[targetSlot];
+  const currentItemDef = currentEquipped ? getItemDef(currentEquipped.id) : null;
+
+  const delta = computeStatDelta(itemDef, currentItemDef);
+  if (Object.keys(delta).length === 0) return;
+
+  // Inject delta indicators into center stats panel
+  const statsArea = document.getElementById("centerStatsArea");
+  if (!statsArea) return;
+
+  const rows = statsArea.querySelectorAll("div");
+  for (const row of rows) {
+    // Match stat rows by checking for uppercase stat labels
+    const label = row.querySelector("span:first-child")?.textContent?.toUpperCase();
+    if (!label) continue;
+
+    const statKey = label.toLowerCase();
+    if (statKey in delta) {
+      const deltaValue = delta[statKey];
+      const deltaColor = deltaValue > 0 ? "#4ade80" : "#ef4444";
+      const deltaArrow = deltaValue > 0 ? "↑" : "↓";
+
+      const deltaSpan = document.createElement("span");
+      deltaSpan.className = "equip-delta-indicator";
+      deltaSpan.style.cssText = `color:${deltaColor};font-size:10px;margin-left:6px;font-weight:700;`;
+      deltaSpan.textContent = `${deltaValue > 0 ? '+' : ''}${deltaValue} ${deltaArrow}`;
+
+      const valueSpan = row.querySelector("span:last-child");
+      if (valueSpan) {
+        valueSpan.appendChild(deltaSpan);
+      }
+    }
+  }
+}
+
+/**
+ * Clear all equip delta preview indicators
+ */
+function clearEquipDeltaPreview() {
+  document.querySelectorAll(".equip-delta-indicator").forEach((el) => el.remove());
+}
+
 // Highlight equipment slots that can accept an item while hovering it in inventory
 function clearEquipSlotHighlights() {
   document.querySelectorAll(".equip-slot-highlight").forEach((el) => {
@@ -2311,10 +2390,12 @@ function populateInventoryGrid(hero) {
         slot.addEventListener("mouseenter", (e) => {
           showItemTooltip(itemDef, e);
           highlightEquipSlotsForItem(itemDef, hero);
+          previewEquipDelta(hero, itemDef);
         });
         slot.addEventListener("mouseleave", () => {
           hideItemTooltip();
           clearEquipSlotHighlights();
+          clearEquipDeltaPreview();
         });
 
         // Double-click to equip: find first empty valid slot
