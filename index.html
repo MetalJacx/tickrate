@@ -140,25 +140,37 @@
       <div id="merchantContainer" style="display:none;"></div>
     </section>
 
-    <section id="controlPanel" class="panel">
-      <h2>Control</h2>
+    <div id="rightColumn" class="rightColumn">
+      <section id="controlPanel" class="panel">
+        <h2>Control</h2>
 
-      <div id="zoneSelect" style="margin-bottom:8px;padding:8px;background:#111;border:1px solid #333;border-radius:6px;display:flex;flex-direction:column;gap:8px;">
-        <div style="display:flex;gap:8px;flex:1;min-height:0;">
-          <div style="flex:1;display:flex;flex-direction:column;">
-            <div style="font-size:11px;color:#aaa;margin-bottom:4px;font-weight:bold;">Zone</div>
-            <div id="zoneList" style="display:flex;flex-direction:column;gap:6px;overflow-y:auto;flex:1;"></div>
+        <div id="zoneSelect" style="margin-bottom:8px;padding:8px;background:#111;border:1px solid #333;border-radius:6px;display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;gap:8px;flex:1;min-height:0;">
+            <div style="flex:1;display:flex;flex-direction:column;">
+              <div style="font-size:11px;color:#aaa;margin-bottom:4px;font-weight:bold;">Zone</div>
+              <div id="zoneList" style="display:flex;flex-direction:column;gap:6px;overflow-y:auto;flex:1;"></div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;">
+              <div style="font-size:11px;color:#aaa;margin-bottom:4px;font-weight:bold;" id="subAreaHeader">Sub-Areas</div>
+              <div id="subAreaList" style="display:flex;flex-direction:column;gap:6px;overflow-y:auto;flex:1;"></div>
+            </div>
           </div>
-          <div style="flex:1;display:flex;flex-direction:column;">
-            <div style="font-size:11px;color:#aaa;margin-bottom:4px;font-weight:bold;" id="subAreaHeader">Sub-Areas</div>
-            <div id="subAreaList" style="display:flex;flex-direction:column;gap:6px;overflow-y:auto;flex:1;"></div>
-          </div>
+          <button id="travelToAreaBtn" style="width:100%;padding:10px;background:#4ade80;color:#000;border:1px solid #22c55e;border-radius:6px;font-weight:bold;cursor:pointer;">Travel to Area</button>
         </div>
-        <button id="travelToAreaBtn" style="width:100%;padding:10px;background:#4ade80;color:#000;border:1px solid #22c55e;border-radius:6px;font-weight:bold;cursor:pointer;">Travel to Area</button>
-      </div>
 
-      <button id="resetBtn" style="width:100%;margin-top:8px;">Reset Progress</button>
-    </section>
+        <button id="resetBtn" style="width:100%;margin-top:8px;">Reset Progress</button>
+      </section>
+
+      <section id="benchPanel" class="panel benchPanel">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <h2 style="margin:0;">Bench</h2>
+          <div style="font-size:11px;color:#aaa;" id="benchCounts">Party: 0/6 | Bench: 0/12</div>
+        </div>
+        <div style="font-size:10px;color:#777;margin-bottom:8px;">Swapping only available in Town.</div>
+        <div id="benchLockMessage" style="display:none;text-align:center;padding:20px;color:#888;font-size:13px;"></div>
+        <div id="benchContent" style="display:flex;flex-direction:column;gap:12px;overflow-y:auto;flex:1;"></div>
+      </section>
+    </div>
   </main>
 </div>
 

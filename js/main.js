@@ -1,9 +1,9 @@
-import { GAME_TICK_MS, AUTO_SAVE_EVERY_MS, MAX_OFFLINE_SECONDS} from "./defs.js";
+import { GAME_TICK_MS, AUTO_SAVE_EVERY_MS, MAX_OFFLINE_SECONDS, RECRUIT_UNLOCK_LEVEL, ROSTER_CAP, MAX_BENCH_SIZE } from "./defs.js";
 import { state, loadGame, saveGame, clearSave, serializeState, updateCurrencyDisplay } from "./state.js";
 import { addLog } from "./util.js";
 import { createHero, levelHeroTo, spawnEnemy, gameTick, travelToNextZone, travelToPreviousZone, p99XpToNext, recalcPartyTotals, checkAccountLevelUp, calculateLevelFromTotalXP } from "./combat.js";
 import { getZoneDef } from "./zones/index.js";
-import { initUI, renderAll, showOfflineModal } from "./ui.js";
+import { initUI, renderAll, showOfflineModal, getRecruitCostGold, getActiveCount, getBenchCount, getRosterCount, getUnlockedPartySlots, hasEmptyUnlockedActiveSlot } from "./ui.js";
 import { CLASSES, getClassDef } from "./classes/index.js"
 import { RACES, getRaceDef, DEFAULT_RACE_KEY } from "./races.js";
 import { initSettings } from "./settings.js";
@@ -16,6 +16,7 @@ let selectedClassKey = null;
 let selectedRecruitClassKey = null;
 let selectedRaceKey = DEFAULT_RACE_KEY;
 let selectedRecruitRaceKey = DEFAULT_RACE_KEY;
+let recruitMode = null;  // "mode1" for active slot, "mode2" for bench hire
 
 function showToast(message, isError = false) {
   const toast = document.getElementById("toast");
@@ -479,6 +480,7 @@ function wireClassScreen(onConfirmed) {
     state.characterName = charName;
     state.playerRaceKey = selectedRaceKey || DEFAULT_RACE_KEY;
     state.party = [];
+    state.bench = [];
     state.partyHP = 0;
     state.partyMaxHP = 0;
 
@@ -502,7 +504,8 @@ function wireRecruitModal() {
   const raceSelect = document.getElementById("recruitRaceSelect");
   const raceSummary = document.getElementById("recruitRaceSummary");
   
-  function openRecruitModal() {
+  function openRecruitModal(mode = "mode1") {
+    recruitMode = mode;  // Track which mode we're using
     selectedRecruitClassKey = null;
     selectedRecruitRaceKey = state.playerRaceKey || DEFAULT_RACE_KEY;
     nameInput.value = "";
@@ -709,25 +712,61 @@ function wireRecruitModal() {
       renderStartingStatsGrid(recruitStatsGrid, combined);
     }
     
-    // Update confirm button
-    const canAfford = state.currencyCopper >= cls.cost;
-    const hasSpace = state.party.length < state.partySlotsUnlocked;
-    
-    confirmBtn.textContent = `Recruit for ${cls.cost} gold`;
-    
-    // Enable button only if has space, can afford, AND has a name entered
+    // Update confirm button with new gating rules based on mode
     const hasName = nameInput.value.trim().length > 0;
-    confirmBtn.disabled = !canAfford || !hasSpace || !hasName || !selectedRecruitRaceKey;
+    const activeCount = getActiveCount(state);
+    const benchCount = getBenchCount(state);
+    const unlockedSlots = getUnlockedPartySlots(state);
+    const rosterCount = getRosterCount(state);
     
-    if (!hasSpace) {
-      errorDiv.textContent = "No party slots available";
-      errorDiv.style.display = "block";
-    } else if (!canAfford) {
-      errorDiv.textContent = `Need ${cls.cost - state.currencyCopper} more copper`;
-      errorDiv.style.display = "block";
-    } else if (!hasName) {
-      errorDiv.textContent = "Enter a hero name";
-      errorDiv.style.display = "block";
+    if (recruitMode === "mode1") {
+      // MODE 1: Fill active slot (any level, free) - only if haven't benched anyone
+      const hasEmptySlot = hasEmptyUnlockedActiveSlot(state);
+      const canDoMode1 = hasEmptySlot && rosterCount < unlockedSlots;
+      confirmBtn.textContent = "Recruit (Free)";
+      confirmBtn.disabled = !canDoMode1 || !hasName || !selectedRecruitRaceKey;
+      
+      if (rosterCount > unlockedSlots) {
+        errorDiv.textContent = "Cannot recruit freely after benching. Use Bench Hiring (Lv 60+)";
+        errorDiv.style.display = "block";
+      } else if (!hasEmptySlot) {
+        errorDiv.textContent = "No empty active slots available";
+        errorDiv.style.display = "block";
+      } else if (!hasName) {
+        errorDiv.textContent = "Enter a hero name";
+        errorDiv.style.display = "block";
+      } else {
+        errorDiv.style.display = "none";
+      }
+    } else if (recruitMode === "mode2") {
+      // MODE 2: Hire to bench (lv 60+, costs gold)
+      const recruitUnlocked = state.accountLevel >= RECRUIT_UNLOCK_LEVEL;
+      const recruitCost = getRecruitCostGold(state);
+      const canAfford = state.currencyCopper >= recruitCost;
+      const benchNotFull = benchCount < MAX_BENCH_SIZE;
+      const basePartyFilled = !hasEmptyUnlockedActiveSlot(state);
+      
+      confirmBtn.textContent = `Hire for ${recruitCost} copper`;
+      confirmBtn.disabled = !recruitUnlocked || !basePartyFilled || !benchNotFull || !canAfford || !hasName || !selectedRecruitRaceKey;
+      
+      if (!recruitUnlocked) {
+        errorDiv.textContent = `Hiring unlocks at Account Lv ${RECRUIT_UNLOCK_LEVEL}`;
+        errorDiv.style.display = "block";
+      } else if (!basePartyFilled) {
+        errorDiv.textContent = "Fill your party first";
+        errorDiv.style.display = "block";
+      } else if (!benchNotFull) {
+        errorDiv.textContent = "Bench is full";
+        errorDiv.style.display = "block";
+      } else if (!canAfford) {
+        errorDiv.textContent = `Need ${recruitCost - state.currencyCopper} more copper`;
+        errorDiv.style.display = "block";
+      } else if (!hasName) {
+        errorDiv.textContent = "Enter a hero name";
+        errorDiv.style.display = "block";
+      } else {
+        errorDiv.style.display = "none";
+      }
     }
   }
   
@@ -769,41 +808,82 @@ function wireRecruitModal() {
       return;
     }
     
-    if (state.party.length >= state.partySlotsUnlocked) {
-      showToast("No party slots available!", true);
-      return;
+    const activeCount = getActiveCount(state);
+    const benchCount = getBenchCount(state);
+    const unlockedSlots = getUnlockedPartySlots(state);
+    const rosterCount = getRosterCount(state);
+    
+    if (recruitMode === "mode1") {
+      // MODE 1: Fill active slot (free, any level) - only if haven't benched anyone
+      if (rosterCount >= unlockedSlots) {
+        showToast("Cannot recruit freely after benching!", true);
+        return;
+      }
+      
+      if (!hasEmptyUnlockedActiveSlot(state)) {
+        showToast("No empty active slots available!", true);
+        return;
+      }
+      
+      const hero = createHero(selectedRecruitClassKey, heroName, selectedRecruitRaceKey);
+      // New recruits start at level 1
+      levelHeroTo(hero, 1);
+      
+      // Add starting inventory items on first recruit
+      if (state.party.length === 0) {
+        state.sharedInventory[0] = { id: "health_potion", quantity: 5 };
+        state.sharedInventory[1] = { id: "mana_potion", quantity: 3 };
+        state.sharedInventory[2] = { id: "copper_ore", quantity: 12 };
+        state.sharedInventory[3] = { id: "iron_sword", quantity: 1 };
+        state.sharedInventory[10] = { id: "wooden_shield", quantity: 1 };
+      }
+      
+      if (hero.classKey === "warrior") {
+        state.sharedInventory[20] = { id: "stick", quantity: 1 };
+      }
+      
+      state.party.push(hero);
+      state.partyHP += hero.maxHP;
+      state.partyMaxHP += hero.maxHP;
+      addLog(`${heroName} the ${cls.name} joins your party at the campfire.`);
+      showToast(`${heroName} recruited!`);
+      
+    } else if (recruitMode === "mode2") {
+      // MODE 2: Hire to bench (costs gold, requires lv 60+)
+      if (state.accountLevel < RECRUIT_UNLOCK_LEVEL) {
+        showToast(`Hiring unlocks at Account Lv ${RECRUIT_UNLOCK_LEVEL}!`, true);
+        return;
+      }
+      
+      if (hasEmptyUnlockedActiveSlot(state)) {
+        showToast("Fill your party first!", true);
+        return;
+      }
+      
+      if (benchCount >= MAX_BENCH_SIZE) {
+        showToast("Bench is full!", true);
+        return;
+      }
+      
+      const recruitCost = getRecruitCostGold(state);
+      if (state.currencyCopper < recruitCost) {
+        showToast("Not enough currency!", true);
+        return;
+      }
+      
+      state.currencyCopper -= recruitCost;
+      updateCurrencyDisplay();
+      
+      const hero = createHero(selectedRecruitClassKey, heroName, selectedRecruitRaceKey);
+      // New recruits start at level 1
+      levelHeroTo(hero, 1);
+      
+      if (!state.bench) state.bench = [];
+      state.bench.push(hero);
+      addLog(`${heroName} the ${cls.name} has been hired to the bench.`);
+      showToast(`${heroName} hired for ${recruitCost} copper!`);
     }
     
-    if (state.currencyCopper < cls.cost) {
-      showToast("Not enough currency!", true);
-      return;
-    }
-    
-    state.currencyCopper -= cls.cost;
-    updateCurrencyDisplay();
-    const hero = createHero(selectedRecruitClassKey, heroName, selectedRecruitRaceKey);
-    const recruitLevel = Math.max(1, Math.floor((state.accountLevel || 1) * 0.8));
-    levelHeroTo(hero, recruitLevel);
-    
-    // Add test items to shared inventory for UI testing
-    if (state.party.length === 0) {
-      state.sharedInventory[0] = { id: "health_potion", quantity: 5 };
-      state.sharedInventory[1] = { id: "mana_potion", quantity: 3 };
-      state.sharedInventory[2] = { id: "copper_ore", quantity: 12 };
-      state.sharedInventory[3] = { id: "iron_sword", quantity: 1 };
-      state.sharedInventory[10] = { id: "wooden_shield", quantity: 1 };
-    }
-    
-    // Give warriors a starting stick in shared inventory
-    if (hero.classKey === "warrior") {
-      state.sharedInventory[20] = { id: "stick", quantity: 1 };
-    }
-    
-    state.party.push(hero);
-    state.partyHP += hero.maxHP;
-    state.partyMaxHP += hero.maxHP;
-    addLog(`${heroName} the ${cls.name} joins your party at the campfire.`);
-    showToast(`${heroName} recruited!`);
     saveGame();
     renderAll();
     closeRecruitModal();
@@ -851,6 +931,7 @@ function start() {
       state.highestUnlockedZone = 1;
       state.partySlotsUnlocked = 1;
       state.party = [];
+      state.bench = [];
       state.partyMaxHP = 0;
       state.partyHP = 0;
       state.currentEnemies = [];

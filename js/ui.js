@@ -5,7 +5,7 @@ import { CLASSES, getClassDef } from "./classes/index.js";
 import { getZoneDef, listZones, ensureZoneDiscovery, getActiveSubArea } from "./zones/index.js";
 import { addLog, isExpiredEffect } from "./util.js";
 import { formatPGSC, saveGame, updateCurrencyDisplay } from "./state.js";
-import { MAX_PARTY_SIZE, ACCOUNT_SLOT_UNLOCKS, CONSUMABLE_SLOT_UNLOCK_LEVELS, EQUIP_SLOTS } from "./defs.js";
+import { MAX_PARTY_SIZE, MAX_BENCH_SIZE, RECRUIT_UNLOCK_LEVEL, ROSTER_CAP, ACCOUNT_SLOT_UNLOCKS, CONSUMABLE_SLOT_UNLOCK_LEVELS, EQUIP_SLOTS } from "./defs.js";
 import { getItemDef } from "./items.js";
 import { WEAPON_TYPE_NAMES } from "./weaponSkills.js";
 
@@ -17,10 +17,43 @@ const PAID_SLOT_START_INDEX = CHARACTER_TIERS_MAX * CHARACTER_TIER_SLOTS; // 50
 
 // Get total unlocked slots based on character count and paid unlocks
 function getTotalUnlockedSlots() {
-  const characterCount = state.party?.length || 0;
+  // Count total roster (active + bench) for inventory slot calculation
+  const characterCount = (state.party?.length || 0) + (state.bench?.length || 0);
   const characterUnlockedSlots = Math.min(characterCount, CHARACTER_TIERS_MAX) * CHARACTER_TIER_SLOTS;
   const paidUnlockedSlots = state.inventoryPaidSlotsUnlocked || 0;
   return Math.min(characterUnlockedSlots + paidUnlockedSlots, INVENTORY_MAX_SLOTS);
+}
+
+// Get current active party member count
+export function getActiveCount(state) {
+  return state.party?.length || 0;
+}
+
+// Get current bench member count
+export function getBenchCount(state) {
+  return state.bench?.length || 0;
+}
+
+// Get total roster count (active + bench)
+export function getRosterCount(state) {
+  return getActiveCount(state) + getBenchCount(state);
+}
+
+// Get unlocked active party slots based on account level
+export function getUnlockedPartySlots(state) {
+  return state.partySlotsUnlocked || 1;
+}
+
+// Check if there's an empty unlocked active slot
+export function hasEmptyUnlockedActiveSlot(state) {
+  return getActiveCount(state) < getUnlockedPartySlots(state);
+}
+
+// Calculate recruit cost based on roster size (gold sink)
+export function getRecruitCostGold(state) {
+  const rosterCount = getRosterCount(state);
+  // cost = 5000 * (rosterCount + 1)^2
+  return 5000 * Math.pow(rosterCount + 1, 2);
 }
 
 // Get unlock requirement text for a locked slot
@@ -332,6 +365,7 @@ function openCampThresholdsModal() {
 export function renderAll() {
   renderEnemy();
   renderParty();
+  renderBenchPanel();
   renderMeta();
   renderBattleFooter();
   renderZones();
@@ -1273,40 +1307,66 @@ export function renderParty() {
       div.className = "hero";
       
       if (isUnlocked) {
-        // Unlocked empty slot - clickable
+        // Unlocked empty slot - MODE 1: Fill active slot (no level gate)
+        // But only if roster hasn't exceeded unlocked slots (i.e., no one has been benched)
+        const zone = getZoneDef(state.zone);
+        const isTown = zone?.isTown;
+        const hasEmptySlot = hasEmptyUnlockedActiveSlot(state);
+        const rosterCount = getRosterCount(state);
+        const unlockedSlots = getUnlockedPartySlots(state);
+        
+        // Can only do free recruit if: in town, empty slot, and haven't benched anyone yet
+        const canRecruit = isTown && hasEmptySlot && rosterCount < unlockedSlots;
+        
         div.style.cssText = `
-          cursor: pointer;
-          border: 2px dashed #555;
+          cursor: ${canRecruit ? "pointer" : "not-allowed"};
+          border: 2px dashed ${canRecruit ? "#555" : "#333"};
           background: #0f0f0f;
           display: flex;
           align-items: center;
           justify-content: center;
           min-height: 80px;
           transition: all 0.2s;
+          opacity: ${canRecruit ? "1" : "0.5"};
         `;
         
+        let tooltipText = "";
+        if (!isTown) {
+          tooltipText = "Recruiting available in Town only";
+        } else if (rosterCount > unlockedSlots) {
+          tooltipText = "Use Bench Hiring (Lv 60+) for additional members";
+        } else if (!hasEmptySlot) {
+          tooltipText = "Party slots full. Unlock more at higher account levels";
+        } else {
+          tooltipText = "Click to recruit (free)";
+        }
+        
         div.innerHTML = `
-          <div style="text-align:center;color:#888;">
+          <div style="text-align:center;color:${canRecruit ? "#888" : "#555"};">
             <div style="font-size:24px;margin-bottom:4px;">+</div>
             <div style="font-size:12px;">Click to recruit</div>
           </div>
         `;
         
-        div.addEventListener("mouseenter", () => {
-          div.style.borderColor = "#888";
-          div.style.background = "#151515";
-        });
+        div.title = tooltipText;
         
-        div.addEventListener("mouseleave", () => {
-          div.style.borderColor = "#555";
-          div.style.background = "#0f0f0f";
-        });
-        
-        div.addEventListener("click", () => {
-          if (window.__openRecruitModal) {
-            window.__openRecruitModal();
-          }
-        });
+        if (canRecruit) {
+          div.addEventListener("mouseenter", () => {
+            div.style.borderColor = "#888";
+            div.style.background = "#151515";
+          });
+          
+          div.addEventListener("mouseleave", () => {
+            div.style.borderColor = "#555";
+            div.style.background = "#0f0f0f";
+          });
+          
+          div.addEventListener("click", () => {
+            if (window.__openRecruitModal) {
+              window.__openRecruitModal("mode1");  // MODE 1: fill active slot
+            }
+          });
+        }
       } else {
         // Locked slot
         div.style.cssText = `
@@ -1368,6 +1428,339 @@ export function renderParty() {
   document.getElementById("partyEnduranceFill").style.width = endurancePct + "%";
   document.getElementById("partyEnduranceLabel").textContent =
     `${Math.floor(totalEndurance)} / ${Math.floor(maxEndurance)}`;
+}
+
+export function renderBenchPanel() {
+  const isTown = (() => {
+    const zone = getZoneDef(state.zone);
+    return zone?.isTown;
+  })();
+  const inCombat = state.currentEnemies.length > 0;
+  
+  const activeCount = getActiveCount(state);
+  const benchCount = getBenchCount(state);
+  
+  // Update counts header
+  document.getElementById("benchCounts").textContent = `Party: ${activeCount}/${MAX_PARTY_SIZE} | Bench: ${benchCount}/${MAX_BENCH_SIZE}`;
+  
+  const lockMsg = document.getElementById("benchLockMessage");
+  const content = document.getElementById("benchContent");
+  
+  // Show lock message if not in town or in combat
+  if (!isTown) {
+    lockMsg.style.display = "block";
+    lockMsg.textContent = "Bench available in Town only";
+    content.style.display = "none";
+    content.style.opacity = "0.55";
+    return;
+  }
+  if (inCombat) {
+    lockMsg.style.display = "block";
+    lockMsg.textContent = "Cannot swap during combat";
+    content.style.display = "none";
+    content.style.opacity = "0.55";
+    return;
+  }
+  
+  lockMsg.style.display = "none";
+  content.style.display = "flex";
+  content.style.opacity = "1";
+  
+  // Build content
+  content.innerHTML = "";
+  
+  // 1) Active Party Section
+  const activeSection = document.createElement("div");
+  activeSection.style.cssText = "display:flex;flex-direction:column;gap:4px;";
+  
+  const activeHeader = document.createElement("div");
+  activeHeader.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;";
+  activeHeader.innerHTML = `
+    <div style="font-size:12px;font-weight:bold;color:#eee;">Active Party</div>
+    <div style="font-size:10px;color:#777;">Click to bench</div>
+  `;
+  activeSection.appendChild(activeHeader);
+  
+  if (activeCount === 0) {
+    const empty = document.createElement("div");
+    empty.style.cssText = "text-align:center;padding:10px;color:#666;font-size:11px;";
+    empty.textContent = "No active party members.";
+    activeSection.appendChild(empty);
+  } else {
+    for (let i = 0; i < state.party.length; i++) {
+      const hero = state.party[i];
+      const cls = getClassDef(hero.classKey);
+      const row = document.createElement("div");
+      row.style.cssText = `
+        display:flex;
+        align-items:center;
+        gap:8px;
+        padding:6px 8px;
+        background:#111;
+        border:1px solid #333;
+        border-radius:4px;
+        height:32px;
+        transition:background 0.15s;
+      `;
+      row.onmouseenter = () => { row.style.background = "#1a1a1a"; };
+      row.onmouseleave = () => { row.style.background = "#111"; };
+      
+      // Role icon
+      const roleIcon = getRoleIcon(cls?.role || "DPS");
+      const icon = document.createElement("div");
+      icon.style.cssText = "font-size:14px;width:16px;text-align:center;";
+      icon.textContent = roleIcon;
+      row.appendChild(icon);
+      
+      // Name
+      const name = document.createElement("div");
+      name.style.cssText = "flex:1;font-size:12px;font-weight:600;color:#eee;";
+      name.textContent = hero.name;
+      row.appendChild(name);
+      
+      // Class
+      const classLabel = document.createElement("div");
+      classLabel.style.cssText = "font-size:11px;color:#888;";
+      classLabel.textContent = cls?.name || "";
+      row.appendChild(classLabel);
+      
+      // Bench button
+      const benchBtn = document.createElement("button");
+      benchBtn.textContent = "Bench";
+      benchBtn.style.cssText = `
+        padding:4px 10px;
+        font-size:10px;
+        background:#d46;
+        border:1px solid #e57;
+        border-radius:4px;
+        color:#fff;
+        cursor:pointer;
+      `;
+      
+      // Disable if only 1 active member left
+      if (state.party.length <= 1) {
+        benchBtn.disabled = true;
+        benchBtn.style.opacity = "0.4";
+        benchBtn.style.cursor = "not-allowed";
+        benchBtn.title = "Must keep at least 1 active member";
+        benchBtn.style.background = "#555";
+        benchBtn.style.borderColor = "#666";
+      } else {
+        benchBtn.onclick = () => benchHero(hero.id);
+      }
+      
+      row.appendChild(benchBtn);
+      activeSection.appendChild(row);
+    }
+  }
+  
+  content.appendChild(activeSection);
+  
+  // 2) Bench Roster Section
+  const benchSection = document.createElement("div");
+  benchSection.style.cssText = "display:flex;flex-direction:column;gap:4px;flex:1;min-height:0;";
+  
+  // Bench header with "Hire New" button for MODE 2
+  const benchHeader = document.createElement("div");
+  benchHeader.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;gap:8px;";
+  
+  const benchTitle = document.createElement("div");
+  benchTitle.style.cssText = "font-size:12px;font-weight:bold;color:#eee;";
+  benchTitle.textContent = "Benched";
+  benchHeader.appendChild(benchTitle);
+  
+  // MODE 2: Hire new to bench button
+  const hireBtn = document.createElement("button");
+  hireBtn.textContent = "Hire New (Lv 60+)";
+  hireBtn.style.cssText = `
+    padding:3px 8px;
+    font-size:10px;
+    background:#3d5;
+    border:1px solid #4e6;
+    border-radius:3px;
+    color:#fff;
+    cursor:pointer;
+    white-space:nowrap;
+  `;
+  
+  // MODE 2 gating checks
+  const basePartyFilled = !hasEmptyUnlockedActiveSlot(state);
+  const benchNotFull = benchCount < MAX_BENCH_SIZE;
+  const recruitUnlockedLv60 = state.accountLevel >= RECRUIT_UNLOCK_LEVEL;
+  const recruitCostMode2 = getRecruitCostGold(state);
+  const canAffordMode2 = state.currencyCopper >= recruitCostMode2;
+  const canHireMode2 = isTown && basePartyFilled && recruitUnlockedLv60 && benchNotFull && canAffordMode2;
+  
+  if (!canHireMode2) {
+    hireBtn.disabled = true;
+    hireBtn.style.opacity = "0.4";
+    hireBtn.style.cursor = "not-allowed";
+    
+    let tooltipMode2 = "";
+    if (!isTown) {
+      tooltipMode2 = "Bench hiring in Town only";
+    } else if (!basePartyFilled) {
+      tooltipMode2 = "Fill your party first";
+    } else if (!recruitUnlockedLv60) {
+      tooltipMode2 = `Unlocks at Account Lv ${RECRUIT_UNLOCK_LEVEL}`;
+    } else if (!benchNotFull) {
+      tooltipMode2 = "Bench is full";
+    } else if (!canAffordMode2) {
+      tooltipMode2 = `Need ${recruitCostMode2 - state.currencyCopper} more copper`;
+    }
+    hireBtn.title = tooltipMode2;
+  } else {
+    hireBtn.title = `Hire for ${recruitCostMode2} copper`;
+    hireBtn.onclick = () => {
+      if (window.__openRecruitModal) {
+        window.__openRecruitModal("mode2");  // MODE 2: hire to bench
+      }
+    };
+  }
+  
+  benchHeader.appendChild(hireBtn);
+  benchSection.appendChild(benchHeader);
+  
+  const benchList = document.createElement("div");
+  benchList.style.cssText = "display:flex;flex-direction:column;gap:4px;overflow-y:auto;flex:1;";
+  
+  if (benchCount === 0) {
+    const empty = document.createElement("div");
+    empty.style.cssText = "text-align:center;padding:20px;color:#666;font-size:11px;";
+    empty.textContent = "No benched members.";
+    benchList.appendChild(empty);
+  } else {
+    // Sort bench by level desc, then name asc
+    const sorted = [...(state.bench || [])].sort((a, b) => {
+      if (b.level !== a.level) return b.level - a.level;
+      return (a.name || "").localeCompare(b.name || "");
+    });
+    
+    for (const hero of sorted) {
+      const cls = getClassDef(hero.classKey);
+      const row = document.createElement("div");
+      row.style.cssText = `
+        display:flex;
+        align-items:center;
+        gap:8px;
+        padding:6px 8px;
+        background:#111;
+        border:1px solid #333;
+        border-radius:4px;
+        height:32px;
+        transition:background 0.15s;
+      `;
+      row.onmouseenter = () => { row.style.background = "#1a1a1a"; };
+      row.onmouseleave = () => { row.style.background = "#111"; };
+      
+      // Role icon
+      const roleIcon = getRoleIcon(cls?.role || "DPS");
+      const icon = document.createElement("div");
+      icon.style.cssText = "font-size:14px;width:16px;text-align:center;";
+      icon.textContent = roleIcon;
+      row.appendChild(icon);
+      
+      // Name
+      const name = document.createElement("div");
+      name.style.cssText = "flex:1;font-size:12px;font-weight:600;color:#eee;";
+      name.textContent = hero.name;
+      row.appendChild(name);
+      
+      // Class
+      const classLabel = document.createElement("div");
+      classLabel.style.cssText = "font-size:11px;color:#888;";
+      classLabel.textContent = cls?.name || "";
+      row.appendChild(classLabel);
+      
+      // Add button
+      const btn = document.createElement("button");
+      btn.textContent = "Add";
+      btn.style.cssText = `
+        padding:4px 10px;
+        font-size:10px;
+        background:#2a5;
+        border:1px solid #3b6;
+        border-radius:4px;
+        color:#fff;
+        cursor:pointer;
+      `;
+      
+      // Disable if party full
+      if (activeCount >= MAX_PARTY_SIZE) {
+        btn.disabled = true;
+        btn.style.opacity = "0.4";
+        btn.style.cursor = "not-allowed";
+        btn.title = "Party is full";
+        btn.style.background = "#555";
+        btn.style.borderColor = "#666";
+      } else {
+        btn.onclick = () => addFromBench(hero.id);
+      }
+      
+      row.appendChild(btn);
+      benchList.appendChild(row);
+    }
+  }
+  
+  benchSection.appendChild(benchList);
+  content.appendChild(benchSection);
+  
+  // Optional tip at bottom
+  const tip = document.createElement("div");
+  tip.style.cssText = "font-size:9px;color:#555;text-align:center;margin-top:4px;";
+  tip.textContent = "Tip: Benched members regenerate while you adventure.";
+  content.appendChild(tip);
+}
+
+function getRoleIcon(role) {
+  const icons = {
+    "Tank": "🛡️",
+    "Healer": "✨",
+    "Caster": "🔮",
+    "Support": "🌀",
+    "DPS": "⚔️"
+  };
+  return icons[role] || "⚔️";
+}
+
+function benchHero(heroId) {
+  const idx = state.party.findIndex(h => h.id === heroId);
+  if (idx === -1) return;
+  
+  // Check if would drop below 1 active
+  if (state.party.length <= 1) {
+    addLog("You must keep at least 1 active member.", "normal");
+    return;
+  }
+  
+  // Move to bench
+  const hero = state.party.splice(idx, 1)[0];
+  if (!state.bench) state.bench = [];
+  state.bench.push(hero);
+  
+  addLog(`${hero.name} has been benched.`, "normal");
+  recalcPartyTotals();
+  renderAll();
+}
+
+function addFromBench(heroId) {
+  if (!state.bench) state.bench = [];
+  const idx = state.bench.findIndex(h => h.id === heroId);
+  if (idx === -1) return;
+  
+  // Check if party full
+  if (state.party.length >= MAX_PARTY_SIZE) {
+    addLog("Party is full.", "normal");
+    return;
+  }
+  
+  // Move to party
+  const hero = state.bench.splice(idx, 1)[0];
+  state.party.push(hero);
+  
+  addLog(`${hero.name} has joined the active party.`, "normal");
+  recalcPartyTotals();
+  renderAll();
 }
 
 export function renderMeta() {

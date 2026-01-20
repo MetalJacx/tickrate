@@ -38,7 +38,8 @@ header h1 {
   margin-right: 15px;
 }
 main {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
   gap: 10px;
   padding: 10px;
   box-sizing: border-box;
@@ -59,17 +60,34 @@ main {
   margin-bottom: 6px;
 }
 #partyPanel {
-  flex: 2;
   overflow-y: auto;
 }
 #battlePanel {
-  flex: 3;
   display: flex;
   flex-direction: column;
-  min-height: 0; /* allow children to overflow-scroll in flex */
+  min-height: 0;
+}
+.rightColumn {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  gap: 10px;
 }
 #controlPanel {
-  flex: 2;
+  flex: 0 0 auto;
+}
+#benchPanel {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+#benchPanel #benchContent {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 .hero {
   border: 1px solid #444;

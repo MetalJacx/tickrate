@@ -20,6 +20,9 @@ export const AUTO_SAVE_EVERY_MS = 5000;
 // Cap both offline and background catch-up to 3 hours
 export const MAX_OFFLINE_SECONDS = 3 * 60 * 60;
 export const MAX_PARTY_SIZE = 6;
+export const MAX_BENCH_SIZE = 12;
+export const RECRUIT_UNLOCK_LEVEL = 60;
+export const ROSTER_CAP = MAX_PARTY_SIZE + MAX_BENCH_SIZE;  // 18
 
 // Meditate skill constants (EQ-authentic)
 export const MEDITATE_UNLOCK_LEVEL = 5;

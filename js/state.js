@@ -81,6 +81,7 @@ export const state = {
   zoneKillCounts: {},
   partySlotsUnlocked: 1,
   party: [],
+  bench: [],  // Benched party members
   partyMaxHP: 0,
   partyHP: 0,
   currentEnemies: [],
@@ -161,6 +162,7 @@ export function serializeState() {
     partyMaxHP: state.partyMaxHP,
     currentEnemies: state.currentEnemies.map(e => ({ ...e })),
     party: state.party.map(h => ({ ...h })),
+    bench: (state.bench || []).map(h => ({ ...h })),
     sharedInventory: state.sharedInventory?.map(i => i ? { ...i } : null) || [],
     inventoryPaidSlotsUnlocked: state.inventoryPaidSlotsUnlocked || 0,
     huntRemaining: state.huntRemaining,
@@ -412,6 +414,80 @@ export function loadGame() {
       
       return h;
     }) : [];
+    
+    // Load bench members (same processing as party members)
+    state.bench = Array.isArray(data.bench) ? data.bench.map(h => {
+      if (!h.raceKey) {
+        h.raceKey = data.playerRaceKey || DEFAULT_RACE_KEY;
+      }
+      if (!h.raceName) {
+        h.raceName = h.raceKey;
+      }
+      ensureActorResists(h);
+      applyRacialResists(h, { force: true });
+      if (h.health === undefined) {
+        h.health = h.maxHP || 0;
+      }
+      if (h.isDead === undefined) {
+        h.isDead = false;
+      }
+      if (h.deathTime === undefined) {
+        h.deathTime = null;
+      }
+      const cls = getClassDef(h.classKey);
+      if (h.maxMana === undefined) {
+        h.maxMana = cls?.maxMana || 0;
+        h.mana = cls?.maxMana || 0;
+        h.manaRegenPerTick = cls?.manaRegenPerTick || 0;
+      }
+      if (h.maxEndurance === undefined) {
+        h.maxEndurance = cls?.maxEndurance || 0;
+        h.endurance = cls?.maxEndurance || 0;
+        h.enduranceRegenPerTick = cls?.enduranceRegenPerTick || 0;
+      }
+      if (h.tempDamageDebuffTicks === undefined) {
+        h.tempDamageDebuffTicks = 0;
+      }
+      if (h.tempDamageDebuffAmount === undefined) {
+        h.tempDamageDebuffAmount = 0;
+      }
+      if (h.abilityBar === undefined) {
+        h.abilityBar = {};
+      }
+      if (h.inventory === undefined) {
+        h.inventory = Array(100).fill(null);
+      }
+      if (h.equipment === undefined) {
+        h.equipment = {
+          charm: null, ear1: null, head: null, face: null, ear2: null, neck: null,
+          shoulders: null, arms: null, back: null, wrist1: null, wrist2: null,
+          ranged: null, hands: null, main: null, off: null, finger1: null,
+          finger2: null, chest: null, legs: null, feet: null, waist: null,
+          power: null, ammo: null
+        };
+      } else {
+        ensureEquipmentSlots(h);
+      }
+      if (!Array.isArray(h.consumableSlots)) {
+        h.consumableSlots = Array(4).fill(null);
+      } else {
+        h.consumableSlots = Array.from({ length: 4 }, (_, idx) => h.consumableSlots[idx] ?? null);
+      }
+      if (h.regenTickCounter === undefined) {
+        h.regenTickCounter = 0;
+      }
+      if (h.classBaseDamage === undefined) {
+        const cls = getClassDef(h.classKey);
+        h.classBaseDamage = cls?.baseDamage ?? cls?.baseDPS ?? h.baseDamage ?? 5;
+      }
+      if (!h.type) h.type = "player";
+      ensureWeaponSkills(h);
+      applyWeaponUnlocks(h);
+      ensureMagicSkills(h);
+      applyMagicUnlocks(h);
+      return h;
+    }) : [];
+    
     state.partyMaxHP = data.partyMaxHP ?? 0;
     state.partyHP = data.partyHP ?? 0;
     state.huntRemaining = data.huntRemaining ?? 0;
@@ -429,7 +505,10 @@ export function loadGame() {
     state.nowMs = Math.max(0, data.nowMs ?? 0);
     state.settings = data.settings ?? { debugLogs: false };
 
-    const maxId = state.party.reduce((m, h) => Math.max(m, h.id || 0), 0);
+    const maxId = Math.max(
+      state.party.reduce((m, h) => Math.max(m, h.id || 0), 0),
+      (state.bench || []).reduce((m, h) => Math.max(m, h.id || 0), 0)
+    );
     bumpHeroIdCounterToAtLeast(maxId + 1);
 
     // enemies will be respawned after load
