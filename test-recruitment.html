@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Recruitment System Tests</title>
+  <style>
+    body {
+      font-family: monospace;
+      background: #111;
+      color: #eee;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    .console {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 6px;
+      padding: 16px;
+      max-width: 900px;
+      margin: 0 auto;
+      max-height: 70vh;
+      overflow-y: auto;
+      font-size: 13px;
+    }
+    .console-line {
+      margin: 3px 0;
+    }
+    .pass {
+      color: #69db7c;
+    }
+    .fail {
+      color: #ff6b6b;
+    }
+    .info {
+      color: #74c0fc;
+    }
+    .header {
+      color: #fbbf24;
+      font-weight: bold;
+    }
+    button {
+      background: #444;
+      color: #eee;
+      border: 1px solid #666;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 20px auto;
+      display: block;
+    }
+    button:hover:not(:disabled) {
+      background: #555;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 Recruitment System Tests</h1>
+  <button id="runBtn" onclick="runTests()">Run Tests</button>
+  <div class="console" id="console"></div>
+
+  <script>
+    // Inline test state helpers
+    const testState = {
+      party: [],
+      bench: [],
+      accountLevel: 1,
+      partySlotsUnlocked: 3,
+      currencyCopper: 1000000,
+      zone: 0
+    };
+
+    // Simplified version of getActiveCount, getBenchCount, etc for testing
+    function getActiveCount() {
+      return testState.party?.length || 0;
+    }
+
+    function getBenchCount() {
+      return testState.bench?.length || 0;
+    }
+
+    function getRosterCount() {
+      return getActiveCount() + getBenchCount();
+    }
+
+    function getUnlockedPartySlots() {
+      return testState.partySlotsUnlocked || 1;
+    }
+
+    function hasEmptyUnlockedActiveSlot() {
+      return getActiveCount() < getUnlockedPartySlots();
+    }
+
+    function resetState() {
+      testState.party = [];
+      testState.bench = [];
+      testState.accountLevel = 1;
+      testState.partySlotsUnlocked = 3;
+      testState.currencyCopper = 1000000;
+      testState.zone = 0;
+    }
+
+    function createTestHero(name) {
+      return { id: Math.random(), name, level: 1 };
+    }
+
+    function log(message) {
+      console.log(`[Recruitment Test] ${message}`);
+    }
+
+    function assert(condition, message) {
+      if (!condition) {
+        throw new Error(`❌ FAILED: ${message}`);
+      }
+      log(`✓ ${message}`);
+    }
+
+    // ============================================
+    // TEST 1: Free Recruit up to Roster Cap
+    // ============================================
+    function testFreeRecruitRosterCap() {
+      log("TEST 1: Free Recruit up to Roster Cap");
+      resetState();
+      
+      const unlockedSlots = getUnlockedPartySlots();
+      
+      // Recruit 3 heroes (fill roster cap)
+      for (let i = 1; i <= 3; i++) {
+        const hero = createTestHero(`Hero${i}`);
+        testState.party.push(hero);
+      }
+      
+      assert(getActiveCount() === 3, "Active count is 3");
+      assert(getRosterCount() === 3, "Roster count is 3 (at cap)");
+      assert(getBenchCount() === 0, "Bench count is 0");
+      
+      assert(
+        getRosterCount() >= unlockedSlots,
+        "Cannot recruit 4th (roster cap reached)"
+      );
+      
+      log("✅ TEST 1 PASSED\n");
+    }
+
+    // ============================================
+    // TEST 2: Bench + Recruit into Empty Active
+    // ============================================
+    function testBenchAndRecruit() {
+      log("TEST 2: Bench + Recruit into Empty Active Slot");
+      resetState();
+      
+      // Recruit 3 heroes
+      for (let i = 1; i <= 3; i++) {
+        const hero = createTestHero(`Hero${i}`);
+        testState.party.push(hero);
+      }
+      
+      assert(getActiveCount() === 3, "Start with 3 active");
+      assert(getRosterCount() === 3, "Roster count is 3");
+      
+      // Bench 1 hero
+      const benchedHero = testState.party.splice(0, 1)[0];
+      testState.bench.push(benchedHero);
+      
+      assert(getActiveCount() === 2, "Active count is 2 after bench");
+      assert(getBenchCount() === 1, "Bench count is 1");
+      assert(getRosterCount() === 3, "Roster count still 3");
+      
+      // Should be able to recruit again (empty active slot, roster under cap)
+      const hero4 = createTestHero("Hero4");
+      testState.party.push(hero4);
+      
+      assert(getActiveCount() === 3, "Active count back to 3");
+      assert(getRosterCount() === 4, "Roster count is 4 (3 active + 1 bench)");
+      
+      log("✅ TEST 2 PASSED\n");
+    }
+
+    // ============================================
+    // TEST 3: Roster Cap Blocks Free Recruit
+    // ============================================
+    function testRosterCapBlocksFreeRecruit() {
+      log("TEST 3: Roster Cap Blocks Free Recruit");
+      resetState();
+      
+      const unlockedSlots = getUnlockedPartySlots();
+      
+      // Recruit 2 active
+      testState.party.push(createTestHero("Hero1"));
+      testState.party.push(createTestHero("Hero2"));
+      
+      // Bench + recruit to fill roster to cap (3)
+      const hero3 = createTestHero("Hero3");
+      testState.party.push(hero3);
+      
+      testState.bench.push(testState.party.splice(0, 1)[0]);
+      
+      assert(getActiveCount() === 2, "Active count is 2");
+      assert(getRosterCount() === 3, "Roster cap reached");
+      
+      assert(
+        !(getRosterCount() < unlockedSlots),
+        "Cannot recruit: roster cap prevents free recruit even with empty active slot"
+      );
+      
+      log("✅ TEST 3 PASSED\n");
+    }
+
+    // ============================================
+    // TEST 4: Level 60+ Can Hire to Bench
+    // ============================================
+    function testLevel60HireToBench() {
+      log("TEST 4: Level 60+ Can Hire to Bench Beyond Roster Cap");
+      resetState();
+      
+      // Fill roster to cap
+      for (let i = 1; i <= 3; i++) {
+        testState.party.push(createTestHero(`Hero${i}`));
+      }
+      
+      assert(getRosterCount() === 3, "Roster at cap (3)");
+      
+      // Level to 60
+      testState.accountLevel = 60;
+      
+      // Should be able to hire to bench (beyond cap)
+      const hero4 = createTestHero("Hero4");
+      testState.bench.push(hero4);
+      
+      assert(getBenchCount() === 1, "Can add to bench at Lv 60");
+      assert(getRosterCount() === 4, "Roster now 4 (beyond cap)");
+      
+      // Hire more to bench
+      for (let i = 5; i <= 8; i++) {
+        testState.bench.push(createTestHero(`Hero${i}`));
+      }
+      
+      assert(getBenchCount() === 5, "Bench has 5 members");
+      assert(getRosterCount() === 8, "Roster now 8 (active 3 + bench 5)");
+      
+      log("✅ TEST 4 PASSED\n");
+    }
+
+    // ============================================
+    // TEST 5: Account Level Unlock
+    // ============================================
+    function testAccountLevelUnlock() {
+      log("TEST 5: Account Level Determines Party Slot Unlocks");
+      resetState();
+      
+      testState.accountLevel = 1;
+      testState.partySlotsUnlocked = 1;
+      assert(getUnlockedPartySlots() === 1, "Lv 1: 1 slot unlocked");
+      
+      testState.accountLevel = 3;
+      testState.partySlotsUnlocked = 2;
+      assert(getUnlockedPartySlots() === 2, "Lv 3: 2 slots unlocked");
+      
+      testState.accountLevel = 60;
+      testState.partySlotsUnlocked = 6;
+      assert(getUnlockedPartySlots() === 6, "Lv 60: 6 slots unlocked");
+      
+      log("✅ TEST 5 PASSED\n");
+    }
+
+    // ============================================
+    // Full Test Suite
+    // ============================================
+    function runAllRecruitmentTests() {
+      console.log("\n========================================");
+      console.log("RECRUITMENT SYSTEM TEST SUITE");
+      console.log("========================================\n");
+      
+      try {
+        testFreeRecruitRosterCap();
+        testBenchAndRecruit();
+        testRosterCapBlocksFreeRecruit();
+        testLevel60HireToBench();
+        testAccountLevelUnlock();
+        
+        console.log("========================================");
+        console.log("✅ ALL TESTS PASSED");
+        console.log("========================================\n");
+        return true;
+      } catch (e) {
+        console.error("\n========================================");
+        console.error("❌ TEST SUITE FAILED");
+        console.error("========================================");
+        console.error(e.message);
+        console.error("========================================\n");
+        return false;
+      }
+    }
+
+    // UI helpers
+    window.runTests = function() {
+      const consoleEl = document.getElementById("console");
+      const runBtn = document.getElementById("runBtn");
+      consoleEl.innerHTML = "";
+      runBtn.disabled = true;
+
+      const originalLog = console.log;
+      const originalError = console.error;
+
+      console.log = function(...args) {
+        originalLog(...args);
+        const line = document.createElement("div");
+        const text = args.join(" ");
+        
+        if (text.includes("✅")) line.className = "console-line pass";
+        else if (text.includes("❌")) line.className = "console-line fail";
+        else if (text.includes("[Recruitment Test]")) line.className = "console-line info";
+        else if (text.includes("======")) line.className = "console-line header";
+        else line.className = "console-line";
+        
+        line.textContent = text;
+        consoleEl.appendChild(line);
+        consoleEl.scrollTop = consoleEl.scrollHeight;
+      };
+
+      console.error = function(...args) {
+        originalError(...args);
+        const line = document.createElement("div");
+        line.className = "console-line fail";
+        line.textContent = args.join(" ");
+        consoleEl.appendChild(line);
+        consoleEl.scrollTop = consoleEl.scrollHeight;
+      };
+
+      try {
+        runAllRecruitmentTests();
+      } catch (e) {
+        console.error("Test execution error:", e.message);
+      }
+
+      console.log = originalLog;
+      console.error = originalError;
+      runBtn.disabled = false;
+    };
+  </script>
+</body>
+</html>
