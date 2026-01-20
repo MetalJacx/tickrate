@@ -1314,8 +1314,9 @@ export function renderParty() {
         const hasEmptySlot = hasEmptyUnlockedActiveSlot(state);
         const rosterCount = getRosterCount(state);
         const unlockedSlots = getUnlockedPartySlots(state);
+        const activeCount = getActiveCount(state);
         
-        // Can only do free recruit if: in town, empty slot, and haven't benched anyone yet
+        // Can only do free recruit if: in town, empty active slot, and roster under cap
         const canRecruit = isTown && hasEmptySlot && rosterCount < unlockedSlots;
         
         div.style.cssText = `
@@ -1333,8 +1334,8 @@ export function renderParty() {
         let tooltipText = "";
         if (!isTown) {
           tooltipText = "Recruiting available in Town only";
-        } else if (rosterCount > unlockedSlots) {
-          tooltipText = "Use Bench Hiring (Lv 60+) for additional members";
+        } else if (rosterCount >= unlockedSlots) {
+          tooltipText = "Roster cap reached. Use Bench Hiring (Lv 60+) for additional members";
         } else if (!hasEmptySlot) {
           tooltipText = "Party slots full. Unlock more at higher account levels";
         } else {

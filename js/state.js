@@ -82,7 +82,7 @@ export const state = {
   partySlotsUnlocked: 1,
   party: [],
   bench: [],  // Benched party members
-  partyMaxHP: 0,
+    bench: [],  // Benched party members
   partyHP: 0,
   currentEnemies: [],
   log: [],

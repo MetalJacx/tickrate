@@ -720,14 +720,14 @@ function wireRecruitModal() {
     const rosterCount = getRosterCount(state);
     
     if (recruitMode === "mode1") {
-      // MODE 1: Fill active slot (any level, free) - only if haven't benched anyone
+      // MODE 1: Fill active slot (any level, free) - gate on empty active slot AND roster cap
       const hasEmptySlot = hasEmptyUnlockedActiveSlot(state);
       const canDoMode1 = hasEmptySlot && rosterCount < unlockedSlots;
       confirmBtn.textContent = "Recruit (Free)";
       confirmBtn.disabled = !canDoMode1 || !hasName || !selectedRecruitRaceKey;
       
-      if (rosterCount > unlockedSlots) {
-        errorDiv.textContent = "Cannot recruit freely after benching. Use Bench Hiring (Lv 60+)";
+      if (rosterCount >= unlockedSlots) {
+        errorDiv.textContent = "Roster cap reached. Use Bench Hiring (Lv 60+) for more members.";
         errorDiv.style.display = "block";
       } else if (!hasEmptySlot) {
         errorDiv.textContent = "No empty active slots available";
@@ -814,9 +814,9 @@ function wireRecruitModal() {
     const rosterCount = getRosterCount(state);
     
     if (recruitMode === "mode1") {
-      // MODE 1: Fill active slot (free, any level) - only if haven't benched anyone
+      // MODE 1: Fill active slot (free, any level) - gate on empty active slot AND roster cap
       if (rosterCount >= unlockedSlots) {
-        showToast("Cannot recruit freely after benching!", true);
+        showToast("Roster cap reached! Use Bench Hiring (Lv 60+).", true);
         return;
       }
       
