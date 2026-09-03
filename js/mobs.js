@@ -570,7 +570,9 @@ export const MOBS = {
     resists: { magic: 10 }
   },
   /* ================================================================
-     EQ Legends Tools import (renamed) - see js/zones/zone7.js onward
+     EQ Legends Tools import (renamed) - see js/zones/index.js for the
+     full list of zone files that reference these ids (everything after
+     zone6.js, e.g. duskburrow.js, realm_of_dread.js, etc.)
      ================================================================ */
   eq_pyzjyn: { id: "eq_pyzjyn", name: "Pyzjyn", baseHP: 116, baseDPS: 10.5, naturalDelayTenths: 42, stats: { str: 11, con: 12, dex: 11, agi: 10, ac: 12, wis: 8, int: 8, cha: 7 },
     isNamed: true,
