@@ -2,7 +2,7 @@ import { state, nextHeroId, updateCurrencyDisplay, formatPGSC } from "./state.js
 import { getClassDef, CLASS_DEFS } from "./classes/index.js";
 import { getZoneDef, getEnemyForZone, MAX_ZONE, rollSubAreaDiscoveries, ensureZoneDiscovery, getZoneById, getActiveSubArea } from "./zones/index.js";
 import { addLog, randInt, isExpiredEffect, unwrapEffect, purgeExpiredActive } from "./util.js";
-import { ACCOUNT_SLOT_UNLOCKS, GAME_TICK_MS, MEDITATE_UNLOCK_LEVEL, MEDITATE_SKILL_HARD_CAP, MEDITATE_BASE_REGEN_FACTOR, COMBAT_REGEN_MULT, OOC_REGEN_MULT, XP_TEST_REDUCTION_PERCENT, SKILL_UP_RATE_MULT } from "./defs.js";
+import { ACCOUNT_SLOT_UNLOCKS, GAME_TICK_MS, MEDITATE_UNLOCK_LEVEL, MEDITATE_SKILL_HARD_CAP, MEDITATE_BASE_REGEN_FACTOR, COMBAT_REGEN_MULT, OOC_REGEN_MULT, XP_TEST_REDUCTION_PERCENT, SKILL_UP_RATE_MULT, getClassGrowth, doubleAttackCap } from "./defs.js";
 import { getItemDef } from "./items.js";
 import { getRaceDef, DEFAULT_RACE_KEY } from "./races.js";
 import { ACTIONS } from "./actions.js";
@@ -269,14 +269,8 @@ function initializeSwingTimer(actor) {
   actor.lastSwingTicks = swingTicks; // Track for comparisons
 }
 
-export function doubleAttackCap(level) {
-  if (level < 5) return 0;
-  const growth = level - 4; // Level 5 -> 1, Level 60 -> 56
-  const rawCap = growth * (250 / 56);
-  const flooredToFive = Math.floor(rawCap / 5) * 5;
-  const capped = clamp(flooredToFive, 5, 250);
-  return capped;
-}
+// Re-exported from defs.js so existing importers (ui.js) keep working.
+export { doubleAttackCap };
 
 export function doubleAttackProcChance(skill) {
   if (!skill) return 0;
@@ -679,17 +673,9 @@ function applyLevelScaling(hero) {
   // Initialize levelBonus if missing (shouldn't happen, but safety)
   hero.levelBonus = hero.levelBonus || { hp: 0, dmg: 0, mana: 0, end: 0 };
   
-  // Per-class growth constants
-  const GROWTH = {
-    warrior:   { hp: 40,  dmg: 1.2, mana: 0,  end: 3 },
-    ranger:    { hp: 30,  dmg: 1.6, mana: 10, end: 2 },
-    cleric:    { hp: 28,  dmg: 1.0, mana: 18, end: 0 },
-    wizard:    { hp: 18,  dmg: 2.0, mana: 20, end: 0 },
-    enchanter: { hp: 22,  dmg: 1.2, mana: 20, end: 0 },
-  };
-  
-  // Get growth for this class (default to warrior if unknown)
-  const g = GROWTH[hero.classKey] || { hp: 40, dmg: 1.2, mana: 0, end: 3 };
+  // Per-class growth comes from defs.js so the save-migration path in state.js
+  // replays exactly the same numbers.
+  const g = getClassGrowth(hero.classKey);
   
   // Accumulate bonuses (these persist on the hero object)
   hero.levelBonus.hp += g.hp;
@@ -1147,7 +1133,6 @@ function onEnemyKilled(enemy, totalDPS) {
   if (lootAwarded.length > 0) {
     for (const msg of lootAwarded) addLog(msg, "gold");
   }
-  state.currentEnemy = null;
   state.waitingToRespawn = true;
   state.huntRemaining = HUNT_TIME_MS; // Start hunt timer
 }

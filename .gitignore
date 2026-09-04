@@ -1,0 +1,13 @@
+# Test / debug output
+test_output.txt
+*.log
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
+
+# Dependencies (should a build step ever be added)
+node_modules/

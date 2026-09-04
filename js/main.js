@@ -125,23 +125,31 @@ function renderRaceButtons() {
 
 function simulateOfflineProgress(seconds) {
   if (!seconds || seconds <= 0) return null;
-  const capped = Math.min(seconds, MAX_OFFLINE_SECONDS);
-  const beforeGold = state.gold;
+  const cappedSeconds = Math.min(seconds, MAX_OFFLINE_SECONDS);
+
+  // One tick is GAME_TICK_MS (3s), not one second. Looping once per second here
+  // would simulate 3x more game time than the player was actually away.
+  const ticks = Math.floor((cappedSeconds * 1000) / GAME_TICK_MS);
+  if (ticks <= 0) return null;
+
+  const beforeCopper = state.currencyCopper;
   const beforeXP = state.totalXP;
 
-  for (let i = 0; i < capped; i++) gameTick();
+  for (let i = 0; i < ticks; i++) gameTick();
 
+  const secondsSimulated = (ticks * GAME_TICK_MS) / 1000;
   const summary = {
-    secondsSimulated: capped,
-    goldGained: state.gold - beforeGold,
+    secondsSimulated,
+    // Copper, not gold -- showOfflineModal runs this through formatPGSC.
+    goldGained: state.currencyCopper - beforeCopper,
     xpGained: state.totalXP - beforeXP
   };
   state.offlineSummary = summary;
-  addLog(`SYSTEM: Offline progress: simulated ${capped} seconds.`);
+  addLog(`SYSTEM: Offline progress: simulated ${secondsSimulated} seconds (${ticks} ticks).`);
   return summary;
 }
 
-function startLoops({ lastSavedAt }) {
+function startLoops({ lastSavedRealMs }) {
   if (tickTimer) return; // already running
 
   // Ensure player has at least their main character hero
@@ -173,10 +181,15 @@ function startLoops({ lastSavedAt }) {
     addLog("Party members are recovering. Combat will resume after revival.", "normal");
   }
 
+  // Offline catch-up is measured against real elapsed time. state.nowMs is a game
+  // clock that only moves when ticks run, so comparing it to the saved game clock
+  // always yielded zero and offline progress never actually ran.
   let offlineSummary = null;
-  if (lastSavedAt != null) {
-    const secondsOffline = Math.floor((state.nowMs - lastSavedAt) / 1000);
-    offlineSummary = simulateOfflineProgress(secondsOffline);
+  if (lastSavedRealMs != null) {
+    const secondsOffline = Math.floor((Date.now() - lastSavedRealMs) / 1000);
+    if (secondsOffline > 0) {
+      offlineSummary = simulateOfflineProgress(secondsOffline);
+    }
   }
 
   renderAll();
@@ -963,7 +976,7 @@ function start() {
   });
 
   // Load saved data (if any)
-  const { loaded, lastSavedAt } = loadGame();
+  const { loaded, lastSavedRealMs } = loadGame();
 
   // Retroactively recalculate account level based on total XP with current reduction
   if (state.totalXP > 0) {
@@ -998,7 +1011,7 @@ function start() {
 
   if (loaded && hasCharacter) {
     showGameScreen();
-    startLoops({ lastSavedAt });
+    startLoops({ lastSavedRealMs });
   } else {
     // New player flow: start -> class select -> game
     wireStartScreen(() => {
@@ -1012,7 +1025,7 @@ function start() {
 
     wireClassScreen(() => {
       showGameScreen();
-      startLoops({ lastSavedAt: null });
+      startLoops({ lastSavedRealMs: null });
     });
 
     showStartScreen();

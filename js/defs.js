@@ -78,3 +78,30 @@ export const EQUIP_SLOTS = [
 ];
 
 export const EQUIP_SLOT_KEYS = EQUIP_SLOTS.map(s => s.key);
+
+// ===== Per-class level growth (single source of truth) =====
+// Applied additively on each level-up (combat.js) and replayed from scratch
+// when migrating old saves that predate levelBonus (state.js). Both paths must
+// use the same table and the same fallback or a hero's stats will differ
+// depending on whether they levelled or were loaded.
+export const CLASS_GROWTH = {
+  warrior:   { hp: 40,  dmg: 1.2, mana: 0,  end: 3 },
+  ranger:    { hp: 30,  dmg: 1.6, mana: 10, end: 2 },
+  cleric:    { hp: 28,  dmg: 1.0, mana: 18, end: 0 },
+  wizard:    { hp: 18,  dmg: 2.0, mana: 20, end: 0 },
+  enchanter: { hp: 22,  dmg: 1.2, mana: 20, end: 0 }
+};
+
+export const DEFAULT_CLASS_GROWTH = CLASS_GROWTH.warrior;
+
+export function getClassGrowth(classKey) {
+  return CLASS_GROWTH[classKey] || DEFAULT_CLASS_GROWTH;
+}
+
+// Warrior Double Attack skill cap by level: unlocks at 5, reaches 250 by 60.
+export function doubleAttackCap(level) {
+  if (level < 5) return 0;
+  const rawCap = (level - 4) * (250 / 56); // Level 5 -> 1 step, Level 60 -> 56 steps
+  const flooredToFive = Math.floor(rawCap / 5) * 5;
+  return Math.min(250, Math.max(5, flooredToFive));
+}

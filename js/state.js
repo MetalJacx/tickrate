@@ -1,4 +1,4 @@
-import { SAVE_KEY } from "./defs.js";
+import { SAVE_KEY, getClassGrowth, doubleAttackCap } from "./defs.js";
 import { DEFAULT_RACE_KEY } from "./races.js";
 import { getClassDef } from "./classes/index.js";
 import { isExpiredEffect, purgeExpiredActive } from "./util.js";
@@ -49,15 +49,6 @@ export function formatPGSC(amount, useColors = false) {
   return parts.join(' ');
 }
 
-function doubleAttackCap(level) {
-  if (level < 5) return 0;
-  const rawCap = (level - 4) * (250 / 56);
-  const floored = Math.floor(rawCap / 5) * 5;
-  if (floored < 5) return 5;
-  if (floored > 250) return 250;
-  return floored;
-}
-
 let heroIdCounter = 1;
 
 export const state = {
@@ -82,7 +73,6 @@ export const state = {
   partySlotsUnlocked: 1,
   party: [],
   bench: [],  // Benched party members
-    bench: [],  // Benched party members
   partyHP: 0,
   currentEnemies: [],
   log: [],
@@ -184,7 +174,11 @@ export function serializeState() {
     killsSinceLastNamed: state.killsSinceLastNamed || {},
     namedCooldownKills: state.namedCooldownKills || {},
     nowMs: state.nowMs ?? 0,
+    // Game clock at save time. Kept for reference/debugging only -- it cannot be
+    // used to measure time away, since it only advances when ticks run.
     lastSavedAt: state.nowMs ?? 0,
+    // Wall clock at save time. This is what offline catch-up measures against.
+    lastSavedRealMs: Date.now(),
     settings: state.settings || { debugLogs: false }
   };
 }
@@ -195,6 +189,160 @@ export function saveGame() {
   } catch (e) {
     console.error("Save failed:", e);
   }
+}
+
+/**
+ * Normalize one saved hero into the shape the current code expects.
+ *
+ * Party and bench heroes go through this same path. They used to have separate
+ * copy-pasted blocks and the bench copy had already fallen behind (no levelBonus
+ * migration, no buff purge, no meditate fields), which meant a hero's stats could
+ * change just by being benched and reloaded.
+ *
+ * `data` is the raw save object, used only for account-level fallbacks.
+ */
+function hydrateHero(h, data) {
+  if (!h.raceKey) {
+    h.raceKey = data.playerRaceKey || DEFAULT_RACE_KEY;
+  }
+  if (!h.raceName) {
+    // defer to runtime lookup; keep simple string for now
+    h.raceName = h.raceKey;
+  }
+  ensureActorResists(h);
+  applyRacialResists(h, { force: true });
+
+  if (h.health === undefined) {
+    h.health = h.maxHP || 0;
+  }
+  if (h.isDead === undefined) {
+    h.isDead = false;
+  }
+  if (h.deathTime === undefined) {
+    h.deathTime = null;
+  }
+
+  // Initialize resources from class definition if missing
+  const cls = getClassDef(h.classKey);
+  if (h.maxMana === undefined) {
+    h.maxMana = cls?.maxMana || 0;
+    h.mana = cls?.maxMana || 0;
+    h.manaRegenPerTick = cls?.manaRegenPerTick || 0;
+  }
+  if (h.maxEndurance === undefined) {
+    h.maxEndurance = cls?.maxEndurance || 0;
+    h.endurance = cls?.maxEndurance || 0;
+    h.enduranceRegenPerTick = cls?.enduranceRegenPerTick || 0;
+  }
+
+  // Temporary debuff fields
+  if (h.tempDamageDebuffTicks === undefined) {
+    h.tempDamageDebuffTicks = 0;
+  }
+  if (h.tempDamageDebuffAmount === undefined) {
+    h.tempDamageDebuffAmount = 0;
+  }
+
+  if (h.abilityBar === undefined) {
+    h.abilityBar = {};
+  }
+  if (h.inventory === undefined) {
+    h.inventory = Array(100).fill(null);
+  }
+
+  // Equipment: creates the map if absent, backfills any slots an old save lacks.
+  // Slot list lives in defs.js (EQUIP_SLOTS) rather than being spelled out here.
+  ensureEquipmentSlots(h);
+
+  // Per-hero consumable slots (4 total)
+  if (!Array.isArray(h.consumableSlots)) {
+    h.consumableSlots = Array(4).fill(null);
+  } else {
+    h.consumableSlots = Array.from({ length: 4 }, (_, idx) => h.consumableSlots[idx] ?? null);
+  }
+
+  if (h.regenTickCounter === undefined) {
+    h.regenTickCounter = 0;
+  }
+
+  // Store the original class damage so equipment bonuses stay additive
+  if (h.classBaseDamage === undefined) {
+    h.classBaseDamage = cls?.baseDamage ?? cls?.baseDPS ?? h.baseDamage ?? 5;
+  }
+
+  // Migrate saves that predate additive levelBonus scaling by replaying growth
+  // from level 1 using the same table combat.js uses on level-up.
+  const hasProperLevelBonus = h.levelBonus && (h.levelBonus.hp > 0 || h.level === 1);
+  if (!hasProperLevelBonus) {
+    // Restore original class base values
+    h.baseHP = cls?.baseHP ?? 50;
+    h.baseMana = cls?.baseMana ?? 0;
+    h.baseDamage = h.classBaseDamage; // Use the stored original class damage
+    h.maxEndurance = cls?.maxEndurance ?? 0; // Restore original endurance cap
+
+    const g = getClassGrowth(h.classKey);
+    const numLevelUps = Math.max(0, (h.level || 1) - 1);
+    h.levelBonus = {
+      hp: numLevelUps * g.hp,
+      dmg: numLevelUps * g.dmg,
+      mana: numLevelUps * g.mana,
+      end: numLevelUps * g.end
+    };
+  }
+
+  if (h.classKey === "warrior") {
+    const cap = doubleAttackCap(h.level || 1);
+    if (h.doubleAttackSkill === undefined) {
+      h.doubleAttackSkill = h.level >= 5 ? 1 : 0;
+    }
+    h.doubleAttackSkill = Math.min(h.doubleAttackSkill || 0, cap);
+  }
+
+  // Meditate skill and regen fields
+  if (h.meditateSkill === undefined) {
+    h.meditateSkill = 0;
+  }
+  if (h.gearManaRegen === undefined) {
+    h.gearManaRegen = 0;
+  }
+  if (h.buffManaRegen === undefined) {
+    h.buffManaRegen = 0;
+  }
+  if (h.inCombat === undefined) {
+    h.inCombat = false;
+  }
+
+  // Active buffs: drop anything already expired on the game clock
+  if (h.activeBuffs === undefined) {
+    h.activeBuffs = {};
+  }
+  const now = state.nowMs ?? 0;
+  purgeExpiredActive(h.activeBuffs, now);
+
+  // Migrate old-style buff timestamps (from before the game clock was used).
+  // If a buff's expiresAt is further out than any real buff could be, it was
+  // written against a different clock; rebase it to a fresh 30 minutes.
+  const MAX_REASONABLE_BUFF_DURATION_MS = 2000000; // ~33 minutes (max buff duration)
+  for (const buffData of Object.values(h.activeBuffs)) {
+    if (buffData && typeof buffData === "object" && buffData.expiresAt) {
+      if (buffData.expiresAt > now + MAX_REASONABLE_BUFF_DURATION_MS) {
+        buffData.expiresAt = now + 1800000; // 30 minutes
+      }
+    }
+  }
+
+  // FIX 21: Ensure heroes always have type = "player" after load
+  // Critical for isPlayerActor() check in combatMath.js weapon skill routing
+  if (!h.type) h.type = "player";
+
+  // Ensure weapon skills and apply unlocks per current level
+  ensureWeaponSkills(h);
+  applyWeaponUnlocks(h);
+  // Ensure magic skills and apply unlocks per current level
+  ensureMagicSkills(h);
+  applyMagicUnlocks(h);
+
+  return h;
 }
 
 export function loadGame() {
@@ -213,7 +361,7 @@ export function loadGame() {
       }
     }
     
-    if (!raw) return { loaded: false, lastSavedAt: null };
+    if (!raw) return { loaded: false, lastSavedAt: null, lastSavedRealMs: null };
 
     const data = JSON.parse(raw);
 
@@ -239,254 +387,13 @@ export function loadGame() {
     state.partySlotsUnlocked = data.partySlotsUnlocked ?? 1;
     state.sharedInventory = Array.isArray(data.sharedInventory) ? data.sharedInventory.map(i => i ? { ...i } : null) : Array(100).fill(null);
     state.inventoryPaidSlotsUnlocked = data.inventoryPaidSlotsUnlocked ?? 0;
-    state.party = Array.isArray(data.party) ? data.party.map(h => {
-      // Initialize health for old saves that don't have it
-      if (!h.raceKey) {
-        h.raceKey = data.playerRaceKey || DEFAULT_RACE_KEY;
-      }
-      if (!h.raceName) {
-        // defer to runtime lookup; keep simple string for now
-        h.raceName = h.raceKey;
-      }
-      ensureActorResists(h);
-      applyRacialResists(h, { force: true });
-      if (h.health === undefined) {
-        h.health = h.maxHP || 0;
-      }
-      if (h.isDead === undefined) {
-        h.isDead = false;
-      }
-      if (h.deathTime === undefined) {
-        h.deathTime = null;
-      }
-      // Initialize resources from class definition if missing
-      const cls = getClassDef(h.classKey);
-      if (h.maxMana === undefined) {
-        h.maxMana = cls?.maxMana || 0;
-        h.mana = cls?.maxMana || 0;
-        h.manaRegenPerTick = cls?.manaRegenPerTick || 0;
-      }
-      if (h.maxEndurance === undefined) {
-        h.maxEndurance = cls?.maxEndurance || 0;
-        h.endurance = cls?.maxEndurance || 0;
-        h.enduranceRegenPerTick = cls?.enduranceRegenPerTick || 0;
-      }
-      // Initialize temporary debuff fields
-      if (h.tempDamageDebuffTicks === undefined) {
-        h.tempDamageDebuffTicks = 0;
-      }
-      if (h.tempDamageDebuffAmount === undefined) {
-        h.tempDamageDebuffAmount = 0;
-      }
-      // Initialize ability bar
-      if (h.abilityBar === undefined) {
-        h.abilityBar = {};
-      }
-      // Initialize inventory
-      if (h.inventory === undefined) {
-        h.inventory = Array(100).fill(null);
-      }
-      // Initialize equipment
-      if (h.equipment === undefined) {
-        h.equipment = {
-          charm: null,
-          ear1: null,
-          head: null,
-          face: null,
-          ear2: null,
-          neck: null,
-          shoulders: null,
-          arms: null,
-          back: null,
-          wrist1: null,
-          wrist2: null,
-          ranged: null,
-          hands: null,
-          main: null,
-          off: null,
-          finger1: null,
-          finger2: null,
-          chest: null,
-          legs: null,
-          feet: null,
-          waist: null,
-          power: null,
-          ammo: null
-        };
-      } else {
-        // Ensure all slots exist for saves missing some
-        ensureEquipmentSlots(h);
-      }
-      // Initialize per-hero consumable slots (4 total)
-      if (!Array.isArray(h.consumableSlots)) {
-        h.consumableSlots = Array(4).fill(null);
-      } else {
-        h.consumableSlots = Array.from({ length: 4 }, (_, idx) => h.consumableSlots[idx] ?? null);
-      }
-      // Initialize regen tick counter
-      if (h.regenTickCounter === undefined) {
-        h.regenTickCounter = 0;
-      }
-      // Initialize classBaseDamage (store original class damage for equipment bonuses)
-      if (h.classBaseDamage === undefined) {
-        const cls = getClassDef(h.classKey);
-        h.classBaseDamage = cls?.baseDamage ?? cls?.baseDPS ?? h.baseDamage ?? 5;
-      }
-      // Initialize levelBonus for additive scaling (new system)
-      // Migrate old saves that don't have proper levelBonus yet
-      const hasProperLevelBonus = h.levelBonus && (h.levelBonus.hp > 0 || h.level === 1);
-      if (!hasProperLevelBonus) {
-        // Restore original class base values
-        const cls = getClassDef(h.classKey);
-        h.baseHP = cls?.baseHP ?? 50;
-        h.baseMana = cls?.baseMana ?? 0;
-        h.baseDamage = h.classBaseDamage; // Use the stored original class damage
-        h.maxEndurance = cls?.maxEndurance ?? 0; // Restore original endurance cap
-        
-        // Recalculate bonuses from scratch based on hero level
-        const GROWTH = {
-          warrior:   { hp: 40,  dmg: 1.2, mana: 0,  end: 3 },
-          ranger:    { hp: 30,  dmg: 1.6, mana: 10, end: 2 },
-          cleric:    { hp: 28,  dmg: 1.0, mana: 18, end: 0 },
-          wizard:    { hp: 18,  dmg: 2.0, mana: 20, end: 0 },
-          enchanter: { hp: 22,  dmg: 1.2, mana: 20, end: 0 },
-        };
-        const g = GROWTH[h.classKey] || { hp: 20, dmg: 1.0, mana: 10, end: 0 };
-        const numLevelUps = Math.max(0, (h.level || 1) - 1);
-        h.levelBonus = {
-          hp: numLevelUps * g.hp,
-          dmg: numLevelUps * g.dmg,
-          mana: numLevelUps * g.mana,
-          end: numLevelUps * g.end
-        };
-      }
-      if (h.classKey === "warrior") {
-        const cap = doubleAttackCap(h.level || 1);
-        if (h.doubleAttackSkill === undefined) {
-          h.doubleAttackSkill = h.level >= 5 ? 1 : 0;
-        }
-        h.doubleAttackSkill = Math.min(h.doubleAttackSkill || 0, cap);
-      }
-      // Initialize meditate skill and regen fields (new system)
-      if (h.meditateSkill === undefined) {
-        h.meditateSkill = 0;
-      }
-      if (h.gearManaRegen === undefined) {
-        h.gearManaRegen = 0;
-      }
-      if (h.buffManaRegen === undefined) {
-        h.buffManaRegen = 0;
-      }
-      if (h.inCombat === undefined) {
-        h.inCombat = false;
-      }
-      // Initialize active buffs (need to clean up expired ones on load)
-      if (h.activeBuffs === undefined) {
-        h.activeBuffs = {};
-      }
-      // Remove expired buffs from old saves
-      const now = state.nowMs ?? 0;
-      purgeExpiredActive(h.activeBuffs, now);
-      
-      // Migrate old-style buff timestamps (before game clock was used)
-      // If a buff's expiresAt is much larger than state.nowMs, it was created with an old clock
-      const MAX_REASONABLE_BUFF_DURATION_MS = 2000000; // ~33 minutes (max buff duration)
-      for (const [buffKey, buffData] of Object.entries(h.activeBuffs)) {
-        if (buffData && typeof buffData === "object" && buffData.expiresAt) {
-          // If expiresAt is way ahead of now + max duration, it's an old timestamp
-          if (buffData.expiresAt > now + MAX_REASONABLE_BUFF_DURATION_MS) {
-            // Old-style buff: recalculate as if applied fresh now with ~30 min duration
-            buffData.expiresAt = now + 1800000; // 30 minutes
-          }
-        }
-      }
-      
-      // FIX 21: Ensure heroes always have type = "player" after load
-      // Critical for isPlayerActor() check in combatMath.js weapon skill routing
-      if (!h.type) h.type = "player";
-      
-      // Ensure weapon skills and apply unlocks per current level
-      ensureWeaponSkills(h);
-      applyWeaponUnlocks(h);
-      // Ensure magic skills and apply unlocks per current level
-      ensureMagicSkills(h);
-      applyMagicUnlocks(h);
-      
-      return h;
-    }) : [];
-    
-    // Load bench members (same processing as party members)
-    state.bench = Array.isArray(data.bench) ? data.bench.map(h => {
-      if (!h.raceKey) {
-        h.raceKey = data.playerRaceKey || DEFAULT_RACE_KEY;
-      }
-      if (!h.raceName) {
-        h.raceName = h.raceKey;
-      }
-      ensureActorResists(h);
-      applyRacialResists(h, { force: true });
-      if (h.health === undefined) {
-        h.health = h.maxHP || 0;
-      }
-      if (h.isDead === undefined) {
-        h.isDead = false;
-      }
-      if (h.deathTime === undefined) {
-        h.deathTime = null;
-      }
-      const cls = getClassDef(h.classKey);
-      if (h.maxMana === undefined) {
-        h.maxMana = cls?.maxMana || 0;
-        h.mana = cls?.maxMana || 0;
-        h.manaRegenPerTick = cls?.manaRegenPerTick || 0;
-      }
-      if (h.maxEndurance === undefined) {
-        h.maxEndurance = cls?.maxEndurance || 0;
-        h.endurance = cls?.maxEndurance || 0;
-        h.enduranceRegenPerTick = cls?.enduranceRegenPerTick || 0;
-      }
-      if (h.tempDamageDebuffTicks === undefined) {
-        h.tempDamageDebuffTicks = 0;
-      }
-      if (h.tempDamageDebuffAmount === undefined) {
-        h.tempDamageDebuffAmount = 0;
-      }
-      if (h.abilityBar === undefined) {
-        h.abilityBar = {};
-      }
-      if (h.inventory === undefined) {
-        h.inventory = Array(100).fill(null);
-      }
-      if (h.equipment === undefined) {
-        h.equipment = {
-          charm: null, ear1: null, head: null, face: null, ear2: null, neck: null,
-          shoulders: null, arms: null, back: null, wrist1: null, wrist2: null,
-          ranged: null, hands: null, main: null, off: null, finger1: null,
-          finger2: null, chest: null, legs: null, feet: null, waist: null,
-          power: null, ammo: null
-        };
-      } else {
-        ensureEquipmentSlots(h);
-      }
-      if (!Array.isArray(h.consumableSlots)) {
-        h.consumableSlots = Array(4).fill(null);
-      } else {
-        h.consumableSlots = Array.from({ length: 4 }, (_, idx) => h.consumableSlots[idx] ?? null);
-      }
-      if (h.regenTickCounter === undefined) {
-        h.regenTickCounter = 0;
-      }
-      if (h.classBaseDamage === undefined) {
-        const cls = getClassDef(h.classKey);
-        h.classBaseDamage = cls?.baseDamage ?? cls?.baseDPS ?? h.baseDamage ?? 5;
-      }
-      if (!h.type) h.type = "player";
-      ensureWeaponSkills(h);
-      applyWeaponUnlocks(h);
-      ensureMagicSkills(h);
-      applyMagicUnlocks(h);
-      return h;
-    }) : [];
+    // Restore the game clock before hydrating heroes: hydrateHero purges expired
+    // buffs and rebases legacy buff timestamps against state.nowMs, so reading a
+    // stale 0 here silently expired every buff on the party.
+    state.nowMs = Math.max(0, data.nowMs ?? 0);
+
+    state.party = Array.isArray(data.party) ? data.party.map(h => hydrateHero(h, data)) : [];
+    state.bench = Array.isArray(data.bench) ? data.bench.map(h => hydrateHero(h, data)) : [];
     
     state.partyMaxHP = data.partyMaxHP ?? 0;
     state.partyHP = data.partyHP ?? 0;
@@ -502,7 +409,6 @@ export function loadGame() {
     state.lastCampLogTime = data.lastCampLogTime ?? 0;
     state.killsSinceLastNamed = data.killsSinceLastNamed ?? {};
     state.namedCooldownKills = data.namedCooldownKills ?? {};
-    state.nowMs = Math.max(0, data.nowMs ?? 0);
     state.settings = data.settings ?? { debugLogs: false };
 
     const maxId = Math.max(
@@ -514,10 +420,16 @@ export function loadGame() {
     // enemies will be respawned after load
     state.currentEnemies = [];
 
-    return { loaded: true, lastSavedAt: data.lastSavedAt ?? null };
+    // Saves written before wall-clock stamping have no lastSavedRealMs; offline
+    // catch-up is skipped for those rather than guessed at.
+    return {
+      loaded: true,
+      lastSavedAt: data.lastSavedAt ?? null,
+      lastSavedRealMs: typeof data.lastSavedRealMs === "number" ? data.lastSavedRealMs : null
+    };
   } catch (e) {
     console.error("Load failed:", e);
-    return { loaded: false, lastSavedAt: null };
+    return { loaded: false, lastSavedAt: null, lastSavedRealMs: null };
   }
 }
 
